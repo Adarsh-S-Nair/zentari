@@ -27,11 +27,13 @@ function App() {
     setResult(null)
     setLoading(true)
 
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
     try {
-      const response = await fetch('http://localhost:8000/simulate', {
+      const response = await fetch(`${baseUrl}/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify(form),
       })
       const data = await response.json()
       if (data.error) setError(data.error)
@@ -42,6 +44,7 @@ function App() {
       setLoading(false)
     }
   }
+
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
