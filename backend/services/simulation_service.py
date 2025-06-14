@@ -1,5 +1,5 @@
-from backend.models.schema import SimulationRequest
-from backend.utils.data_fetcher import load_bulk_scoring_data
+from models.schema import SimulationRequest
+from utils.data_fetcher import load_bulk_scoring_data
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from math import isfinite

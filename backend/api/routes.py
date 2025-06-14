@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from backend.models.schema import SimulationRequest
-from backend.services.simulation_service import SimulationService
+from models.schema import SimulationRequest
+from services.simulation_service import SimulationService
 from datetime import datetime
 
 router = APIRouter()
