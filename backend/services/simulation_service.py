@@ -9,11 +9,8 @@ import pandas as pd
 class SimulationService:
     def __init__(self, params: SimulationRequest):
         self.params = params
-        self.price_cache = []  # <-- List of {"name": ticker, "price_data": [{date, value}]}
-        self.bulk_price_data = {}  # {ticker: DataFrame}
-        self.used_tickers = set()
         self.holdings = {}
-        self.purchase_prices = {}  # Store purchase prices for return calculations
+        self.purchase_prices = {}
         self.portfolio_value = params.starting_value
         self.benchmark_value = params.starting_value
         self.benchmark_shares = 0
@@ -21,53 +18,20 @@ class SimulationService:
         self.daily_values = []
         self.daily_benchmark_values = []
         self.monthly_orders = []
+        self.price_data = {}  # {ticker: DataFrame}
+
+        # Performance-based rebalance thresholds
+        self.rebalance_on_gain_pct = 10  # take-profit trigger
+        self.rebalance_on_loss_pct = 5   # stop-loss trigger
 
     def preload_price_data(self):
-        self.download_bulk_data()
-        self.identify_used_tickers()
-        self.build_price_cache()
-
-    def download_bulk_data(self):
         start_dt = datetime.strptime(self.params.start_date, "%Y-%m-%d")
-        lookback_start = start_dt - relativedelta(months=self.params.lookback_months + self.params.skip_recent_months)
         end_dt = datetime.strptime(self.params.end_date, "%Y-%m-%d")
+        lookback_start = start_dt - relativedelta(months=self.params.lookback_months + self.params.skip_recent_months)
+        self.price_data = load_bulk_scoring_data(lookback_start, end_dt, benchmark=self.params.benchmark)
 
-        print(f"[INFO] Preloading bulk price data for momentum scoring")
-        self.bulk_price_data = load_bulk_scoring_data(lookback_start, end_dt, benchmark=self.params.benchmark)
-
-    def identify_used_tickers(self):
-        print(f"[INFO] Calculating rebalance dates to identify used tickers...")
-        current = datetime.strptime(self.params.start_date, "%Y-%m-%d")
-        end = datetime.strptime(self.params.end_date, "%Y-%m-%d")
-
-        while current < end:
-            top_n = self.get_top_momentum_stocks(current)
-            self.used_tickers.update([ticker for ticker, _ in top_n])
-            current += relativedelta(months=self.params.hold_months)
-
-        self.used_tickers.add(self.params.benchmark)
-
-        print(f"[SUMMARY] Total unique tickers used: {len(self.used_tickers)}")
-        print(f"[SUMMARY] Tickers: {sorted(self.used_tickers)}")
-
-    def build_price_cache(self):
-        print(f"[INFO] Building in-memory cache for used tickers...")
-        self.price_cache = []
-
-        for ticker in self.used_tickers:
-            df = self.bulk_price_data.get(ticker)
-            if df is None or df.empty:
-                continue
-            self.price_cache.append({
-                "name": ticker,
-                "price_data": [
-                    {"date": row["date"], "value": row["adj_close"]}
-                    for _, row in df.iterrows()
-                ]
-            })
-
-        benchmark_df = self.bulk_price_data.get(self.params.benchmark)
-        if benchmark_df is not None:
+        benchmark_df = self.price_data.get(self.params.benchmark)
+        if benchmark_df is not None and not benchmark_df.empty:
             benchmark_df = benchmark_df.set_index("date")
             start_price = benchmark_df.loc[self.params.start_date]['adj_close'] \
                 if self.params.start_date in benchmark_df.index \
@@ -76,20 +40,29 @@ class SimulationService:
         else:
             print(f"[WARN] Benchmark data for {self.params.benchmark} missing!")
 
-    def get_top_momentum_stocks(self, rebalance_date: datetime):
+    def get_price(self, ticker, date_str):
+        df = self.price_data.get(ticker)
+        if df is None or df.empty:
+            raise ValueError(f"No data for ticker {ticker}")
+        target = pd.to_datetime(date_str)
+        eligible = df[df['date'] <= target]
+        if eligible.empty:
+            raise ValueError(f"No price for {ticker} on or before {date_str}")
+        return eligible.iloc[-1]['adj_close']
+
+    def get_top_momentum_stocks(self, rebalance_date):
         lookback_end = pd.to_datetime(rebalance_date - relativedelta(months=self.params.skip_recent_months))
         lookback_start = pd.to_datetime(lookback_end - relativedelta(months=self.params.lookback_months))
-
         momentum_scores = []
 
-        for ticker, df in self.bulk_price_data.items():
+        for ticker, df in self.price_data.items():
             if ticker == self.params.benchmark:
                 continue
             try:
-                price_slice = df.loc[(df["date"] >= lookback_start) & (df["date"] <= lookback_end)]["adj_close"]
-                if len(price_slice) < 2:
+                prices = df[(df["date"] >= lookback_start) & (df["date"] <= lookback_end)]["adj_close"]
+                if len(prices) < 2:
                     continue
-                momentum = (price_slice.iloc[-1] / price_slice.iloc[0]) - 1
+                momentum = (prices.iloc[-1] / prices.iloc[0]) - 1
                 if isfinite(momentum):
                     momentum_scores.append((ticker, momentum))
             except:
@@ -97,17 +70,6 @@ class SimulationService:
 
         top = sorted(momentum_scores, key=lambda x: x[1], reverse=True)[:self.params.top_n]
         return top
-
-    def get_price(self, ticker, date_str):
-        target_date = pd.to_datetime(date_str)
-
-        for entry in self.price_cache:
-            if entry["name"] == ticker:
-                for price_point in reversed(entry["price_data"]):
-                    price_date = pd.to_datetime(price_point["date"])
-                    if price_date <= target_date:
-                        return price_point["value"]
-        raise ValueError(f"No price for {ticker} on or before {date_str}")
 
     def sell_portfolio(self, date):
         print("[SELLING] Closing all current positions:")
@@ -129,7 +91,7 @@ class SimulationService:
                 })
                 print(f"  - {ticker}: {shares:.4f} shares @ ${price:.2f} = ${value:,.2f}")
             except Exception as e:
-                print(f"[WARN] Could not sell {ticker} on {date.date()}: {e}")
+                print(f"[WARN] Could not sell {ticker}: {e}")
         self.holdings.clear()
         self.purchase_prices.clear()
         self.portfolio_value = total
@@ -141,15 +103,12 @@ class SimulationService:
 
         print("[BUYING] Allocating funds to top tickers:")
         allocation = self.portfolio_value / len(top_tickers)
-        new_holdings = {}
-        new_purchase_prices = {}
-
         for ticker, _ in top_tickers:
             try:
                 price = self.get_price(ticker, date.strftime("%Y-%m-%d"))
                 shares = allocation / price
-                new_holdings[ticker] = shares
-                new_purchase_prices[ticker] = price
+                self.holdings[ticker] = shares
+                self.purchase_prices[ticker] = price
                 self.monthly_orders.append({
                     "ticker": ticker,
                     "action": "Buy",
@@ -160,10 +119,14 @@ class SimulationService:
                 })
                 print(f"  - {ticker}: ${allocation:,.2f} @ ${price:.2f} = {shares:.4f} shares")
             except Exception as e:
-                print(f"[WARN] Could not buy {ticker} on {date.date()}: {e}")
+                print(f"[WARN] Could not buy {ticker}: {e}")
 
-        self.holdings = new_holdings
-        self.purchase_prices = new_purchase_prices
+    def get_benchmark_value(self, date):
+        try:
+            price = self.get_price(self.params.benchmark, date.strftime("%Y-%m-%d"))
+            return round(self.benchmark_shares * price, 2)
+        except:
+            return None
 
     def calculate_portfolio_value_on(self, date):
         total = 0.0
@@ -175,50 +138,67 @@ class SimulationService:
                 continue
         return round(total, 2)
 
-    def get_benchmark_value(self, date):
-        try:
-            price = self.get_price(self.params.benchmark, date.strftime("%Y-%m-%d"))
-            return round(self.benchmark_shares * price, 2)
-        except:
-            return None
+    def should_rebalance_today(self, current, last_rebalance):
+        if last_rebalance is None:
+            return True
+
+        value_now = self.calculate_portfolio_value_on(current)
+        value_then = self.calculate_portfolio_value_on(last_rebalance)
+        if value_then == 0:
+            return False
+
+        change_pct = ((value_now - value_then) / value_then) * 100
+
+        if current >= last_rebalance + relativedelta(months=self.params.hold_months):
+            print(f"[REBALANCE] Scheduled time-based rebalance reached.")
+            return True
+        if change_pct >= self.rebalance_on_gain_pct:
+            print(f"[REBALANCE] Triggered by gain of {change_pct:.2f}% since last rebalance.")
+            return True
+        if change_pct <= -self.rebalance_on_loss_pct:
+            print(f"[REBALANCE] Triggered by loss of {change_pct:.2f}% since last rebalance.")
+            return True
+
+        return False
+
+    def rebalance_portfolio(self, date):
+        print("\n" + "=" * 50)
+        print(f"[REBALANCE] {date.strftime('%Y-%m-%d')}")
+        print("=" * 50)
+        self.monthly_orders = []
+
+        if self.holdings:
+            self.sell_portfolio(date)
+
+        top_n = self.get_top_momentum_stocks(date)
+        self.buy_stocks(date, top_n)
+
+        self.monthly_returns.append({
+            "date": date.strftime("%Y-%m-%d"),
+            "portfolio_value": round(self.portfolio_value, 2),
+            "benchmark_value": self.get_benchmark_value(date),
+            "orders": self.monthly_orders.copy()
+        })
 
     def simulate_over_time(self):
         current = datetime.strptime(self.params.start_date, "%Y-%m-%d")
         end = datetime.strptime(self.params.end_date, "%Y-%m-%d")
+        last_rebalance = None
 
-        while current < end:
-            print("\n" + "=" * 50)
-            print(f"[REBALANCE] {current.strftime('%Y-%m-%d')}")
-            print("=" * 50)
+        while current <= end:
+            if self.should_rebalance_today(current, last_rebalance):
+                self.rebalance_portfolio(current)
+                last_rebalance = current
 
-            self.monthly_orders = []
-
-            if self.holdings:
-                self.sell_portfolio(current)
-
-            top_n = self.get_top_momentum_stocks(current)
-            self.buy_stocks(current, top_n)
-
-            print(f"[SUMMARY] Portfolio Value After Rebalance: ${round(self.portfolio_value, 2):,.2f}")
-
-            self.monthly_returns.append({
+            self.daily_values.append({
                 "date": current.strftime("%Y-%m-%d"),
-                "portfolio_value": round(self.portfolio_value, 2),
-                "benchmark_value": self.get_benchmark_value(current),
-                "orders": self.monthly_orders.copy()
+                "portfolio_value": self.calculate_portfolio_value_on(current)
             })
-
-            next_rebalance = current + relativedelta(months=self.params.hold_months)
-            while current < next_rebalance and current < end:
-                self.daily_values.append({
-                    "date": current.strftime("%Y-%m-%d"),
-                    "portfolio_value": self.calculate_portfolio_value_on(current)
-                })
-                self.daily_benchmark_values.append({
-                    "date": current.strftime("%Y-%m-%d"),
-                    "benchmark_value": self.get_benchmark_value(current)
-                })
-                current += timedelta(days=1)
+            self.daily_benchmark_values.append({
+                "date": current.strftime("%Y-%m-%d"),
+                "benchmark_value": self.get_benchmark_value(current)
+            })
+            current += timedelta(days=1)
 
         self.sell_portfolio(end)
         self.monthly_returns.append({
