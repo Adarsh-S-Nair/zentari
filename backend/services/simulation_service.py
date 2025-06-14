@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from math import isfinite
 import time
+import pandas as pd
 
 class SimulationService:
     def __init__(self, params: SimulationRequest):
@@ -48,8 +49,8 @@ class SimulationService:
             print(f"[WARN] Benchmark data for {self.params.benchmark} missing!")
 
     def get_top_momentum_stocks(self, rebalance_date: datetime):
-        lookback_end = rebalance_date - relativedelta(months=self.params.skip_recent_months)
-        lookback_start = lookback_end - relativedelta(months=self.params.lookback_months)
+        lookback_end = pd.to_datetime(rebalance_date - relativedelta(months=self.params.skip_recent_months))
+        lookback_start = pd.to_datetime(lookback_end - relativedelta(months=self.params.lookback_months))
 
         print(f"[INFO] Calculating momentum scores for rebalance date: {rebalance_date.date()}")
         print(f"[INFO] Lookback range: {lookback_start.date()} to {lookback_end.date()}")
@@ -63,6 +64,7 @@ class SimulationService:
             try:
                 price_slice = df.loc[lookback_start:lookback_end]['adj_close']
                 if len(price_slice) < 2:
+                    print(f"[SKIP] {ticker}: only {len(price_slice)} rows between {lookback_start.date()} and {lookback_end.date()}")
                     continue
 
                 start_price = price_slice.iloc[0]

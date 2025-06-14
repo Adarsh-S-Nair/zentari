@@ -45,27 +45,39 @@ class PriceCache:
         df_to_save.to_parquet(self._get_file_path(ticker), index=False)
 
     def get_or_fetch(self, ticker, start_date, end_date):
-        cached = self.get_cached_data(ticker, start_date, end_date)
+        # Convert to Timestamp early for safety
+        start_date = pd.to_datetime(start_date)
+        end_date = pd.to_datetime(end_date)
 
-        if cached.empty:
-            print(f"[INFO] No cache for {ticker}. Fetching from yfinance.")
-            df = yf.download(ticker, start=start_date, end=end_date, progress=False, auto_adjust=False)
+        # Attempt to read cached data
+        path = self._get_file_path(ticker)
+        cached_df = None
+        if os.path.exists(path):
+            cached_df = pd.read_parquet(path)
+            cached_df["date"] = pd.to_datetime(cached_df["date"])
 
-            print(f"[DEBUG] Raw columns from yfinance for {ticker}: {df.columns.tolist()}")
+            # Check if all requested dates are covered
+            available_dates = cached_df["date"]
+            has_start = (available_dates >= start_date).any()
+            has_end = (available_dates <= end_date).any()
 
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
-                print(f"[DEBUG] Flattened columns for {ticker}: {df.columns.tolist()}")
-
-            if "Adj Close" in df.columns and not df.empty:
-                try:
-                    self.cache_data(ticker, df)
-                    return self.get_cached_data(ticker, start_date, end_date)
-                except Exception as e:
-                    print(f"[ERROR] Failed to cache data for {ticker}: {e}")
-                    return pd.DataFrame()
+            if has_start and has_end:
+                print(f"[CACHE] Hit for {ticker} from {start_date.date()} to {end_date.date()}")
+                return cached_df[(available_dates >= start_date) & (available_dates <= end_date)]
             else:
-                print(f"[WARN] yfinance returned empty or invalid data for {ticker}")
-                return pd.DataFrame()
+                print(f"[CACHE] Incomplete cache for {ticker}. Refetching.")
 
-        return cached
+        # Download full range if not cached or incomplete
+        print(f"[FETCH] Downloading {ticker} from {start_date.date()} to {end_date.date()}")
+        df = yf.download(ticker, start=start_date, end=end_date, progress=False, auto_adjust=False)
+
+        if df.empty or "Adj Close" not in df.columns:
+            print(f"[WARN] yfinance returned no data for {ticker}")
+            return pd.DataFrame()
+
+        try:
+            self.cache_data(ticker, df)
+            return self.get_cached_data(ticker, start_date, end_date)
+        except Exception as e:
+            print(f"[ERROR] Failed to cache {ticker}: {e}")
+            return pd.DataFrame()
