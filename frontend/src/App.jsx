@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import SidebarForm from './components/SidebarForm'
+import CollapsibleSidebar from './components/CollapsibleSidebar'
 import MainPanel from './components/MainPanel'
 
 function App() {
@@ -44,17 +44,15 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 font-sans p-[24px] box-border flex flex-col">
-      <div className="w-full max-w-[1440px] mx-auto flex flex-1 overflow-hidden">
-        <SidebarForm
-          form={form}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          error={error}
-          loading={loading}
-        />
-        <MainPanel loading={loading} result={result} />
-      </div>
+    <div className="flex h-screen w-screen overflow-hidden">
+      <CollapsibleSidebar
+        form={form}
+        handleChange={handleChange}
+        handleSubmit={handleSubmit}
+        error={error}
+        loading={loading}
+      />
+      <MainPanel loading={loading} result={result} />
     </div>
   )
 }
