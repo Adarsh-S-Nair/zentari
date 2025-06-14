@@ -12,7 +12,6 @@ import { Line } from 'react-chartjs-2'
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend)
 
 const LineChart = ({ result }) => {
-  // Extract and format dates from daily_values
   const labels = result.daily_values.map(entry =>
     new Intl.DateTimeFormat('en-US', {
       timeZone: 'UTC',
@@ -22,11 +21,9 @@ const LineChart = ({ result }) => {
     }).format(new Date(entry.date + 'T00:00:00Z'))
   )
 
-  // Extract corresponding portfolio and benchmark values
   const portfolioData = result.daily_values.map(entry => entry.portfolio_value)
   const benchmarkData = result.daily_benchmark_values.map(entry => entry.benchmark_value)
 
-  // Normalize to percent change (relative to day 1)
   const basePortfolio = portfolioData[0]
   const baseBenchmark = benchmarkData[0]
 
@@ -92,8 +89,8 @@ const LineChart = ({ result }) => {
         },
         ticks: {
           autoSkip: true,
-          maxTicksLimit: 6, // optional fallback
-          stepSize: 5,      // optional: show ticks every 5%
+          maxTicksLimit: 6,
+          stepSize: 5,
           callback: val => `${val.toFixed(1)}%`,
           display: true,
           padding: 8,
@@ -137,13 +134,13 @@ const LineChart = ({ result }) => {
 
   return (
     <div
-      className="w-full max-w-[700px] h-[300px] bg-white rounded-[8px] pt-0 pr-[20px] pb-[20px] pl-[20px] flex flex-col"
+      className="w-full max-w-[700px] h-[300px] bg-white rounded-[8px] flex flex-col"
       style={{
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
         border: '1px solid #e5e7eb'
       }}
     >
-      <div className="flex-1">
+      <div className="flex-1 px-[20px]">
         <Line data={data} options={options} />
       </div>
     </div>

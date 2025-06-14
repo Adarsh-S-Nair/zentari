@@ -1,6 +1,8 @@
-// components/SummaryStat.jsx
+import Pill from './Pill'
+
 function SummaryStat({ label, value, diff = null }) {
-  const isPositive = diff && diff >= 0
+  const isPositive = diff > 0
+  const isZero = diff === 0
 
   // Format number as currency: $11,234.56
   const formatCurrency = val => {
@@ -12,6 +14,11 @@ function SummaryStat({ label, value, diff = null }) {
     }
     return val
   }
+
+  const formattedValue =
+    typeof value === 'number' && label.toLowerCase().includes('value')
+      ? formatCurrency(value)
+      : value
 
   return (
     <div className="flex flex-col items-center">
@@ -35,23 +42,11 @@ function SummaryStat({ label, value, diff = null }) {
             color: '#1f2937'
           }}
         >
-          {formatCurrency(value)}
+          {formattedValue}
         </div>
 
         {diff !== null && (
-          <div
-            style={{
-              fontSize: '10px',
-              padding: '2px 5px',
-              borderRadius: '9999px',
-              fontWeight: 500,
-              backgroundColor: isPositive ? '#dcfce7' : '#fee2e2',
-              color: isPositive ? '#16a34a' : '#dc2626'
-            }}
-          >
-            {isPositive ? '+' : ''}
-            {diff.toFixed(1)}%
-          </div>
+          <Pill value={diff} isPositive={isPositive} isZero={isZero} />
         )}
       </div>
     </div>

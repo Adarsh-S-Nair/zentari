@@ -1,6 +1,7 @@
 import Spinner from './Spinner'
 import LineChart from './LineChart'
 import SummaryStat from './SummaryStat'
+import CollapsibleMonthlyTable from './CollapsibleMonthlyTable'
 
 function MainPanel({ loading, result }) {
   return (
@@ -10,7 +11,7 @@ function MainPanel({ loading, result }) {
           <Spinner />
         </div>
       ) : result ? (
-        <div className="flex flex-col items-center gap-[20px] pt-[24px]">
+        <div className="flex flex-col items-center gap-[20px] pt-[24px] pb-[40px]">
           {/* ⬆️ Summary row */}
           <div className="flex justify-around w-full max-w-[700px] px-[20px]">
             <SummaryStat
@@ -35,10 +36,17 @@ function MainPanel({ loading, result }) {
                 100
               }
             />
+            <SummaryStat
+              label="Duration"
+              value={`${result.duration_sec.toFixed(2)} seconds`}
+            />
           </div>
 
           {/* ⬇️ Chart */}
           <LineChart result={result} />
+
+          {/* ⬇️ Collapsible Table */}
+          <CollapsibleMonthlyTable monthlyReturns={result.monthly_returns} />
         </div>
       ) : (
         <div className="text-gray-500 text-[14px] italic text-center pt-[40px]">

@@ -1,83 +1,80 @@
 import os
 import pandas as pd
-import yfinance as yf
 from datetime import datetime
+from dateutil.rrule import rrule, MONTHLY
 
 CACHE_DIR = "backend/data/price_cache"
-os.makedirs(CACHE_DIR, exist_ok=True)
 
 class PriceCache:
     def __init__(self):
-        pass
+        os.makedirs(CACHE_DIR, exist_ok=True)
 
-    def _get_file_path(self, ticker):
-        return os.path.join(CACHE_DIR, f"{ticker}.parquet")
+    def _get_chunk_path(self, ticker, year, month):
+        return os.path.join(CACHE_DIR, ticker, f"{year:04d}-{month:02d}.parquet")
 
-    def get_cached_data(self, ticker, start_date, end_date):
-        path = self._get_file_path(ticker)
+    def _ensure_ticker_dir(self, ticker):
+        path = os.path.join(CACHE_DIR, ticker)
+        os.makedirs(path, exist_ok=True)
 
-        if not os.path.exists(path):
-            return pd.DataFrame()
+    def _fetch_and_cache_chunk(self, ticker, year, month):
+        # UNUSED NOW in batch flow, but still supports fallback if needed
+        self._ensure_ticker_dir(ticker)
+        start = pd.Timestamp(f"{year:04d}-{month:02d}-01")
+        end = (start + pd.offsets.MonthEnd(1)).normalize()
 
-        df = pd.read_parquet(path)
-        df["date"] = pd.to_datetime(df["date"])
+        print(f"[FETCH] {ticker} {start.date()} to {end.date()}")
+        df = yf.download(ticker, start=start, end=end + pd.Timedelta(days=1), progress=False, auto_adjust=False)
+        if df.empty or "Adj Close" not in df.columns:
+            print(f"[INFO] No data returned for {ticker} {year}-{month}")
+            return None
 
-        return df[(df["date"] >= pd.to_datetime(start_date)) & (df["date"] <= pd.to_datetime(end_date))]
+        df = df[["Adj Close"]].reset_index().rename(columns={"Date": "date", "Adj Close": "adj_close"})
+        df.columns = [col if not isinstance(col, tuple) else col[0] for col in df.columns]
+        df["ticker"] = ticker
+        df.to_parquet(self._get_chunk_path(ticker, year, month), index=False)
+        return df
 
-    def cache_data(self, ticker, df):
-        # Flatten MultiIndex columns if needed
+    def save_bulk_data(self, ticker, df):
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
 
-        if "Adj Close" not in df.columns:
-            print(f"[ERROR] 'Adj Close' column missing for {ticker} after flattening")
-            return
+        df = df[["Adj Close"]].reset_index().rename(columns={"Date": "date", "Adj Close": "adj_close"})
+        df["ticker"] = ticker
+        df["date"] = pd.to_datetime(df["date"])
 
-        df_to_save = df.copy().reset_index()[["Date", "Adj Close"]].rename(columns={
-            "Date": "date",
-            "Adj Close": "adj_close"
-        })
-        df_to_save["ticker"] = ticker
+        self._ensure_ticker_dir(ticker)
 
-        print(f"[DEBUG] Saving {len(df_to_save)} records to Parquet for {ticker}")
-        print(f"[DEBUG] First record to save: {df_to_save.iloc[0].to_dict()}")
+        for dt in df["date"].dt.to_period("M").unique():
+            month_start = dt.to_timestamp()
+            month_end = (month_start + pd.offsets.MonthEnd(0))
 
-        df_to_save.to_parquet(self._get_file_path(ticker), index=False)
+            chunk = df[(df["date"] >= month_start) & (df["date"] <= month_end)]
+            if chunk.empty:
+                continue
+
+            chunk_path = self._get_chunk_path(ticker, month_start.year, month_start.month)
+            chunk.to_parquet(chunk_path, index=False)
+            print(f"[CACHE] Saved {ticker} {month_start.strftime('%Y-%m')} ({len(chunk)} rows)")
 
     def get_or_fetch(self, ticker, start_date, end_date):
-        # Convert to Timestamp early for safety
-        start_date = pd.to_datetime(start_date)
-        end_date = pd.to_datetime(end_date)
+        start = pd.to_datetime(start_date)
+        end = pd.to_datetime(end_date)
 
-        # Attempt to read cached data
-        path = self._get_file_path(ticker)
-        cached_df = None
-        if os.path.exists(path):
-            cached_df = pd.read_parquet(path)
-            cached_df["date"] = pd.to_datetime(cached_df["date"])
+        all_chunks = []
 
-            # Check if all requested dates are covered
-            available_dates = cached_df["date"]
-            has_start = (available_dates >= start_date).any()
-            has_end = (available_dates <= end_date).any()
+        for dt in rrule(MONTHLY, dtstart=start, until=end):
+            year, month = dt.year, dt.month
+            path = self._get_chunk_path(ticker, year, month)
 
-            if has_start and has_end:
-                print(f"[CACHE] Hit for {ticker} from {start_date.date()} to {end_date.date()}")
-                return cached_df[(available_dates >= start_date) & (available_dates <= end_date)]
-            else:
-                print(f"[CACHE] Incomplete cache for {ticker}. Refetching.")
+            if os.path.exists(path):
+                df = pd.read_parquet(path)
+                print(f"[CACHE] Found {ticker} {year}-{month} ({len(df)} rows)")
+                all_chunks.append(df)
 
-        # Download full range if not cached or incomplete
-        print(f"[FETCH] Downloading {ticker} from {start_date.date()} to {end_date.date()}")
-        df = yf.download(ticker, start=start_date, end=end_date, progress=False, auto_adjust=False)
-
-        if df.empty or "Adj Close" not in df.columns:
-            print(f"[WARN] yfinance returned no data for {ticker}")
+        if not all_chunks:
+            print(f"[WARN] No cached data found for {ticker} from {start_date} to {end_date}")
             return pd.DataFrame()
 
-        try:
-            self.cache_data(ticker, df)
-            return self.get_cached_data(ticker, start_date, end_date)
-        except Exception as e:
-            print(f"[ERROR] Failed to cache {ticker}: {e}")
-            return pd.DataFrame()
+        combined = pd.concat(all_chunks)
+        combined["date"] = pd.to_datetime(combined["date"])
+        return combined[(combined["date"] >= start) & (combined["date"] <= end)].sort_values("date")

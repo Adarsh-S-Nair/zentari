@@ -1,21 +1,30 @@
 import pandas as pd
-from backend.services.price_cache import PriceCache
+import yfinance as yf
 
-price_cache = PriceCache()
-
-def download_bulk_momentum_prices(start_dt, end_dt, benchmark="SPY"):
+def load_bulk_scoring_data(start_dt, end_dt, benchmark="SPY"):
     sp500 = pd.read_csv("https://datahub.io/core/s-and-p-500-companies/r/constituents.csv")
     tickers = [t.replace('.', '-') for t in sp500['Symbol'].tolist()]
     if benchmark not in tickers:
         tickers.append(benchmark)
 
+    print(f"[INFO] Bulk downloading OHLC data for {len(tickers)} tickers")
+    all_data = yf.download(
+        tickers=tickers,
+        start=start_dt,
+        end=end_dt + pd.Timedelta(days=1),
+        group_by="ticker",
+        auto_adjust=False,
+        progress=False
+    )
+
     result = {}
     for ticker in tickers:
         try:
-            df = price_cache.get_or_fetch(ticker, start_dt.date(), end_dt.date())
-            if not df.empty:
-                df.set_index("date", inplace=True)
-                result[ticker] = df
+            ticker_df = all_data[ticker] if isinstance(all_data.columns, pd.MultiIndex) else all_data
+            df = ticker_df[["Adj Close"]].reset_index()
+            df.columns = ["date", "adj_close"]
+            df["ticker"] = ticker
+            result[ticker] = df
         except Exception as e:
-            print(f"[ERROR] Failed {ticker}: {e}")
+            print(f"[WARN] Skipping {ticker}: {e}")
     return result

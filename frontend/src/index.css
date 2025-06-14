@@ -30,3 +30,28 @@ body {
 html, body, #root {
   height: 100%;
 }
+
+/* styles/globals.css or index.css */
+::-webkit-scrollbar {
+  width: 6px;       /* make scrollbar thinner */
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #d1d5db; /* Tailwind gray-300 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-button {
+  display: none; /* remove up/down arrows */
+}
+
+/* Firefox support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
