@@ -13,12 +13,14 @@ class SimulationService:
         self.bulk_price_data = {}  # {ticker: DataFrame}
         self.used_tickers = set()
         self.holdings = {}
+        self.purchase_prices = {}  # Store purchase prices for return calculations
         self.portfolio_value = params.starting_value
         self.benchmark_value = params.starting_value
         self.benchmark_shares = 0
         self.monthly_returns = []
         self.daily_values = []
         self.daily_benchmark_values = []
+        self.monthly_orders = []
 
     def preload_price_data(self):
         self.download_bulk_data()
@@ -115,10 +117,21 @@ class SimulationService:
                 price = self.get_price(ticker, date.strftime("%Y-%m-%d"))
                 value = shares * price
                 total += value
+                cost_basis = self.purchase_prices.get(ticker, price)
+                return_pct = ((price - cost_basis) / cost_basis) * 100 if cost_basis else 0
+                self.monthly_orders.append({
+                    "ticker": ticker,
+                    "action": "Sell",
+                    "price": round(price, 2),
+                    "shares": round(shares, 4),
+                    "amount": round(value, 2),
+                    "return_pct": round(return_pct, 2)
+                })
                 print(f"  - {ticker}: {shares:.4f} shares @ ${price:.2f} = ${value:,.2f}")
             except Exception as e:
                 print(f"[WARN] Could not sell {ticker} on {date.date()}: {e}")
         self.holdings.clear()
+        self.purchase_prices.clear()
         self.portfolio_value = total
 
     def buy_stocks(self, date, top_tickers):
@@ -129,17 +142,28 @@ class SimulationService:
         print("[BUYING] Allocating funds to top tickers:")
         allocation = self.portfolio_value / len(top_tickers)
         new_holdings = {}
+        new_purchase_prices = {}
 
         for ticker, _ in top_tickers:
             try:
                 price = self.get_price(ticker, date.strftime("%Y-%m-%d"))
                 shares = allocation / price
                 new_holdings[ticker] = shares
+                new_purchase_prices[ticker] = price
+                self.monthly_orders.append({
+                    "ticker": ticker,
+                    "action": "Buy",
+                    "price": round(price, 2),
+                    "shares": round(shares, 4),
+                    "amount": round(allocation, 2),
+                    "return_pct": None
+                })
                 print(f"  - {ticker}: ${allocation:,.2f} @ ${price:.2f} = {shares:.4f} shares")
             except Exception as e:
                 print(f"[WARN] Could not buy {ticker} on {date.date()}: {e}")
 
         self.holdings = new_holdings
+        self.purchase_prices = new_purchase_prices
 
     def calculate_portfolio_value_on(self, date):
         total = 0.0
@@ -167,6 +191,8 @@ class SimulationService:
             print(f"[REBALANCE] {current.strftime('%Y-%m-%d')}")
             print("=" * 50)
 
+            self.monthly_orders = []
+
             if self.holdings:
                 self.sell_portfolio(current)
 
@@ -179,7 +205,7 @@ class SimulationService:
                 "date": current.strftime("%Y-%m-%d"),
                 "portfolio_value": round(self.portfolio_value, 2),
                 "benchmark_value": self.get_benchmark_value(current),
-                "tickers": [t[0] for t in top_n]
+                "orders": self.monthly_orders.copy()
             })
 
             next_rebalance = current + relativedelta(months=self.params.hold_months)
@@ -199,7 +225,7 @@ class SimulationService:
             "date": end.strftime("%Y-%m-%d"),
             "portfolio_value": round(self.portfolio_value, 2),
             "benchmark_value": self.get_benchmark_value(end),
-            "tickers": []
+            "orders": self.monthly_orders.copy()
         })
 
     def run(self):

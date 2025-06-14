@@ -21,10 +21,11 @@ function CollapsibleMonthlyTable({ monthlyReturns }) {
             boxSizing: 'border-box'
           }}
         >
-          <div className="grid grid-cols-3 text-[12px] font-medium text-gray-500 pr-[10px]">
+          <div className="grid grid-cols-[1fr_1fr_1fr_32px] text-[12px] font-medium text-gray-500 pr-[12px]">
             <div className="text-left">Date</div>
             <div className="text-right">Portfolio Value</div>
             <div className="text-right">Benchmark Value</div>
+            <div></div>
           </div>
         </div>
       </div>
@@ -37,7 +38,7 @@ function CollapsibleMonthlyTable({ monthlyReturns }) {
           overflowX: 'hidden',
           flexGrow: 1,
           boxSizing: 'border-box',
-          paddingRight: '24px', // avoids content flush with scrollbar
+          paddingRight: '0px',
           marginRight: '0px'
         }}
       >
@@ -59,6 +60,7 @@ function CollapsibleMonthlyTable({ monthlyReturns }) {
                 benchmark={entry.benchmark_value}
                 portfolioChange={pctChangePortfolio}
                 benchmarkChange={pctChangeBenchmark}
+                trades={entry.orders}
               />
             )
           })}
