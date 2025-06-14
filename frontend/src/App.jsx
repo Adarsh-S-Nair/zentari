@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import SidebarForm from './components/SidebarForm'
-import Spinner from './components/Spinner'
+import MainPanel from './components/MainPanel'
 
 function App() {
   const [loading, setLoading] = useState(false)
@@ -45,7 +45,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans p-[24px] box-border flex flex-col">
-      <div className="flex flex-1 overflow-hidden">
+      <div className="w-full max-w-[1440px] mx-auto flex flex-1 overflow-hidden">
         <SidebarForm
           form={form}
           handleChange={handleChange}
@@ -53,30 +53,7 @@ function App() {
           error={error}
           loading={loading}
         />
-
-        <main className="flex-1 px-[24px] overflow-y-auto">
-          {loading ? (
-            <Spinner />
-          ) : result ? (
-            <div
-              className="bg-white rounded-[8px] px-[24px] py-[16px] max-w-[600px]"
-              style={{
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-                border: '1px solid #e5e7eb'
-              }}
-            >
-              <h2 className="text-[16px] font-semibold mb-[16px] text-gray-800">Simulation Summary</h2>
-              <p className="mb-[8px]"><strong>Start:</strong> {result.start_date}</p>
-              <p className="mb-[8px]"><strong>End:</strong> {result.end_date}</p>
-              <p className="mb-[8px]"><strong>Final Portfolio Value:</strong> ${result.final_portfolio_value.toFixed(2)}</p>
-              <p className="mb-[8px]"><strong>Final Benchmark Value ({form.benchmark}):</strong> ${result.final_benchmark_value.toFixed(2)}</p>
-              <p className="mb-[8px]"><strong>Total Return:</strong> {result.total_return_pct.toFixed(2)}%</p>
-              <p className="mb-[8px]"><strong>Simulation Time:</strong> {result.duration_sec.toFixed(2)}s</p>
-            </div>
-          ) : (
-            <div className="text-gray-500 italic">Run a simulation to see results here.</div>
-          )}
-        </main>
+        <MainPanel loading={loading} result={result} />
       </div>
     </div>
   )

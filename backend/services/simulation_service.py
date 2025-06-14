@@ -1,6 +1,6 @@
 from backend.models.schema import SimulationRequest
 from backend.utils.data_fetcher import download_bulk_momentum_prices
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from math import isfinite
 import time
@@ -15,6 +15,8 @@ class SimulationService:
         self.benchmark_shares = 0
         self.monthly_returns = []
         self.sell_counter = 0
+        self.daily_values = []
+        self.daily_benchmark_values = []
 
     def preload_price_data(self):
         start_dt = datetime.strptime(self.params.start_date, "%Y-%m-%d")
@@ -128,6 +130,31 @@ class SimulationService:
             return None
         price = df.loc[date]['adj_close'] if date in df.index else df['adj_close'].asof(date)
         return round(self.benchmark_shares * price, 2)
+    
+
+    def calculate_portfolio_value_on(self, date: datetime) -> float:
+        total = 0.0
+        for ticker, shares in self.holdings.items():
+            df = self.price_cache.get(ticker)
+            if df is None or df.empty:
+                continue
+            try:
+                price = df.loc[date]['adj_close'] if date in df.index else df['adj_close'].asof(date)
+                total += shares * price
+            except Exception as e:
+                print(f"[WARN] Could not calculate value for {ticker} on {date.date()}: {e}")
+        return round(total, 2)
+    
+    def calculate_benchmark_value_on(self, date: datetime) -> float:
+        df = self.price_cache.get(self.params.benchmark)
+        if df is None or df.empty:
+            return None
+        try:
+            price = df.loc[date]['adj_close'] if date in df.index else df['adj_close'].asof(date)
+            return round(self.benchmark_shares * price, 2)
+        except Exception as e:
+            print(f"[WARN] Could not calculate benchmark on {date.date()}: {e}")
+            return None
 
     def simulate_over_time(self):
         current_date = datetime.strptime(self.params.start_date, "%Y-%m-%d")
@@ -152,7 +179,21 @@ class SimulationService:
                 "tickers": [t[0] for t in top_n]
             })
 
-            current_date += relativedelta(months=self.params.hold_months)
+            next_rebalance_date = current_date + relativedelta(months=self.params.hold_months)
+            while current_date < next_rebalance_date and current_date < end_date:
+                value = self.calculate_portfolio_value_on(current_date)
+                benchmark_val = self.calculate_benchmark_value_on(current_date)
+
+                self.daily_values.append({
+                    "date": current_date.strftime("%Y-%m-%d"),
+                    "portfolio_value": value
+                })
+
+                self.daily_benchmark_values.append({
+                    "date": current_date.strftime("%Y-%m-%d"),
+                    "benchmark_value": benchmark_val
+                })
+                current_date += timedelta(days=1)
 
         print(f"\n{'=' * 50}")
         print(f"[SIM] FINAL SELL — {end_date.date()}")
@@ -179,6 +220,8 @@ class SimulationService:
         return {
             "start_date": self.params.start_date,
             "end_date": self.params.end_date,
+            "benchmark": self.params.benchmark,
+            "starting_value": self.params.starting_value,
             "lookback_months": self.params.lookback_months,
             "skip_recent_months": self.params.skip_recent_months,
             "top_n": self.params.top_n,
@@ -186,5 +229,7 @@ class SimulationService:
             "final_benchmark_value": final_benchmark,
             "total_return_pct": round(((self.portfolio_value - self.params.starting_value) / self.params.starting_value) * 100, 2),
             "monthly_returns": self.monthly_returns,
+            "daily_values": self.daily_values,
+            "daily_benchmark_values": self.daily_benchmark_values,
             "duration_sec": duration_sec
         }
