@@ -18,24 +18,37 @@ class SimulationService:
         self.daily_values = []
         self.daily_benchmark_values = []
         self.monthly_orders = []
-        self.price_data = {}  # {ticker: DataFrame}
+        self.price_data = {}
 
-        # Performance-based rebalance thresholds
-        self.rebalance_on_gain_pct = 10  # take-profit trigger
-        self.rebalance_on_loss_pct = 5   # stop-loss trigger
+        self.rebalance_on_gain_pct = 10
+        self.rebalance_on_loss_pct = 5
 
     def preload_price_data(self):
         start_dt = datetime.strptime(self.params.start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(self.params.end_date, "%Y-%m-%d")
         lookback_start = start_dt - relativedelta(months=self.params.lookback_months + self.params.skip_recent_months)
+
+        # Load all required price data (including benchmark) from DuckDB or fallback
         self.price_data = load_bulk_scoring_data(lookback_start, end_dt, benchmark=self.params.benchmark)
 
+        # Ensure all DataFrames are properly indexed and sorted
+        for ticker in self.price_data:
+            df = self.price_data[ticker].copy()
+            df["date"] = pd.to_datetime(df["date"])
+            df.set_index("date", inplace=True)
+            df.sort_index(inplace=True)  # Required for .asof() to work reliably
+            self.price_data[ticker] = df
+
+        # Set up benchmark shares using price on the official start date
         benchmark_df = self.price_data.get(self.params.benchmark)
         if benchmark_df is not None and not benchmark_df.empty:
-            benchmark_df = benchmark_df.set_index("date")
-            start_price = benchmark_df.loc[self.params.start_date]['adj_close'] \
-                if self.params.start_date in benchmark_df.index \
-                else benchmark_df['adj_close'].asof(self.params.start_date)
+            start_date_ts = pd.to_datetime(self.params.start_date)
+
+            if start_date_ts in benchmark_df.index:
+                start_price = benchmark_df.loc[start_date_ts]['adj_close']
+            else:
+                start_price = benchmark_df['adj_close'].asof(start_date_ts)
+
             self.benchmark_shares = self.params.starting_value / start_price
         else:
             print(f"[WARN] Benchmark data for {self.params.benchmark} missing!")
@@ -45,10 +58,7 @@ class SimulationService:
         if df is None or df.empty:
             raise ValueError(f"No data for ticker {ticker}")
         target = pd.to_datetime(date_str)
-        eligible = df[df['date'] <= target]
-        if eligible.empty:
-            raise ValueError(f"No price for {ticker} on or before {date_str}")
-        return eligible.iloc[-1]['adj_close']
+        return df["adj_close"].asof(target)
 
     def get_top_momentum_stocks(self, rebalance_date):
         lookback_end = pd.to_datetime(rebalance_date - relativedelta(months=self.params.skip_recent_months))
@@ -59,13 +69,14 @@ class SimulationService:
             if ticker == self.params.benchmark:
                 continue
             try:
-                prices = df[(df["date"] >= lookback_start) & (df["date"] <= lookback_end)]["adj_close"]
+                prices = df[(df.index >= lookback_start) & (df.index <= lookback_end)]["adj_close"]
                 if len(prices) < 2:
                     continue
                 momentum = (prices.iloc[-1] / prices.iloc[0]) - 1
                 if isfinite(momentum):
                     momentum_scores.append((ticker, momentum))
-            except:
+            except Exception as e:
+                print(f"[WARN] Error computing momentum for {ticker}: {e}")
                 continue
 
         top = sorted(momentum_scores, key=lambda x: x[1], reverse=True)[:self.params.top_n]
@@ -124,8 +135,10 @@ class SimulationService:
     def get_benchmark_value(self, date):
         try:
             price = self.get_price(self.params.benchmark, date.strftime("%Y-%m-%d"))
-            return round(self.benchmark_shares * price, 2)
-        except:
+            value = round(self.benchmark_shares * price, 2)
+            return value
+        except Exception as e:
+            print(f"[WARN] Failed to get benchmark value on {date}: {e}")
             return None
 
     def calculate_portfolio_value_on(self, date):
