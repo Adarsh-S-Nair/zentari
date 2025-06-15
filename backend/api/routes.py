@@ -12,12 +12,10 @@ def root():
 @router.post("/simulate")
 def run_simulation(params: SimulationRequest):
     try:
-        start = datetime.strptime(params.start_date, "%Y-%m-%d")
-        end = datetime.strptime(params.end_date, "%Y-%m-%d")
-        if start > end:
-            return {"error": "Start date must be before end date."}
-    except ValueError:
-        return {"error": "Invalid date format. Use YYYY-MM-DD."}
-
-    sim = SimulationService(params)
-    return sim.run()
+        sim = SimulationService(params)
+        result = sim.run()
+        return result
+    except ValueError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": f"Unexpected error: {str(e)}"}

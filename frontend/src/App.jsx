@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import CollapsibleSidebar from './components/CollapsibleSidebar'
 import MainPanel from './components/MainPanel'
+import Toast from './components/Toast'
 
 function App() {
   const [loading, setLoading] = useState(false)
@@ -15,7 +16,7 @@ function App() {
     benchmark: 'SPY'
   })
   const [result, setResult] = useState(null)
-  const [error, setError] = useState(null)
+  const [toast, setToast] = useState({ message: '', type: 'default' })
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -23,7 +24,7 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError(null)
+    setToast({ message: '', type: 'default' })
     setResult(null)
     setLoading(true)
 
@@ -36,15 +37,18 @@ function App() {
         body: JSON.stringify(form),
       })
       const data = await response.json()
-      if (data.error) setError(data.error)
-      else setResult(data)
+      if (data.error) {
+        setToast({ message: data.error, type: 'error' })
+      } else {
+        setResult(data)
+        setToast({ message: 'Simulation completed!', type: 'success' })
+      }
     } catch {
-      setError('Something went wrong.')
+      setToast({ message: 'Something went wrong.', type: 'error' })
     } finally {
       setLoading(false)
     }
   }
-
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
@@ -52,10 +56,15 @@ function App() {
         form={form}
         handleChange={handleChange}
         handleSubmit={handleSubmit}
-        error={error}
         loading={loading}
       />
       <MainPanel loading={loading} result={result} />
+      <Toast
+        key={toast.message}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: '', type: 'default' })}
+      />
     </div>
   )
 }

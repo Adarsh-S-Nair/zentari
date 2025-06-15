@@ -23,6 +23,36 @@ class SimulationService:
         self.rebalance_on_gain_pct = 10
         self.rebalance_on_loss_pct = 5
 
+    def validate_inputs(self):
+        errors = []
+
+        try:
+            start_date = datetime.strptime(self.params.start_date, "%Y-%m-%d")
+            end_date = datetime.strptime(self.params.end_date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("Invalid date format. Use YYYY-MM-DD.")
+
+        if start_date > end_date:
+            errors.append("Start date cannot be after end date.")
+        if start_date.year < 2000:
+            errors.append("Start date cannot be before the year 2000.")
+        if not (1 <= self.params.lookback_months <= 12):
+            errors.append("Lookback months must be between 1 and 12.")
+        if not (1 <= self.params.hold_months <= 3):
+            errors.append("Hold months must be between 1 and 3.")
+        if not (1 <= self.params.top_n <= 20):
+            errors.append("Top N must be between 1 and 20.")
+        if not (0 < self.params.starting_value <= 1_000_000_000):
+            errors.append("Starting value must be greater than 0 and at most 1,000,000,000.")
+
+        # Check if benchmark exists in price data (after preload)
+        benchmark_data = self.price_data.get(self.params.benchmark)
+        if benchmark_data is None or benchmark_data.empty:
+            errors.append(f"Benchmark ticker '{self.params.benchmark}' is invalid or has no data.")
+
+        if errors:
+            raise ValueError("\n".join(errors))
+
     def preload_price_data(self):
         start_dt = datetime.strptime(self.params.start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(self.params.end_date, "%Y-%m-%d")
@@ -224,6 +254,7 @@ class SimulationService:
     def run(self):
         start = time.time()
         self.preload_price_data()
+        self.validate_inputs()
         self.simulate_over_time()
         duration = round(time.time() - start, 2)
         final = self.monthly_returns[-1]["benchmark_value"] if self.monthly_returns else None
