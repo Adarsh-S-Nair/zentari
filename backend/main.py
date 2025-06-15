@@ -14,7 +14,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",  # dev
-        "https://zentari-7opu.onrender.com",  # production
+        "https://zentari-seven.vercel.app",  # production
     ],
     allow_credentials=True,
     allow_methods=["*"],
