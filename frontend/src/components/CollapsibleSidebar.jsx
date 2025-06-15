@@ -1,146 +1,194 @@
-import React, { useState } from 'react'
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi'
+import React, { useState, useRef, useEffect } from 'react'
+import {
+  FiMenu,
+  FiChevronDown,
+  FiChevronUp,
+  FiBarChart2,
+  FiFolder,
+} from 'react-icons/fi'
+import SimulationControls from './SimulationControls'
+import { useNavigate, useLocation } from 'react-router-dom'
+import logo from '../assets/logo.png'
 
 function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [isOpen, setIsOpen] = useState(true)
+  const [showSimulation, setShowSimulation] = useState(true)
+  const contentRef = useRef(null)
+  const [contentHeight, setContentHeight] = useState(0)
 
-  const groupedFields = [
-    [
-      { label: 'Start Date', name: 'start_date', type: 'date' },
-      { label: 'End Date', name: 'end_date', type: 'date' }
-    ],
-    [
-      { label: 'Lookback Months', name: 'lookback_months', type: 'number' },
-      { label: 'Skip Recent Months', name: 'skip_recent_months', type: 'number' }
-    ],
-    [
-      { label: 'Hold Months', name: 'hold_months', type: 'number' },
-      { label: 'Top N Stocks', name: 'top_n', type: 'number' }
-    ],
-    [
-      { label: 'Starting Value ($)', name: 'starting_value', type: 'number' },
-      { label: 'Benchmark Ticker', name: 'benchmark', type: 'text' }
-    ]
+  const collapsedWidth = 60
+
+  useEffect(() => {
+    if (contentRef.current) {
+      setContentHeight(contentRef.current.scrollHeight)
+    }
+  }, [showSimulation])
+
+  const tabs = [
+    {
+      label: 'Simulation',
+      icon: <FiBarChart2 size={18} style={{ verticalAlign: 'middle' }} />,
+      route: '/simulate',
+      expanded: showSimulation,
+      toggle: () => setShowSimulation(prev => !prev),
+      content: (
+        <div
+          style={{
+            maxHeight: showSimulation ? `${contentHeight}px` : '0px',
+            transition: 'max-height 0.3s ease',
+            overflow: 'hidden',
+            backgroundColor: '#1c232f',
+            borderBottomLeftRadius: '6px',
+            borderBottomRightRadius: '6px',
+          }}
+        >
+          <div ref={contentRef} className="px-[24px] py-[16px]">
+            <SimulationControls
+              form={form}
+              handleChange={handleChange}
+              handleSubmit={handleSubmit}
+              error={error}
+              loading={loading}
+            />
+          </div>
+        </div>
+      ),
+    },
+    {
+      label: 'My Portfolio',
+      icon: <FiFolder size={18} style={{ verticalAlign: 'middle' }} />,
+      route: '/portfolio',
+      expanded: false,
+      toggle: null,
+      content: null,
+    },
   ]
 
   return (
-    <div
-      className="transition-all duration-300 flex flex-col items-start"
-      style={{
-        height: '100vh',
-        backgroundColor: '#1f2937',
-        width: isOpen ? '260px' : '36px',
-        padding: isOpen ? '16px' : '6px',
-        boxShadow: '12px 100px 24px rgba(0, 0, 0, 0.26)',
-        fontFamily: '"Inter", system-ui, sans-serif',
-        color: '#f3f4f6',
-        position: 'relative',
-        zIndex: 10
-      }}
-    >
-      {/* Toggle Button */}
-      <button
-        onClick={() => setIsOpen(prev => !prev)}
+    <>
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          style={{
+            position: 'absolute',
+            top: '38px',
+            left: '46px',
+            backgroundColor: '#4b5563',
+            border: 'none',
+            borderRadius: '50%',
+            width: '28px',
+            height: '28px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            color: '#d1d5db',
+            cursor: 'pointer',
+            zIndex: 20,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+            transition: 'background-color 0.2s ease-in-out',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#6b7280')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#4b5563')}
+        >
+          <FiMenu size={16} />
+        </button>
+      )}
+
+      <div
+        className="transition-all duration-300 flex flex-col items-start h-[100vh]"
         style={{
-          background: 'none',
-          border: 'none',
-          color: '#9ca3af',
-          cursor: 'pointer',
-          alignSelf: isOpen ? 'flex-end' : 'center',
-          marginBottom: '20px',
-          padding: '4px',
-          borderRadius: '4px'
+          backgroundColor: '#1f2937',
+          width: isOpen ? '300px' : `${collapsedWidth}px`,
+          paddingTop: '16px',
+          paddingBottom: '16px',
+          boxShadow: '12px 100px 24px rgba(0, 0, 0, 0.26)',
+          fontFamily: '"Inter", system-ui, sans-serif',
+          color: '#f3f4f6',
+          position: 'relative',
+          zIndex: 10,
+          overflowY: 'auto',
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = '#f3f4f6')}
-        onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
       >
-        {isOpen ? <FiChevronLeft size={20} /> : <FiChevronRight size={18} />}
-      </button>
-
-      {isOpen && (
-        <form className="flex flex-col w-full" style={{ gap: '16px' }}>
-          {groupedFields.map((group, i) => (
-            <div key={i} className="flex justify-between gap-[12px]">
-              {group.map(({ label, name, type }) => (
-                <div key={name} style={{ width: 'calc(50% - 6px)' }}>
-                  <label
-                    className="text-[11px] font-medium mb-[4px]"
-                    style={{ color: '#d1d5db' }}
-                  >
-                    {label}
-                  </label>
-                  <input
-                    type={type}
-                    name={name}
-                    value={form[name]}
-                    onChange={handleChange}
-                    style={{
-                      width: '100%',
-                      height: '30px',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '0 10px',
-                      backgroundColor: '#374151',
-                      color: '#e5e7eb',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                      fontFamily: '"Inter", system-ui, sans-serif',
-                      appearance: 'none'
-                    }}
-                    required={name === 'start_date' || name === 'end_date'}
-                  />
-                </div>
-              ))}
+        {/* Logo */}
+        <div
+          className="w-full flex items-center justify-between"
+          style={{
+            paddingLeft: isOpen ? '16px' : '0px',
+            paddingRight: isOpen ? '16px' : '0px',
+            marginBottom: '20px',
+            boxSizing: 'border-box',
+          }}
+        >
+          {isOpen ? (
+            <div className="flex items-center gap-[10px]">
+              <img src={logo} alt="Logo" className="h-[40px] w-[40px] object-contain" />
+              <span className="text-[18px] font-extrabold tracking-wide">ZENTARI</span>
             </div>
-          ))}
-
-          {/* White calendar icon */}
-          <style>
-            {`
-              input[type="date"]::-webkit-calendar-picker-indicator {
-                filter: invert(1);
-              }
-              input[type="date"]::-moz-calendar-picker-indicator {
-                filter: invert(1);
-              }
-            `}
-          </style>
-
-          {error && (
-            <p className="text-red-400 text-[11px] text-center">{error}</p>
+          ) : (
+            <div
+              className="w-full flex justify-center cursor-pointer"
+              onClick={() => setIsOpen(true)}
+            >
+              <img src={logo} alt="Logo" className="h-[40px] w-[40px] object-contain" />
+            </div>
           )}
 
-          <div style={{ marginTop: '28px' }}>
-            <button
-              type="button"
-              onClick={loading ? null : handleSubmit}
-              disabled={loading}
-              style={{
-                width: '100%',
-                backgroundColor: loading ? '#6b7280' : '#3b82f6',
-                color: '#ffffff',
-                padding: '10px 0',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.85 : 1,
-                boxShadow: '0 2px 5px rgba(0, 0, 0, 0.12)'
-              }}
-              onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = '#2563eb'
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.currentTarget.style.backgroundColor = '#3b82f6'
-              }}
-            >
-              {loading ? 'Running...' : 'Run Simulation'}
-            </button>
-          </div>
-        </form>
-      )}
-    </div>
+          {isOpen && (
+            <div className="w-[36px] flex justify-center">
+              <button
+                onClick={() => setIsOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#9ca3af',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '4px',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#f3f4f6')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
+              >
+                <FiMenu size={20} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="w-full">
+          {tabs.map((tab, idx) => (
+            <div key={idx}>
+              <div
+                className={`flex items-center gap-[10px] ${
+                  isOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'
+                } cursor-pointer transition-colors duration-200 ${
+                  location.pathname === tab.route
+                    ? 'bg-[#374151]'
+                    : 'hover:bg-[#2d384a]'
+                }`}
+                onClick={() => {
+                  navigate(tab.route)
+                  if (tab.toggle) tab.toggle()
+                }}
+              >
+                <div className="flex items-center">{tab.icon}</div>
+                {isOpen && (
+                  <div className="flex justify-between w-full items-center">
+                    <h2 className="text-[13px] font-bold text-gray-100">{tab.label}</h2>
+                    {tab.expanded !== undefined ? (
+                      tab.expanded ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              {isOpen && tab.content}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   )
 }
 

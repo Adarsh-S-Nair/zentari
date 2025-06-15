@@ -1,6 +1,8 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useState } from 'react'
 import CollapsibleSidebar from './components/CollapsibleSidebar'
-import MainPanel from './components/MainPanel'
+import PortfolioPanel from './components/PortfolioPanel'
+import SimulationPanel from './components/SimulationPanel'
 import Toast from './components/Toast'
 
 function App() {
@@ -51,21 +53,29 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      <CollapsibleSidebar
-        form={form}
-        handleChange={handleChange}
-        handleSubmit={handleSubmit}
-        loading={loading}
-      />
-      <MainPanel loading={loading} result={result} />
-      <Toast
-        key={toast.message}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast({ message: '', type: 'default' })}
-      />
-    </div>
+    <Router>
+      <div className="flex h-screen w-screen overflow-hidden">
+        <CollapsibleSidebar
+          form={form}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
+          loading={loading}
+        />
+
+        <Routes>
+          <Route path="/simulate" element={<SimulationPanel loading={loading} result={result} />}/>
+          <Route path="/portfolio" element={<PortfolioPanel />} />
+          <Route path="*" element={<Navigate to="/simulate" replace />} />
+        </Routes>
+
+        <Toast
+          key={toast.message}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ message: '', type: 'default' })}
+        />
+      </div>
+    </Router>
   )
 }
 

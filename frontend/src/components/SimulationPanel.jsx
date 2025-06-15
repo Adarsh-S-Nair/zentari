@@ -3,7 +3,7 @@ import LineChart from './LineChart'
 import SummaryStat from './SummaryStat'
 import CollapsibleMonthlyTable from './CollapsibleMonthlyTable'
 
-function MainPanel({ loading, result }) {
+function SimulationPanel({ loading, result }) {
   return (
     <main className="flex-1 px-[24px] overflow-y-auto flex flex-col items-center justify-center">
       {loading ? (
@@ -11,9 +11,9 @@ function MainPanel({ loading, result }) {
           <Spinner />
         </div>
       ) : result ? (
-        <div className="flex flex-col items-center gap-[20px] pt-[24px] pb-[40px]">
+        <div className="flex flex-col w-full max-w-[700px] items-center gap-[20px] pt-[24px] pb-[40px]">
           {/* ⬆️ Summary row */}
-          <div className="flex justify-around w-full max-w-[700px] px-[20px]">
+          <div className="flex justify-around w-full px-[20px]">
             <SummaryStat
               label="Starting Value"
               value={result.starting_value || 10000}
@@ -43,10 +43,14 @@ function MainPanel({ loading, result }) {
           </div>
 
           {/* ⬇️ Chart */}
-          <LineChart result={result} />
+          <div className="w-full min-h-[300px]">
+            <LineChart result={result} />
+          </div>
 
           {/* ⬇️ Collapsible Table */}
-          <CollapsibleMonthlyTable monthlyReturns={result.monthly_returns} />
+          <div className="w-full min-h-[400px]">
+            <CollapsibleMonthlyTable monthlyReturns={result.monthly_returns} />
+          </div>
         </div>
       ) : (
         <div className="text-gray-500 text-[14px] italic text-center pt-[40px]">
@@ -57,4 +61,4 @@ function MainPanel({ loading, result }) {
   )
 }
 
-export default MainPanel
+export default SimulationPanel
