@@ -20,19 +20,16 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
   const [contentHeight, setContentHeight] = useState(0)
 
   const isSimulationRoute = location.pathname === '/simulate'
-  const [isExpanded, setIsExpanded] = useState(isSimulationRoute)
 
+  // Refetch height whenever the route is /simulate and content is visible
   useEffect(() => {
-    if (contentRef.current) {
+    if (isSimulationRoute && contentRef.current) {
       setTimeout(() => {
-        setContentHeight(contentRef.current.scrollHeight)
+        const measured = contentRef.current.scrollHeight
+        setContentHeight(measured)
       }, 0)
     }
-  }, [form])
-
-  useEffect(() => {
-    setIsExpanded(isSimulationRoute)
-  }, [isSimulationRoute])
+  }, [isSimulationRoute, form]) // you can add more dependencies as needed
 
   const tabs = [
     {
@@ -40,35 +37,12 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
       icon: <FiBarChart2 size={18} style={{ verticalAlign: 'middle' }} />,
       route: '/simulate',
       hasContent: true,
-      content: (
-        <div
-          style={{
-            maxHeight: isExpanded ? `${contentHeight}px` : '0px',
-            transition: 'max-height 0.3s ease',
-            overflow: 'hidden',
-            backgroundColor: '#1c232f',
-            borderBottomLeftRadius: '6px',
-            borderBottomRightRadius: '6px',
-          }}
-        >
-          <div ref={contentRef} className="px-[24px] py-[16px]">
-            <SimulationControls
-              form={form}
-              handleChange={handleChange}
-              handleSubmit={handleSubmit}
-              error={error}
-              loading={loading}
-            />
-          </div>
-        </div>
-      ),
     },
     {
       label: 'My Portfolio',
       icon: <FiFolder size={18} style={{ verticalAlign: 'middle' }} />,
       route: '/portfolio',
       hasContent: false,
-      content: null,
     },
   ]
 
@@ -166,6 +140,8 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
         <div className="w-full">
           {tabs.map((tab, idx) => {
             const isActive = location.pathname === tab.route
+            const isExpandable = tab.hasContent && isActive
+
             return (
               <div key={idx}>
                 <div
@@ -183,12 +159,35 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
                     <div className="flex justify-between w-full items-center">
                       <h2 className="text-[13px] font-bold text-gray-100">{tab.label}</h2>
                       {tab.hasContent ? (
-                        isActive ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />
+                        isExpandable ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />
                       ) : null}
                     </div>
                   )}
                 </div>
-                {isOpen && tab.hasContent && isActive && tab.content}
+
+                {/* EXPANDABLE CONTENT */}
+                {isOpen && tab.hasContent && tab.route === '/simulate' && (
+                  <div
+                    style={{
+                      maxHeight: isActive ? `${contentHeight}px` : '0px',
+                      transition: 'max-height 0.3s ease',
+                      overflow: 'hidden',
+                      backgroundColor: '#1c232f',
+                      borderBottomLeftRadius: '6px',
+                      borderBottomRightRadius: '6px',
+                    }}
+                  >
+                    <div ref={contentRef} className="px-[24px] py-[16px]">
+                      <SimulationControls
+                        form={form}
+                        handleChange={handleChange}
+                        handleSubmit={handleSubmit}
+                        error={error}
+                        loading={loading}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
