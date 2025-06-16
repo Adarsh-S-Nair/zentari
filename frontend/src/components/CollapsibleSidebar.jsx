@@ -6,12 +6,16 @@ import {
   FiBarChart2,
   FiFolder,
   FiLogIn,
+  FiLogOut,
 } from 'react-icons/fi'
+import { FaUserCircle } from 'react-icons/fa'
 import SimulationControls from './SimulationControls'
 import { useNavigate, useLocation } from 'react-router-dom'
 import logo from '../assets/logo.png'
+import { supabase } from '../supabaseClient'
+import LogoutModal from './LogoutModal'
 
-function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, onLoginClick }) {
+function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, onLoginClick, user }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [isOpen, setIsOpen] = useState(true)
@@ -19,8 +23,30 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, 
 
   const contentRef = useRef(null)
   const [contentHeight, setContentHeight] = useState(0)
+  const [userName, setUserName] = useState('')
+  const [logoutOpen, setLogoutOpen] = useState(false)
 
   const isSimulationRoute = location.pathname === '/simulate'
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user) {
+        const { data: profile, error } = await supabase
+          .from('user_profiles')
+          .select('name')
+          .eq('id', user.id)
+          .single()
+
+        if (!error && profile?.name) {
+          setUserName(profile.name)
+        } else {
+          setUserName('')
+        }
+      }
+    }
+
+    fetchProfile()
+  }, [user])
 
   useEffect(() => {
     if (isSimulationRoute && contentRef.current) {
@@ -166,7 +192,6 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, 
                     )}
                   </div>
 
-                  {/* EXPANDABLE CONTENT */}
                   {isOpen && tab.hasContent && tab.route === '/simulate' && (
                     <div
                       style={{
@@ -195,25 +220,61 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, 
           </div>
         </div>
 
-        {/* Log In / Sign Up button at bottom */}
+        {/* Auth Tab at Bottom */}
         <div className="w-full mt-[20px] mb-[24px]">
           <div
             className={`flex items-center gap-[10px] ${
               isOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'
-            } transition-colors duration-200 hover:bg-[#2d384a] cursor-pointer`}
-            onClick={onLoginClick}
+            } transition-colors duration-200 ${
+              user ? 'cursor-default' : 'hover:bg-[#2d384a] cursor-pointer'
+            }`}
+            onClick={() => {
+              if (!user) onLoginClick()
+            }}
           >
             <div className="flex items-center">
-              <FiLogIn size={18} style={{ verticalAlign: 'middle' }} />
+              {user ? <FaUserCircle size={18} /> : <FiLogIn size={18} />}
             </div>
             {isOpen && (
               <div className="flex justify-between w-full items-center">
-                <h2 className="text-[13px] font-bold text-gray-100">Log in / Sign Up</h2>
+                <div className="flex items-center gap-[6px]">
+                  <h2 className="text-[13px] font-bold text-gray-100">
+                    {user ? userName || 'Logged in' : 'Log in / Sign Up'}
+                  </h2>
+                </div>
+                {user && (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setLogoutOpen(true)
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '6px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.1s ease-in-out',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#6c1f1f')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <FiLogOut size={18} color="#ef4444" />
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      <LogoutModal
+        isOpen={logoutOpen}
+        onClose={() => setLogoutOpen(false)}
+        onLogout={() => {
+          setUserName('')
+        }}
+      />
     </>
   )
 }

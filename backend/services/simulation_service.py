@@ -31,6 +31,10 @@ class SimulationService:
             end_date = datetime.strptime(self.params.end_date, "%Y-%m-%d")
         except ValueError:
             raise ValueError("Invalid date format. Use YYYY-MM-DD.")
+        
+        max_range = timedelta(days=3 * 365)
+        if end_date - start_date > max_range:
+            errors.append("Date range cannot exceed 3 years.")
 
         if start_date > end_date:
             errors.append("Start date cannot be after end date.")

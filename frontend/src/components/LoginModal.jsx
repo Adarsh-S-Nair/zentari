@@ -2,33 +2,62 @@ import React, { useEffect, useState, useRef } from 'react'
 import { FiX } from 'react-icons/fi'
 import { MdEmail } from 'react-icons/md'
 import { FaLock, FaUser } from 'react-icons/fa'
+import { supabase } from '../supabaseClient'
 
-function LoginModal({ isOpen, onClose }) {
+function Field({ icon, type, placeholder, value, onChange }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        backgroundColor: '#f9fafb',
+        borderRadius: '8px',
+        padding: '10px 12px',
+        border: '1px solid #e5e7eb',
+        boxSizing: 'border-box',
+      }}
+    >
+      {icon}
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        style={{
+          flex: 1,
+          border: 'none',
+          outline: 'none',
+          fontSize: '14px',
+          color: '#111827',
+          background: 'transparent',
+          marginLeft: '8px',
+        }}
+      />
+    </div>
+  )
+}
+
+export default function LoginModal({ isOpen, onClose }) {
   const [visible, setVisible] = useState(false)
   const [isSignup, setIsSignup] = useState(false)
   const modalRef = useRef(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (isOpen) {
-      setVisible(true)
-    }
+    if (isOpen) setVisible(true)
 
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') handleClose()
-    }
+    const key = (e) => e.key === 'Escape' && handleClose()
+    const outside = (e) => modalRef.current && !modalRef.current.contains(e.target) && handleClose()
 
-    const handleClickOutside = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        handleClose()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    document.addEventListener('mousedown', handleClickOutside)
-
+    document.addEventListener('keydown', key)
+    document.addEventListener('mousedown', outside)
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', key)
+      document.removeEventListener('mousedown', outside)
     }
   }, [isOpen])
 
@@ -40,202 +69,132 @@ function LoginModal({ isOpen, onClose }) {
     }, 200)
   }
 
+  const handleSubmit = async () => {
+    setLoading(true)
+    setError(null)
+
+    if (!email || !password || (isSignup && !name)) {
+      setError('Please fill out all fields.')
+      setLoading(false)
+      return
+    }
+
+    try {
+      if (isSignup) {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password
+        })
+
+        if (signUpError) throw signUpError
+
+        // 🔁 Wait until Supabase returns the session
+        const { data: sessionData } = await supabase.auth.getSession()
+        const userId = sessionData.session?.user?.id
+
+        if (!userId) throw new Error('No user session found.')
+
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({ id: userId, name })
+
+        if (profileError) throw profileError
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+        if (signInError) throw signInError
+      }
+
+      handleClose()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 50,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.45)',
-        backdropFilter: 'blur(6px)',
-      }}
-    >
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50, display: 'flex',
+      justifyContent: 'center', alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)',
+    }}>
       <div
         ref={modalRef}
-        className={`transition-all duration-200 ${
-          visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-[40px]'
-        }`}
         style={{
-          width: '360px',
-          backgroundColor: '#ffffff',
-          borderRadius: '16px',
-          padding: '24px',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-          boxSizing: 'border-box',
-          position: 'relative',
-          transform: visible ? 'translateY(0)' : 'translateY(-40px)',
-          opacity: visible ? 1 : 0,
-          transition: 'all 0.2s ease-in-out',
+          width: '360px', background: '#fff', borderRadius: '16px', padding: '24px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.3)', boxSizing: 'border-box',
+          position: 'relative', transform: visible ? 'translateY(0)' : 'translateY(-40px)',
+          opacity: visible ? 1 : 0, transition: 'all 0.2s ease-in-out',
         }}
       >
-        {/* Close Button */}
-        <button
-          onClick={handleClose}
-          style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            background: 'none',
-            border: 'none',
-            color: '#6b7280',
-            cursor: 'pointer',
-            padding: '4px',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
-        >
+        <button onClick={handleClose} style={{
+          position: 'absolute', top: '12px', right: '12px',
+          background: 'none', border: 'none', color: '#6b7280',
+          cursor: 'pointer', padding: '4px',
+        }}>
           <FiX size={20} />
         </button>
 
-        {/* Title */}
-        <h2
-          style={{
-            fontSize: '20px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            marginBottom: '20px',
-            color: '#111827',
-          }}
-        >
+        <h2 style={{ fontSize: '20px', fontWeight: 'bold', textAlign: 'center', marginBottom: '20px', color: '#111827' }}>
           {isSignup ? 'Sign Up' : 'Log In'}
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {isSignup && (
-            <div
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                padding: '10px 12px',
-                boxSizing: 'border-box',
-              }}
-            >
-              <FaUser size={16} style={{ marginRight: '8px', color: '#6b7280' }} />
-              <input
-                type="text"
-                placeholder="Name"
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: '14px',
-                  color: '#111827',
-                  background: 'transparent',
-                }}
-              />
+            <Field
+              icon={<FaUser size={16} color="#6b7280" />}
+              type="text"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          )}
+          <Field
+            icon={<MdEmail size={18} color="#6b7280" />}
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Field
+            icon={<FaLock size={16} color="#6b7280" />}
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          {error && (
+            <div style={{ color: 'red', fontSize: '13px', textAlign: 'center' }}>
+              {error}
             </div>
           )}
 
-          <div
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              padding: '10px 12px',
-              boxSizing: 'border-box',
-            }}
-          >
-            <MdEmail size={18} style={{ marginRight: '8px', color: '#6b7280' }} />
-            <input
-              type="email"
-              placeholder="Email"
-              style={{
-                flex: 1,
-                border: 'none',
-                outline: 'none',
-                fontSize: '14px',
-                color: '#111827',
-                background: 'transparent',
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              padding: '10px 12px',
-              boxSizing: 'border-box',
-            }}
-          >
-            <FaLock size={16} style={{ marginRight: '8px', color: '#6b7280' }} />
-            <input
-              type="password"
-              placeholder="Password"
-              style={{
-                flex: 1,
-                border: 'none',
-                outline: 'none',
-                fontSize: '14px',
-                color: '#111827',
-                background: 'transparent',
-              }}
-            />
-          </div>
-
           <button
-            style={{
-              width: '100%',
-              padding: '10px',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: '600',
-              backgroundColor: '#3b82f6',
-              color: '#ffffff',
-              border: 'none',
-              boxSizing: 'border-box',
-              cursor: 'pointer',
-            }}
+            disabled={loading}
+            onClick={handleSubmit}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3b82f6')}
-          >
-            {isSignup ? 'Create account' : 'Log in'}
-          </button>
-
-          <p
             style={{
-              fontSize: '13px',
-              textAlign: 'center',
-              marginTop: '6px',
-              color: '#6b7280',
+              width: '100%', padding: '10px', borderRadius: '6px',
+              fontSize: '14px', fontWeight: 600, backgroundColor: '#3b82f6',
+              color: '#fff', border: 'none', cursor: 'pointer',
+              opacity: loading ? 0.6 : 1,
             }}
           >
+            {loading ? 'Please wait...' : isSignup ? 'Create account' : 'Log in'}
+          </button>
+
+          <p style={{ fontSize: '13px', textAlign: 'center', marginTop: '6px', color: '#6b7280' }}>
             {isSignup ? (
-              <>
-                Already have an account?{' '}
-                <span
-                  style={{ color: '#2563eb', cursor: 'pointer' }}
-                  onClick={() => setIsSignup(false)}
-                >
-                  Log in
-                </span>
-              </>
+              <>Already have an account? <span onClick={() => setIsSignup(false)} style={{ color: '#2563eb', cursor: 'pointer' }}>Log in</span></>
             ) : (
-              <>
-                Don’t have an account?{' '}
-                <span
-                  style={{ color: '#2563eb', cursor: 'pointer' }}
-                  onClick={() => setIsSignup(true)}
-                >
-                  Sign up
-                </span>
-              </>
+              <>Don’t have an account? <span onClick={() => setIsSignup(true)} style={{ color: '#2563eb', cursor: 'pointer' }}>Sign up</span></>
             )}
           </p>
         </div>
@@ -243,5 +202,3 @@ function LoginModal({ isOpen, onClose }) {
     </div>
   )
 }
-
-export default LoginModal

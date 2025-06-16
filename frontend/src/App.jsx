@@ -1,14 +1,16 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import CollapsibleSidebar from './components/CollapsibleSidebar'
 import PortfolioPanel from './components/PortfolioPanel'
 import SimulationPanel from './components/SimulationPanel'
 import Toast from './components/Toast'
 import LoginModal from './components/LoginModal'
+import { supabase } from './supabaseClient'
 
 function App() {
   const [loading, setLoading] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
+  const [user, setUser] = useState(null)
 
   const [form, setForm] = useState({
     start_date: '2025-01-01',
@@ -20,6 +22,7 @@ function App() {
     starting_value: 10000,
     benchmark: 'SPY'
   })
+
   const [result, setResult] = useState(null)
   const [toast, setToast] = useState({ message: '', type: 'default' })
 
@@ -55,6 +58,25 @@ function App() {
     }
   }
 
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data, error } = await supabase.auth.getUser()
+      if (!error && data?.user) setUser(data.user)
+    }
+
+    fetchUser()
+
+    // ✅ Listen to login/logout/session change
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null)
+    })
+
+    return () => {
+      listener.subscription.unsubscribe()
+    }
+  }, [])
+
+
   return (
     <Router>
       <div className="flex h-screen w-screen overflow-hidden">
@@ -64,10 +86,11 @@ function App() {
           handleSubmit={handleSubmit}
           loading={loading}
           onLoginClick={() => setLoginOpen(true)}
+          user={user}
         />
 
         <Routes>
-          <Route path="/simulate" element={<SimulationPanel loading={loading} result={result} />}/>
+          <Route path="/simulate" element={<SimulationPanel loading={loading} result={result} />} />
           <Route path="/portfolio" element={<PortfolioPanel />} />
           <Route path="*" element={<Navigate to="/simulate" replace />} />
         </Routes>
@@ -79,7 +102,11 @@ function App() {
           onClose={() => setToast({ message: '', type: 'default' })}
         />
 
-        <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
+        <LoginModal
+          isOpen={loginOpen}
+          onClose={() => setLoginOpen(false)}
+          setToast={setToast}
+        />
       </div>
     </Router>
   )
