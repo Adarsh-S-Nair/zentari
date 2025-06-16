@@ -48,7 +48,7 @@ function SimulationPanel({ loading, result }) {
           </div>
 
           {/* ⬇️ Collapsible Table */}
-          <div className="w-full h-[400px]">
+          <div className="w-full h-[350px]">
             <CollapsibleMonthlyTable monthlyReturns={result.monthly_returns} />
           </div>
         </div>

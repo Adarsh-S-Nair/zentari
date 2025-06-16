@@ -4,9 +4,12 @@ import CollapsibleSidebar from './components/CollapsibleSidebar'
 import PortfolioPanel from './components/PortfolioPanel'
 import SimulationPanel from './components/SimulationPanel'
 import Toast from './components/Toast'
+import LoginModal from './components/LoginModal'
 
 function App() {
   const [loading, setLoading] = useState(false)
+  const [loginOpen, setLoginOpen] = useState(false)
+
   const [form, setForm] = useState({
     start_date: '2025-01-01',
     end_date: '2025-06-01',
@@ -60,6 +63,7 @@ function App() {
           handleChange={handleChange}
           handleSubmit={handleSubmit}
           loading={loading}
+          onLoginClick={() => setLoginOpen(true)}
         />
 
         <Routes>
@@ -74,6 +78,8 @@ function App() {
           type={toast.type}
           onClose={() => setToast({ message: '', type: 'default' })}
         />
+
+        <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
       </div>
     </Router>
   )

@@ -5,12 +5,13 @@ import {
   FiChevronUp,
   FiBarChart2,
   FiFolder,
+  FiLogIn,
 } from 'react-icons/fi'
 import SimulationControls from './SimulationControls'
 import { useNavigate, useLocation } from 'react-router-dom'
 import logo from '../assets/logo.png'
 
-function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }) {
+function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, onLoginClick }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [isOpen, setIsOpen] = useState(true)
@@ -21,7 +22,6 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
 
   const isSimulationRoute = location.pathname === '/simulate'
 
-  // Refetch height whenever the route is /simulate and content is visible
   useEffect(() => {
     if (isSimulationRoute && contentRef.current) {
       setTimeout(() => {
@@ -29,7 +29,7 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
         setContentHeight(measured)
       }, 0)
     }
-  }, [isSimulationRoute, form]) // you can add more dependencies as needed
+  }, [isSimulationRoute, form])
 
   const tabs = [
     {
@@ -77,7 +77,7 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
       )}
 
       <div
-        className="transition-all duration-300 flex flex-col items-start h-[100vh]"
+        className="transition-all duration-300 flex flex-col justify-between h-[100vh]"
         style={{
           backgroundColor: '#1f2937',
           width: isOpen ? '300px' : `${collapsedWidth}px`,
@@ -91,106 +91,127 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
           overflowY: 'auto',
         }}
       >
-        {/* Logo */}
-        <div
-          className="w-full flex items-center justify-between"
-          style={{
-            paddingLeft: isOpen ? '16px' : '0px',
-            paddingRight: isOpen ? '16px' : '0px',
-            marginBottom: '20px',
-            boxSizing: 'border-box',
-          }}
-        >
-          {isOpen ? (
-            <div className="flex items-center gap-[10px]">
-              <img src={logo} alt="Logo" className="h-[40px] w-[40px] object-contain" />
-              <span className="text-[18px] font-extrabold tracking-wide">ZENTARI</span>
-            </div>
-          ) : (
-            <div
-              className="w-full flex justify-center cursor-pointer"
-              onClick={() => setIsOpen(true)}
-            >
-              <img src={logo} alt="Logo" className="h-[40px] w-[40px] object-contain" />
-            </div>
-          )}
-
-          {isOpen && (
-            <div className="w-[36px] flex justify-center">
-              <button
-                onClick={() => setIsOpen(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#9ca3af',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  borderRadius: '4px',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#f3f4f6')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
+        <div>
+          {/* Logo */}
+          <div
+            className="w-full flex items-center justify-between"
+            style={{
+              paddingLeft: isOpen ? '16px' : '0px',
+              paddingRight: isOpen ? '16px' : '0px',
+              marginBottom: '20px',
+              boxSizing: 'border-box',
+            }}
+          >
+            {isOpen ? (
+              <div className="flex items-center gap-[10px]">
+                <img src={logo} alt="Logo" className="h-[40px] w-[40px] object-contain" />
+                <span className="text-[18px] font-extrabold tracking-wide">ZENTARI</span>
+              </div>
+            ) : (
+              <div
+                className="w-full flex justify-center cursor-pointer"
+                onClick={() => setIsOpen(true)}
               >
-                <FiMenu size={20} />
-              </button>
-            </div>
-          )}
-        </div>
+                <img src={logo} alt="Logo" className="h-[40px] w-[40px] object-contain" />
+              </div>
+            )}
 
-        {/* Tabs */}
-        <div className="w-full">
-          {tabs.map((tab, idx) => {
-            const isActive = location.pathname === tab.route
-            const isExpandable = tab.hasContent && isActive
-
-            return (
-              <div key={idx}>
-                <div
-                  className={`flex items-center gap-[10px] ${
-                    isOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'
-                  } transition-colors duration-200 ${
-                    isActive ? 'bg-[#374151] cursor-default' : 'hover:bg-[#2d384a] cursor-pointer'
-                  }`}
-                  onClick={() => {
-                    if (!isActive) navigate(tab.route)
+            {isOpen && (
+              <div className="w-[36px] flex justify-center">
+                <button
+                  onClick={() => setIsOpen(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#9ca3af',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '4px',
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#f3f4f6')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
                 >
-                  <div className="flex items-center">{tab.icon}</div>
-                  {isOpen && (
-                    <div className="flex justify-between w-full items-center">
-                      <h2 className="text-[13px] font-bold text-gray-100">{tab.label}</h2>
-                      {tab.hasContent ? (
-                        isExpandable ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />
-                      ) : null}
+                  <FiMenu size={20} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Tabs */}
+          <div className="w-full">
+            {tabs.map((tab, idx) => {
+              const isActive = location.pathname === tab.route
+              const isExpandable = tab.hasContent && isActive
+
+              return (
+                <div key={idx}>
+                  <div
+                    className={`flex items-center gap-[10px] ${
+                      isOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'
+                    } transition-colors duration-200 ${
+                      isActive ? 'bg-[#374151] cursor-default' : 'hover:bg-[#2d384a] cursor-pointer'
+                    }`}
+                    onClick={() => {
+                      if (!isActive) navigate(tab.route)
+                    }}
+                  >
+                    <div className="flex items-center">{tab.icon}</div>
+                    {isOpen && (
+                      <div className="flex justify-between w-full items-center">
+                        <h2 className="text-[13px] font-bold text-gray-100">{tab.label}</h2>
+                        {tab.hasContent ? (
+                          isExpandable ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* EXPANDABLE CONTENT */}
+                  {isOpen && tab.hasContent && tab.route === '/simulate' && (
+                    <div
+                      style={{
+                        maxHeight: isActive ? `${contentHeight}px` : '0px',
+                        transition: 'max-height 0.3s ease',
+                        overflow: 'hidden',
+                        backgroundColor: '#1c232f',
+                        borderBottomLeftRadius: '6px',
+                        borderBottomRightRadius: '6px',
+                      }}
+                    >
+                      <div ref={contentRef} className="px-[24px] py-[16px]">
+                        <SimulationControls
+                          form={form}
+                          handleChange={handleChange}
+                          handleSubmit={handleSubmit}
+                          error={error}
+                          loading={loading}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
+              )
+            })}
+          </div>
+        </div>
 
-                {/* EXPANDABLE CONTENT */}
-                {isOpen && tab.hasContent && tab.route === '/simulate' && (
-                  <div
-                    style={{
-                      maxHeight: isActive ? `${contentHeight}px` : '0px',
-                      transition: 'max-height 0.3s ease',
-                      overflow: 'hidden',
-                      backgroundColor: '#1c232f',
-                      borderBottomLeftRadius: '6px',
-                      borderBottomRightRadius: '6px',
-                    }}
-                  >
-                    <div ref={contentRef} className="px-[24px] py-[16px]">
-                      <SimulationControls
-                        form={form}
-                        handleChange={handleChange}
-                        handleSubmit={handleSubmit}
-                        error={error}
-                        loading={loading}
-                      />
-                    </div>
-                  </div>
-                )}
+        {/* Log In / Sign Up button at bottom */}
+        <div className="w-full mt-[20px] mb-[24px]">
+          <div
+            className={`flex items-center gap-[10px] ${
+              isOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'
+            } transition-colors duration-200 hover:bg-[#2d384a] cursor-pointer`}
+            onClick={onLoginClick}
+          >
+            <div className="flex items-center">
+              <FiLogIn size={18} style={{ verticalAlign: 'middle' }} />
+            </div>
+            {isOpen && (
+              <div className="flex justify-between w-full items-center">
+                <h2 className="text-[13px] font-bold text-gray-100">Log in / Sign Up</h2>
               </div>
-            )
-          })}
+            )}
+          </div>
         </div>
       </div>
     </>
