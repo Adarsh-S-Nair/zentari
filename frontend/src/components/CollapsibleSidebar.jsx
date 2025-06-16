@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import {
   FiMenu,
   FiChevronDown,
@@ -14,29 +14,36 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
   const navigate = useNavigate()
   const location = useLocation()
   const [isOpen, setIsOpen] = useState(true)
-  const [showSimulation, setShowSimulation] = useState(true)
+  const collapsedWidth = 60
+
   const contentRef = useRef(null)
   const [contentHeight, setContentHeight] = useState(0)
 
-  const collapsedWidth = 60
+  const isSimulationRoute = location.pathname === '/simulate'
+  const [isExpanded, setIsExpanded] = useState(isSimulationRoute)
 
   useEffect(() => {
     if (contentRef.current) {
-      setContentHeight(contentRef.current.scrollHeight)
+      setTimeout(() => {
+        setContentHeight(contentRef.current.scrollHeight)
+      }, 0)
     }
-  }, [showSimulation])
+  }, [form])
+
+  useEffect(() => {
+    setIsExpanded(isSimulationRoute)
+  }, [isSimulationRoute])
 
   const tabs = [
     {
       label: 'Simulation',
       icon: <FiBarChart2 size={18} style={{ verticalAlign: 'middle' }} />,
       route: '/simulate',
-      expanded: showSimulation,
-      toggle: () => setShowSimulation(prev => !prev),
+      hasContent: true,
       content: (
         <div
           style={{
-            maxHeight: showSimulation ? `${contentHeight}px` : '0px',
+            maxHeight: isExpanded ? `${contentHeight}px` : '0px',
             transition: 'max-height 0.3s ease',
             overflow: 'hidden',
             backgroundColor: '#1c232f',
@@ -60,8 +67,7 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
       label: 'My Portfolio',
       icon: <FiFolder size={18} style={{ verticalAlign: 'middle' }} />,
       route: '/portfolio',
-      expanded: false,
-      toggle: null,
+      hasContent: false,
       content: null,
     },
   ]
@@ -158,34 +164,34 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading }
 
         {/* Tabs */}
         <div className="w-full">
-          {tabs.map((tab, idx) => (
-            <div key={idx}>
-              <div
-                className={`flex items-center gap-[10px] ${
-                  isOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'
-                } cursor-pointer transition-colors duration-200 ${
-                  location.pathname === tab.route
-                    ? 'bg-[#374151]'
-                    : 'hover:bg-[#2d384a]'
-                }`}
-                onClick={() => {
-                  navigate(tab.route)
-                  if (tab.toggle) tab.toggle()
-                }}
-              >
-                <div className="flex items-center">{tab.icon}</div>
-                {isOpen && (
-                  <div className="flex justify-between w-full items-center">
-                    <h2 className="text-[13px] font-bold text-gray-100">{tab.label}</h2>
-                    {tab.expanded !== undefined ? (
-                      tab.expanded ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />
-                    ) : null}
-                  </div>
-                )}
+          {tabs.map((tab, idx) => {
+            const isActive = location.pathname === tab.route
+            return (
+              <div key={idx}>
+                <div
+                  className={`flex items-center gap-[10px] ${
+                    isOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'
+                  } transition-colors duration-200 ${
+                    isActive ? 'bg-[#374151] cursor-default' : 'hover:bg-[#2d384a] cursor-pointer'
+                  }`}
+                  onClick={() => {
+                    if (!isActive) navigate(tab.route)
+                  }}
+                >
+                  <div className="flex items-center">{tab.icon}</div>
+                  {isOpen && (
+                    <div className="flex justify-between w-full items-center">
+                      <h2 className="text-[13px] font-bold text-gray-100">{tab.label}</h2>
+                      {tab.hasContent ? (
+                        isActive ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+                {isOpen && tab.hasContent && isActive && tab.content}
               </div>
-              {isOpen && tab.content}
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </>

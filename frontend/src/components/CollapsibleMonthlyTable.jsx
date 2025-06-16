@@ -3,7 +3,7 @@ import MonthlyRow from './MonthlyRow'
 function CollapsibleMonthlyTable({ monthlyReturns }) {
   return (
     <div
-      className="w-full max-w-[700px] h-[300px] bg-white rounded-[8px] flex flex-col"
+      className="w-full max-w-[700px] h-full bg-white rounded-[8px] flex flex-col"
       style={{
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
         border: '1px solid #e5e7eb',
