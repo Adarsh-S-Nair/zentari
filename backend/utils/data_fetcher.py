@@ -2,6 +2,7 @@ import duckdb
 import pandas as pd
 import yfinance as yf
 import os
+from dateutil.relativedelta import relativedelta
 
 def load_bulk_scoring_data(start_dt, end_dt, benchmark="SPY", db_path="data/sp500_prices.duckdb"):
     abs_path = os.path.abspath(db_path)
@@ -46,3 +47,19 @@ def load_bulk_scoring_data(start_dt, end_dt, benchmark="SPY", db_path="data/sp50
             print(f"[WARN] Failed to download benchmark data for {benchmark} from yfinance.")
 
     return result
+
+def preload_price_data(start_date_str, end_date_str, lookback_months, skip_recent_months, benchmark):
+    start_dt = pd.to_datetime(start_date_str)
+    end_dt = pd.to_datetime(end_date_str)
+    lookback_start = start_dt - relativedelta(months=lookback_months + skip_recent_months)
+
+    price_data = load_bulk_scoring_data(lookback_start, end_dt, benchmark=benchmark)
+
+    for ticker in price_data:
+        df = price_data[ticker].copy()
+        df["date"] = pd.to_datetime(df["date"])
+        df.set_index("date", inplace=True)
+        df.sort_index(inplace=True)
+        price_data[ticker] = df
+
+    return price_data
