@@ -38,6 +38,8 @@ class SimulationService:
             errors.append("Start date cannot be before the year 2000.")
         if not (1 <= self.params.lookback_months <= 12):
             errors.append("Lookback months must be between 1 and 12.")
+        if not (0 < self.params.skip_recent_months < 3):
+            errors.append("Skip recent months must be greater than 0 and less than 3.")
         if not (1 <= self.params.hold_months <= 3):
             errors.append("Hold months must be between 1 and 3.")
         if not (1 <= self.params.top_n <= 20):

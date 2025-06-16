@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { FiX } from 'react-icons/fi'
 import { MdEmail } from 'react-icons/md'
 import { FaLock, FaUser } from 'react-icons/fa'
@@ -6,10 +6,29 @@ import { FaLock, FaUser } from 'react-icons/fa'
 function LoginModal({ isOpen, onClose }) {
   const [visible, setVisible] = useState(false)
   const [isSignup, setIsSignup] = useState(false)
+  const modalRef = useRef(null)
 
   useEffect(() => {
     if (isOpen) {
       setVisible(true)
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') handleClose()
+    }
+
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        handleClose()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen])
 
@@ -17,7 +36,7 @@ function LoginModal({ isOpen, onClose }) {
     setVisible(false)
     setTimeout(() => {
       onClose()
-      setIsSignup(false) // reset to login
+      setIsSignup(false)
     }, 200)
   }
 
@@ -40,6 +59,7 @@ function LoginModal({ isOpen, onClose }) {
       }}
     >
       <div
+        ref={modalRef}
         className={`transition-all duration-200 ${
           visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-[40px]'
         }`}
@@ -89,7 +109,6 @@ function LoginModal({ isOpen, onClose }) {
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* Name (Signup only) */}
           {isSignup && (
             <div
               style={{
@@ -118,7 +137,6 @@ function LoginModal({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* Email Field */}
           <div
             style={{
               position: 'relative',
@@ -145,7 +163,6 @@ function LoginModal({ isOpen, onClose }) {
             />
           </div>
 
-          {/* Password Field */}
           <div
             style={{
               position: 'relative',
@@ -172,7 +189,6 @@ function LoginModal({ isOpen, onClose }) {
             />
           </div>
 
-          {/* Submit Button */}
           <button
             style={{
               width: '100%',
@@ -192,7 +208,6 @@ function LoginModal({ isOpen, onClose }) {
             {isSignup ? 'Create account' : 'Log in'}
           </button>
 
-          {/* Toggle link */}
           <p
             style={{
               fontSize: '13px',
