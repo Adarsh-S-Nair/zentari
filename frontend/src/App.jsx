@@ -171,6 +171,7 @@ function App() {
                   loadingPhase={loadingPhase}
                   result={result}
                   currentSimDate={currentSimDate}
+                  isMobile={isMobile}
                 />
               }
             />

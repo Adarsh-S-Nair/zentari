@@ -1,7 +1,6 @@
 import MonthlyRow from './MonthlyRow'
 
-function CollapsibleMonthlyTable({ monthlyReturns }) {
-  console.log(monthlyReturns)
+function CollapsibleMonthlyTable({ monthlyReturns, isMobile }) {
   return (
     <div
       className="w-full max-w-[700px] h-full bg-white rounded-[8px] flex flex-col"
@@ -22,10 +21,10 @@ function CollapsibleMonthlyTable({ monthlyReturns }) {
             boxSizing: 'border-box'
           }}
         >
-          <div className="grid grid-cols-[1fr_1fr_1fr_32px] text-[12px] font-medium text-gray-500 pr-[12px]">
+          <div className={`grid ${isMobile ? 'grid-cols-[1fr_1fr_32px]' : 'grid-cols-[1fr_1fr_1fr_32px]'} text-[12px] font-medium text-gray-500 pr-[12px]`}>
             <div className="text-left">Date</div>
             <div className="text-right">Portfolio Value</div>
-            <div className="text-right">Benchmark Value</div>
+            {!isMobile && <div className="text-right">Benchmark Value</div>}
             <div></div>
           </div>
         </div>
@@ -53,6 +52,7 @@ function CollapsibleMonthlyTable({ monthlyReturns }) {
               portfolioChange={entry.portfolio_return_pct}
               benchmarkChange={entry.benchmark_return_pct}
               trades={entry.orders}
+              isMobile={isMobile}
             />
           ))}
         </div>

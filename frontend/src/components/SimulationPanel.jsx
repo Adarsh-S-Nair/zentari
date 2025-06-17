@@ -3,7 +3,7 @@ import LineChart from './LineChart'
 import SummaryStat from './SummaryStat'
 import CollapsibleMonthlyTable from './CollapsibleMonthlyTable'
 
-function SimulationPanel({ loading, loadingPhase, result, currentSimDate }) {
+function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobile }) {
   const finalValue = result?.final_portfolio_value || 0
   const benchmarkValue = result?.final_benchmark_value || 0
   const startValue = result?.starting_value || 10000
@@ -26,38 +26,80 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate }) {
         <Spinner label={getSpinnerLabel()} />
       ) : result ? (
         <div className="flex flex-col w-full max-w-[700px] items-center gap-[20px] pt-[24px] pb-[40px]">
-          <div className="flex justify-around w-full px-[20px]">
-            <SummaryStat label="Starting Value" value={startValue} isCurrency />
-            <SummaryStat
-              label="Ending Value"
-              value={finalValue}
-              diff={((finalValue - startValue) / startValue) * 100}
-              isCurrency
-            />
-            <SummaryStat
-              label={`${result.benchmark || 'Benchmark'} Ending Value`}
-              value={benchmarkValue}
-              diff={((benchmarkValue - startValue) / startValue) * 100}
-              isCurrency
-            />
-            <SummaryStat
-              label="Duration"
-              value={
-                result.duration_sec
-                  ? `${result.duration_sec.toFixed(2)} sec`
-                  : loading
-                  ? 'Running...'
-                  : '-'
-              }
-            />
-          </div>
 
+          {/* SUMMARY STATS */}
+          {isMobile ? (
+            <div className="grid grid-cols-2 gap-[16px] w-full max-w-[360px] px-[24px]">
+              <div className="flex flex-col gap-[10px]">
+                <SummaryStat label="Starting Value" value={startValue} isCurrency alignLeft />
+                <SummaryStat
+                  label="Duration"
+                  value={
+                    result.duration_sec
+                      ? `${result.duration_sec.toFixed(2)} sec`
+                      : loading
+                      ? 'Running...'
+                      : '-'
+                  }
+                  alignLeft
+                />
+              </div>
+              <div className="flex flex-col gap-[10px]">
+                <SummaryStat
+                  label="Ending Value"
+                  value={finalValue}
+                  diff={((finalValue - startValue) / startValue) * 100}
+                  isCurrency
+                  alignLeft
+                />
+                <SummaryStat
+                  label={`${result.benchmark || 'Benchmark'} Ending Value`}
+                  value={benchmarkValue}
+                  diff={((benchmarkValue - startValue) / startValue) * 100}
+                  isCurrency
+                  alignLeft
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-around w-full px-[20px]">
+              <SummaryStat label="Starting Value" value={startValue} isCurrency />
+              <SummaryStat
+                label="Ending Value"
+                value={finalValue}
+                diff={((finalValue - startValue) / startValue) * 100}
+                isCurrency
+              />
+              <SummaryStat
+                label={`${result.benchmark || 'Benchmark'} Ending Value`}
+                value={benchmarkValue}
+                diff={((benchmarkValue - startValue) / startValue) * 100}
+                isCurrency
+              />
+              <SummaryStat
+                label="Duration"
+                value={
+                  result.duration_sec
+                    ? `${result.duration_sec.toFixed(2)} sec`
+                    : loading
+                    ? 'Running...'
+                    : '-'
+                }
+              />
+            </div>
+          )}
+
+          {/* CHART */}
           <div className="w-full min-h-[300px]">
             <LineChart result={result} />
           </div>
 
+          {/* MONTHLY RETURNS */}
           <div className="w-full h-[350px]">
-            <CollapsibleMonthlyTable monthlyReturns={result.monthly_returns || []} />
+            <CollapsibleMonthlyTable
+              monthlyReturns={result.monthly_returns || []}
+              isMobile={isMobile}
+            />
           </div>
         </div>
       ) : (

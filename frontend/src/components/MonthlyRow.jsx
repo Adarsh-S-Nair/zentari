@@ -3,7 +3,7 @@ import { FiChevronDown } from 'react-icons/fi'
 import Pill from './Pill'
 import TradeBreakdown from './TradeBreakdown'
 
-function MonthlyRow({ date, value, benchmark, portfolioChange, benchmarkChange, trades }) {
+function MonthlyRow({ date, value, benchmark, portfolioChange, benchmarkChange, trades, isMobile }) {
   const [expanded, setExpanded] = useState(false)
   const [height, setHeight] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
@@ -49,7 +49,7 @@ function MonthlyRow({ date, value, benchmark, portfolioChange, benchmarkChange, 
       }}
     >
       <div className="py-[10px] pr-[16px] pl-[6px]">
-        <div className="grid grid-cols-[1fr_1fr_1fr_32px] text-[13px] text-gray-700 items-center">
+        <div className={`grid ${isMobile ? 'grid-cols-[1fr_1fr_32px]' : 'grid-cols-[1fr_1fr_1fr_32px]'} text-[13px] text-gray-700 items-center`}>
           <div className="text-left">{formattedDate}</div>
 
           <div className="flex justify-end items-center gap-[6px]">
@@ -61,14 +61,16 @@ function MonthlyRow({ date, value, benchmark, portfolioChange, benchmarkChange, 
             />
           </div>
 
-          <div className="flex justify-end items-center gap-[6px]">
-            {formatCurrency(benchmark)}
-            <Pill
-              value={safeBenchmarkChange}
-              isPositive={safeBenchmarkChange > 0}
-              isZero={isBenchmarkZero}
-            />
-          </div>
+          {!isMobile && (
+            <div className="flex justify-end items-center gap-[6px]">
+              {formatCurrency(benchmark)}
+              <Pill
+                value={safeBenchmarkChange}
+                isPositive={safeBenchmarkChange > 0}
+                isZero={isBenchmarkZero}
+              />
+            </div>
+          )}
 
           <div className="flex justify-end">
             <FiChevronDown

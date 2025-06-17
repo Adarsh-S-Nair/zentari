@@ -27,7 +27,7 @@ export default function RightDrawer({ isOpen, onClose, children }) {
           position: 'fixed',
           top: 0,
           right: isOpen ? 0 : '-100%',
-          width: '80%',
+          width: '320px',
           height: '100%',
           backgroundColor: '#1f2937',
           boxShadow: '-12px 0 20px rgba(0,0,0,0.4)',

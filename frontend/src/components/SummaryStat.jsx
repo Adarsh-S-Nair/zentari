@@ -1,6 +1,6 @@
 import Pill from './Pill'
 
-function SummaryStat({ label, value, diff = null, isCurrency = false }) {
+function SummaryStat({ label, value, diff = null, isCurrency = false, alignLeft = false }) {
   const isPositive = diff > 0
   const isZero = diff === 0
 
@@ -18,14 +18,14 @@ function SummaryStat({ label, value, diff = null, isCurrency = false }) {
     typeof value === 'number' && isCurrency ? formatCurrency(value) : value
 
   return (
-    <div className="flex flex-col items-center">
+    <div className={`flex flex-col ${alignLeft ? 'items-start' : 'items-center'}`}>
       <div
         style={{
           fontSize: '12px',
           fontWeight: 500,
           color: '#6b7280',
           minWidth: 'max-content',
-          textAlign: 'center'
+          textAlign: alignLeft ? 'left' : 'center',
         }}
       >
         {label}
