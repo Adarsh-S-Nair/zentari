@@ -9,8 +9,12 @@ import { supabase } from './supabaseClient'
 
 function App() {
   const [loading, setLoading] = useState(false)
+  const [loadingPhase, setLoadingPhase] = useState('') // 'init' | '' | 'done'
   const [loginOpen, setLoginOpen] = useState(false)
   const [user, setUser] = useState(null)
+  const [result, setResult] = useState(null)
+  const [toast, setToast] = useState({ message: '', type: 'default' })
+  const [currentSimDate, setCurrentSimDate] = useState(null)
 
   const [form, setForm] = useState({
     start_date: '2025-01-01',
@@ -23,9 +27,6 @@ function App() {
     benchmark: 'SPY'
   })
 
-  const [result, setResult] = useState(null)
-  const [toast, setToast] = useState({ message: '', type: 'default' })
-
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
@@ -33,28 +34,88 @@ function App() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setToast({ message: '', type: 'default' })
-    setResult(null)
+    setResult({
+      starting_value: form.starting_value,
+      benchmark: form.benchmark,
+      monthly_returns: [],
+      daily_values: [],
+      daily_benchmark_values: []
+    })
     setLoading(true)
+    setLoadingPhase('init')
+    setCurrentSimDate(null)
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+    const socket = new WebSocket(`ws://${baseUrl.replace(/^https?:\/\//, '')}/simulate/ws`)
 
-    try {
-      const response = await fetch(`${baseUrl}/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const data = await response.json()
-      if (data.error) {
-        setToast({ message: data.error, type: 'error' })
-      } else {
-        setResult(data)
-        setToast({ message: 'Simulation completed!', type: 'success' })
+    socket.onopen = () => {
+      console.log('[WebSocket] Connected')
+      socket.send(JSON.stringify(form))
+    }
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data)
+
+      switch (msg.type) {
+
+        case 'status':
+          console.log('[STATUS]', msg.payload)
+          if (msg.payload.toLowerCase().includes('starting simulation')) {
+            setLoadingPhase('')
+          }
+          break
+
+        case 'daily':
+          setCurrentSimDate(msg.payload.date)
+          setResult((prev) => ({
+            ...prev,
+            daily_values: [...(prev.daily_values || []), {
+              date: msg.payload.date,
+              portfolio_value: msg.payload.portfolio_value
+            }],
+            daily_benchmark_values: [...(prev.daily_benchmark_values || []), {
+              date: msg.payload.date,
+              benchmark_value: msg.payload.benchmark_value
+            }]
+          }))
+          break
+
+        case 'rebalance':
+          setResult((prev) => ({
+            ...prev,
+            monthly_returns: [...(prev.monthly_returns || []), msg.payload],
+            final_portfolio_value: msg.payload.portfolio_value,
+            final_benchmark_value: msg.payload.benchmark_value
+          }))
+          break
+
+        case 'done':
+          setResult((prev) => ({
+            ...prev,
+            ...msg.payload
+          }))
+          setLoading(false)
+          setToast({ message: 'Simulation completed!', type: 'success' })
+          break
+
+        case 'error':
+          setToast({ message: msg.payload || 'Something went wrong.', type: 'error' })
+          setLoading(false)
+          break
+
+        default:
+          console.log('[UNKNOWN MESSAGE]', msg)
       }
-    } catch {
+    }
+
+    socket.onerror = (err) => {
+      console.error('[WebSocket Error]', err)
       setToast({ message: 'Something went wrong.', type: 'error' })
-    } finally {
       setLoading(false)
+    }
+
+    socket.onclose = () => {
+      console.log('[WebSocket] Disconnected')
     }
   }
 
@@ -66,7 +127,6 @@ function App() {
 
     fetchUser()
 
-    // ✅ Listen to login/logout/session change
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null)
     })
@@ -75,7 +135,6 @@ function App() {
       listener.subscription.unsubscribe()
     }
   }, [])
-
 
   return (
     <Router>
@@ -90,7 +149,17 @@ function App() {
         />
 
         <Routes>
-          <Route path="/simulate" element={<SimulationPanel loading={loading} result={result} />} />
+          <Route
+            path="/simulate"
+            element={
+              <SimulationPanel
+                loading={loading}
+                loadingPhase={loadingPhase}
+                result={result}
+                currentSimDate={currentSimDate}
+              />
+            }
+          />
           <Route path="/portfolio" element={<PortfolioPanel />} />
           <Route path="*" element={<Navigate to="/simulate" replace />} />
         </Routes>

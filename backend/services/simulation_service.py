@@ -41,9 +41,12 @@ class SimulationService:
 
         buy_orders = self.portfolio.buy(top, lambda t, d: get_price(self.price_data, t, d), date.strftime("%Y-%m-%d"))
 
+        # ⬇️ FIX: Compute true current portfolio value based on holdings
+        current_value = self.portfolio.value_on(lambda t, d: get_price(self.price_data, t, d), date.strftime("%Y-%m-%d"))
+
         self.monthly_returns.append({
             "date": date.strftime("%Y-%m-%d"),
-            "portfolio_value": round(self.portfolio.value, 2),
+            "portfolio_value": current_value,
             "benchmark_value": self.get_benchmark_value(date),
             "orders": sell_orders + buy_orders
         })

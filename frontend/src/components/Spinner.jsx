@@ -1,8 +1,8 @@
 import React from 'react'
 
-function Spinner() {
+function Spinner({ label }) {
   return (
-    <div className="flex justify-center items-center h-full">
+    <div className="flex flex-col justify-center items-center h-full gap-[12px]">
       <div
         className="w-[40px] h-[40px] rounded-full border-[4px] border-[#509cf4] border-t-transparent animate-spin"
         style={{
@@ -10,7 +10,18 @@ function Spinner() {
         }}
       ></div>
 
-      {/* Fallback keyframe in case Tailwind's `animate-spin` doesn't work */}
+      {label && (
+        <div
+          style={{
+            fontSize: '11px',
+            color: '#6b7280',
+            textAlign: 'center'
+          }}
+        >
+          {label}
+        </div>
+      )}
+
       <style>
         {`
           @keyframes spin {

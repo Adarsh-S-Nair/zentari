@@ -1,10 +1,9 @@
 import Pill from './Pill'
 
-function SummaryStat({ label, value, diff = null }) {
+function SummaryStat({ label, value, diff = null, isCurrency = false }) {
   const isPositive = diff > 0
   const isZero = diff === 0
 
-  // Format number as currency: $11,234.56
   const formatCurrency = val => {
     if (typeof val === 'number') {
       return `$${val.toLocaleString('en-US', {
@@ -16,9 +15,7 @@ function SummaryStat({ label, value, diff = null }) {
   }
 
   const formattedValue =
-    typeof value === 'number' && label.toLowerCase().includes('value')
-      ? formatCurrency(value)
-      : value
+    typeof value === 'number' && isCurrency ? formatCurrency(value) : value
 
   return (
     <div className="flex flex-col items-center">

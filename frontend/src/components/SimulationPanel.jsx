@@ -3,53 +3,61 @@ import LineChart from './LineChart'
 import SummaryStat from './SummaryStat'
 import CollapsibleMonthlyTable from './CollapsibleMonthlyTable'
 
-function SimulationPanel({ loading, result }) {
+function SimulationPanel({ loading, loadingPhase, result, currentSimDate }) {
+  const finalValue = result?.final_portfolio_value || 0
+  const benchmarkValue = result?.final_benchmark_value || 0
+  const startValue = result?.starting_value || 10000
+
+  const getSpinnerLabel = () => {
+    if (loadingPhase === 'init') return 'Loading price data...'
+    if (currentSimDate) {
+      const date = new Date(currentSimDate + 'T00:00:00Z')
+      return `Running simulation – ${date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      })}`
+    }
+    return 'Running simulation...'
+  }
+
   return (
     <main className="flex-1 px-[24px] overflow-y-auto flex flex-col items-center justify-center">
       {loading ? (
-        <div className="flex justify-center items-center h-full w-full">
-          <Spinner />
-        </div>
+        <Spinner label={getSpinnerLabel()} />
       ) : result ? (
         <div className="flex flex-col w-full max-w-[700px] items-center gap-[20px] pt-[24px] pb-[40px]">
-          {/* ⬆️ Summary row */}
           <div className="flex justify-around w-full px-[20px]">
-            <SummaryStat
-              label="Starting Value"
-              value={result.starting_value || 10000}
-            />
+            <SummaryStat label="Starting Value" value={startValue} isCurrency />
             <SummaryStat
               label="Ending Value"
-              value={result.final_portfolio_value}
-              diff={
-                ((result.final_portfolio_value - result.starting_value) /
-                  result.starting_value) *
-                100
-              }
+              value={finalValue}
+              diff={((finalValue - startValue) / startValue) * 100}
+              isCurrency
             />
             <SummaryStat
-              label={`${result.benchmark} Ending Value`}
-              value={result.final_benchmark_value}
-              diff={
-                ((result.final_benchmark_value - result.starting_value) /
-                  result.starting_value) *
-                100
-              }
+              label={`${result.benchmark || 'Benchmark'} Ending Value`}
+              value={benchmarkValue}
+              diff={((benchmarkValue - startValue) / startValue) * 100}
+              isCurrency
             />
             <SummaryStat
               label="Duration"
-              value={`${result.duration_sec.toFixed(2)} seconds`}
+              value={
+                result.duration_sec
+                  ? `${result.duration_sec.toFixed(2)} sec`
+                  : loading
+                  ? 'Running...'
+                  : '-'
+              }
             />
           </div>
 
-          {/* ⬇️ Chart */}
           <div className="w-full min-h-[300px]">
             <LineChart result={result} />
           </div>
 
-          {/* ⬇️ Collapsible Table */}
           <div className="w-full h-[350px]">
-            <CollapsibleMonthlyTable monthlyReturns={result.monthly_returns} />
+            <CollapsibleMonthlyTable monthlyReturns={result.monthly_returns || []} />
           </div>
         </div>
       ) : (
