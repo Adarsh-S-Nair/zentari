@@ -46,7 +46,7 @@ export default function LogoutModal({ isOpen, onClose, onLogout }) {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 50, display: 'flex',
       justifyContent: 'center', alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)',
+      backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)',
     }}>
       <div
         ref={modalRef}

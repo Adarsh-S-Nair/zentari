@@ -151,7 +151,7 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, 
         </div>
 
         {/* Auth/Login */}
-        <div style={{ marginTop: 'auto', marginBottom: fullyOpen ? '0px' : '8px' }}>
+        <div style={{ marginTop: 'auto', marginBottom: fullyOpen ? '-10px' : '8px' }}>
           {user ? (
             <UserProfileTab
               isOpen={fullyOpen}

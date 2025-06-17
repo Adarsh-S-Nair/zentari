@@ -61,13 +61,14 @@ function Toast({ message, type = 'default', onClose, duration = 20000 }) {
 
   return (
     <div
-      className={`fixed bottom-[24px] right-[24px] z-50 shadow-lg max-w-[480px] flex flex-col ${
+      className={`fixed bottom-[24px] right-[24px] z-50 max-w-[480px] flex flex-col ${
         isVisible ? 'animate-slide-in' : 'animate-slide-out'
       }`}
       style={{
         backgroundColor,
         borderRadius: '8px',
         color,
+        boxShadow: '0 12px 36px rgba(0, 0, 0, 0.25)',
       }}
     >
       <div className="flex items-center justify-between px-[16px] py-[10px]">
