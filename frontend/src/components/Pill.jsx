@@ -9,6 +9,9 @@ function Pill({ value, isPositive, isZero = false }) {
     textColor = isPositive ? '#16a34a' : '#dc2626'
   }
 
+  const displayValue =
+    typeof value === 'number' && isFinite(value) ? value.toFixed(1) : '--'
+
   return (
     <div
       style={{
@@ -24,7 +27,7 @@ function Pill({ value, isPositive, isZero = false }) {
       }}
     >
       {!isZero && isPositive ? '+' : ''}
-      {value.toFixed(1)}%
+      {displayValue}%
     </div>
   )
 }

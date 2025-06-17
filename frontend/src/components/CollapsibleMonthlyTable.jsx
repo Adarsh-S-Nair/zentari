@@ -1,6 +1,7 @@
 import MonthlyRow from './MonthlyRow'
 
 function CollapsibleMonthlyTable({ monthlyReturns }) {
+  console.log(monthlyReturns)
   return (
     <div
       className="w-full max-w-[700px] h-full bg-white rounded-[8px] flex flex-col"
@@ -43,27 +44,17 @@ function CollapsibleMonthlyTable({ monthlyReturns }) {
         }}
       >
         <div className="flex flex-col">
-          {monthlyReturns.map((entry, index) => {
-            const prev = index > 0 ? monthlyReturns[index - 1] : null
-            const pctChangePortfolio = prev
-              ? ((entry.portfolio_value - prev.portfolio_value) / prev.portfolio_value) * 100
-              : 0
-            const pctChangeBenchmark = prev
-              ? ((entry.benchmark_value - prev.benchmark_value) / prev.benchmark_value) * 100
-              : 0
-
-            return (
-              <MonthlyRow
-                key={entry.date}
-                date={entry.date}
-                value={entry.portfolio_value}
-                benchmark={entry.benchmark_value}
-                portfolioChange={pctChangePortfolio}
-                benchmarkChange={pctChangeBenchmark}
-                trades={entry.orders}
-              />
-            )
-          })}
+          {[...monthlyReturns].reverse().map((entry) => (
+            <MonthlyRow
+              key={entry.date}
+              date={entry.date}
+              value={entry.portfolio_value}
+              benchmark={entry.benchmark_value}
+              portfolioChange={entry.portfolio_return_pct}
+              benchmarkChange={entry.benchmark_return_pct}
+              trades={entry.orders}
+            />
+          ))}
         </div>
       </div>
     </div>

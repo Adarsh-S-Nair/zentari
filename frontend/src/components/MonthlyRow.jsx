@@ -30,6 +30,11 @@ function MonthlyRow({ date, value, benchmark, portfolioChange, benchmarkChange, 
     }
   }, [expanded])
 
+  const safePortfolioChange = portfolioChange ?? 0
+  const safeBenchmarkChange = benchmarkChange ?? 0
+  const isPortfolioZero = portfolioChange === null || portfolioChange === 0
+  const isBenchmarkZero = benchmarkChange === null || benchmarkChange === 0
+
   return (
     <div
       onClick={() => setExpanded(prev => !prev)}
@@ -49,12 +54,20 @@ function MonthlyRow({ date, value, benchmark, portfolioChange, benchmarkChange, 
 
           <div className="flex justify-end items-center gap-[6px]">
             {formatCurrency(value)}
-            <Pill value={portfolioChange} isPositive={portfolioChange > 0} isZero={portfolioChange === 0} />
+            <Pill
+              value={safePortfolioChange}
+              isPositive={safePortfolioChange > 0}
+              isZero={isPortfolioZero}
+            />
           </div>
 
           <div className="flex justify-end items-center gap-[6px]">
             {formatCurrency(benchmark)}
-            <Pill value={benchmarkChange} isPositive={benchmarkChange > 0} isZero={benchmarkChange === 0} />
+            <Pill
+              value={safeBenchmarkChange}
+              isPositive={safeBenchmarkChange > 0}
+              isZero={isBenchmarkZero}
+            />
           </div>
 
           <div className="flex justify-end">

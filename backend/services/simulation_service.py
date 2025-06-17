@@ -19,7 +19,9 @@ class SimulationService:
         )
 
         self.portfolio = Portfolio(params.starting_value)
-        self.benchmark_shares = get_benchmark_shares(self.price_data, params.benchmark, params.starting_value, params.start_date)
+        self.benchmark_shares = get_benchmark_shares(
+            self.price_data, params.benchmark, params.starting_value, params.start_date
+        )
 
         self.monthly_returns = []
         self.daily_values = []
@@ -27,7 +29,10 @@ class SimulationService:
 
     def rebalance(self, date):
         print(f"[REBALANCE] {date.strftime('%Y-%m-%d')}")
-        sell_orders = self.portfolio.sell_all(lambda t, d: get_price(self.price_data, t, d), date.strftime("%Y-%m-%d"))
+        sell_orders = self.portfolio.sell_all(
+            lambda t, d: get_price(self.price_data, t, d),
+            date.strftime("%Y-%m-%d")
+        )
 
         top = get_top_momentum_stocks(
             self.price_data,
@@ -39,21 +44,47 @@ class SimulationService:
         )
         print(f"[DEBUG] Top momentum tickers: {top}")
 
-        buy_orders = self.portfolio.buy(top, lambda t, d: get_price(self.price_data, t, d), date.strftime("%Y-%m-%d"))
+        buy_orders = self.portfolio.buy(
+            top,
+            lambda t, d: get_price(self.price_data, t, d),
+            date.strftime("%Y-%m-%d")
+        )
 
-        # ⬇️ FIX: Compute true current portfolio value based on holdings
-        current_value = self.portfolio.value_on(lambda t, d: get_price(self.price_data, t, d), date.strftime("%Y-%m-%d"))
+        current_value = self.portfolio.value_on(
+            lambda t, d: get_price(self.price_data, t, d),
+            date.strftime("%Y-%m-%d")
+        )
+        current_benchmark = self.get_benchmark_value(date)
+
+        # Compute % changes vs last monthly return
+        prev = self.monthly_returns[-1] if self.monthly_returns else None
+        portfolio_return_pct = (
+            round(((current_value - prev["portfolio_value"]) / prev["portfolio_value"]) * 100, 2)
+            if prev and prev["portfolio_value"]
+            else None
+        )
+        benchmark_return_pct = (
+            round(((current_benchmark - prev["benchmark_value"]) / prev["benchmark_value"]) * 100, 2)
+            if prev and prev["benchmark_value"]
+            else None
+        )
 
         self.monthly_returns.append({
             "date": date.strftime("%Y-%m-%d"),
-            "portfolio_value": current_value,
-            "benchmark_value": self.get_benchmark_value(date),
+            "portfolio_value": round(current_value, 2),
+            "benchmark_value": round(current_benchmark, 2) if current_benchmark is not None else None,
+            "portfolio_return_pct": portfolio_return_pct,
+            "benchmark_return_pct": benchmark_return_pct,
             "orders": sell_orders + buy_orders
         })
 
     def get_benchmark_value(self, date):
         try:
-            price = get_price(self.price_data, self.params.benchmark, date.strftime("%Y-%m-%d"))
+            price = get_price(
+                self.price_data,
+                self.params.benchmark,
+                date.strftime("%Y-%m-%d")
+            )
             return round(self.benchmark_shares * price, 2)
         except:
             return None
@@ -64,13 +95,20 @@ class SimulationService:
         last_rebalance = None
 
         while current <= end:
-            if self.portfolio.should_rebalance(current, last_rebalance, lambda t, d: get_price(self.price_data, t, d)):
+            if self.portfolio.should_rebalance(
+                current,
+                last_rebalance,
+                lambda t, d: get_price(self.price_data, t, d)
+            ):
                 self.rebalance(current)
                 last_rebalance = current
 
             self.daily_values.append({
                 "date": current.strftime("%Y-%m-%d"),
-                "portfolio_value": self.portfolio.value_on(lambda t, d: get_price(self.price_data, t, d), current.strftime("%Y-%m-%d"))
+                "portfolio_value": self.portfolio.value_on(
+                    lambda t, d: get_price(self.price_data, t, d),
+                    current.strftime("%Y-%m-%d")
+                )
             })
             self.daily_benchmark_values.append({
                 "date": current.strftime("%Y-%m-%d"),
@@ -79,11 +117,32 @@ class SimulationService:
 
             current += timedelta(days=1)
 
-        final_orders = self.portfolio.sell_all(lambda t, d: get_price(self.price_data, t, d), end.strftime("%Y-%m-%d"))
+        final_orders = self.portfolio.sell_all(
+            lambda t, d: get_price(self.price_data, t, d),
+            end.strftime("%Y-%m-%d")
+        )
+
+        final_value = round(self.portfolio.value, 2)
+        final_benchmark = self.get_benchmark_value(end)
+
+        prev = self.monthly_returns[-1] if self.monthly_returns else None
+        portfolio_return_pct = (
+            round(((final_value - prev["portfolio_value"]) / prev["portfolio_value"]) * 100, 2)
+            if prev and prev["portfolio_value"]
+            else None
+        )
+        benchmark_return_pct = (
+            round(((final_benchmark - prev["benchmark_value"]) / prev["benchmark_value"]) * 100, 2)
+            if prev and prev["benchmark_value"]
+            else None
+        )
+
         self.monthly_returns.append({
             "date": end.strftime("%Y-%m-%d"),
-            "portfolio_value": round(self.portfolio.value, 2),
-            "benchmark_value": self.get_benchmark_value(end),
+            "portfolio_value": final_value,
+            "benchmark_value": final_benchmark,
+            "portfolio_return_pct": portfolio_return_pct,
+            "benchmark_return_pct": benchmark_return_pct,
             "orders": final_orders
         })
 
@@ -102,7 +161,9 @@ class SimulationService:
             "top_n": self.params.top_n,
             "final_portfolio_value": round(self.portfolio.value, 2),
             "final_benchmark_value": self.monthly_returns[-1]["benchmark_value"],
-            "total_return_pct": round(((self.portfolio.value - self.params.starting_value) / self.params.starting_value) * 100, 2),
+            "total_return_pct": round(
+                ((self.portfolio.value - self.params.starting_value) / self.params.starting_value) * 100, 2
+            ),
             "monthly_returns": self.monthly_returns,
             "daily_values": self.daily_values,
             "daily_benchmark_values": self.daily_benchmark_values,

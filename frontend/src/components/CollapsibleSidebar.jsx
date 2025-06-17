@@ -6,14 +6,13 @@ import {
   FiBarChart2,
   FiFolder,
   FiLogIn,
-  FiLogOut,
 } from 'react-icons/fi'
-import { FaUserCircle } from 'react-icons/fa'
 import SimulationControls from './SimulationControls'
 import { useNavigate, useLocation } from 'react-router-dom'
 import logo from '../assets/logo.png'
 import { supabase } from '../supabaseClient'
 import LogoutModal from './LogoutModal'
+import UserProfileTab from './UserProfileTab'
 
 function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, onLoginClick, user }) {
   const navigate = useNavigate()
@@ -103,7 +102,7 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, 
       )}
 
       <div
-        className="transition-all duration-300 flex flex-col justify-between h-[100vh]"
+        className="transition-all duration-300 flex flex-col h-[100vh]"
         style={{
           backgroundColor: '#1f2937',
           width: isOpen ? '300px' : `${collapsedWidth}px`,
@@ -221,50 +220,32 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, 
         </div>
 
         {/* Auth Tab at Bottom */}
-        <div className="w-full mt-[20px] mb-[24px]">
-          <div
-            className={`flex items-center gap-[10px] ${
-              isOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'
-            } transition-colors duration-200 ${
-              user ? 'cursor-default' : 'hover:bg-[#2d384a] cursor-pointer'
-            }`}
-            onClick={() => {
-              if (!user) onLoginClick()
-            }}
-          >
-            <div className="flex items-center">
-              {user ? <FaUserCircle size={18} /> : <FiLogIn size={18} />}
-            </div>
-            {isOpen && (
-              <div className="flex justify-between w-full items-center">
-                <div className="flex items-center gap-[6px]">
-                  <h2 className="text-[13px] font-bold text-gray-100">
-                    {user ? userName || 'Logged in' : 'Log in / Sign Up'}
-                  </h2>
+        <div style={{ marginTop: 'auto', marginBottom: isOpen ? '0px' : '8px' }}>
+          {user ? (
+            <UserProfileTab isOpen={isOpen} user={user} userName={userName} setLogoutOpen={setLogoutOpen} />
+          ) : (
+            <div className="w-full mt-[20px] mb-[24px]">
+              <div
+                className={`flex items-center gap-[10px] ${
+                  isOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'
+                } transition-colors duration-200 hover:bg-[#2d384a] cursor-pointer`}
+                onClick={() => onLoginClick()}
+              >
+                <div className="flex items-center">
+                  <FiLogIn size={18} />
                 </div>
-                {user && (
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setLogoutOpen(true)
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '6px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.1s ease-in-out',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#6c1f1f')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <FiLogOut size={18} color="#ef4444" />
+                {isOpen && (
+                  <div className="flex justify-between w-full items-center">
+                    <div className="flex items-center gap-[6px]">
+                      <h2 className="text-[13px] font-bold text-gray-100">
+                        Log in / Sign Up
+                      </h2>
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -39,6 +39,11 @@ class WebSocketSimulationService:
         except:
             return None
 
+    def compute_return_pct(self, current, previous):
+        if previous is None or previous == 0:
+            return None
+        return round(((current - previous) / previous) * 100, 2)
+
     async def rebalance(self, date):
         await self.send("status", f"Rebalancing on {date.strftime('%Y-%m-%d')}")
 
@@ -65,10 +70,16 @@ class WebSocketSimulationService:
 
         benchmark_value = await self.get_benchmark_value(date)
 
+        prev_entry = self.monthly_returns[-1] if self.monthly_returns else None
+        prev_portfolio_value = prev_entry["portfolio_value"] if prev_entry else None
+        prev_benchmark_value = prev_entry["benchmark_value"] if prev_entry else None
+
         self.monthly_returns.append({
             "date": date.strftime("%Y-%m-%d"),
             "portfolio_value": current_value,
             "benchmark_value": benchmark_value,
+            "portfolio_return_pct": self.compute_return_pct(current_value, prev_portfolio_value),
+            "benchmark_return_pct": self.compute_return_pct(benchmark_value, prev_benchmark_value),
             "orders": sell_orders + buy_orders
         })
 
@@ -76,6 +87,8 @@ class WebSocketSimulationService:
             "date": date.strftime("%Y-%m-%d"),
             "portfolio_value": current_value,
             "benchmark_value": benchmark_value,
+            "portfolio_return_pct": self.compute_return_pct(current_value, prev_portfolio_value),
+            "benchmark_return_pct": self.compute_return_pct(benchmark_value, prev_benchmark_value),
             "orders": sell_orders + buy_orders
         })
 
@@ -129,10 +142,16 @@ class WebSocketSimulationService:
         final_benchmark_value = await self.get_benchmark_value(end)
         duration = round(time.time() - start_time, 2)
 
+        prev_entry = self.monthly_returns[-1] if self.monthly_returns else None
+        prev_portfolio_value = prev_entry["portfolio_value"] if prev_entry else None
+        prev_benchmark_value = prev_entry["benchmark_value"] if prev_entry else None
+
         self.monthly_returns.append({
             "date": end.strftime("%Y-%m-%d"),
             "portfolio_value": final_portfolio_value,
             "benchmark_value": final_benchmark_value,
+            "portfolio_return_pct": self.compute_return_pct(final_portfolio_value, prev_portfolio_value),
+            "benchmark_return_pct": self.compute_return_pct(final_benchmark_value, prev_benchmark_value),
             "orders": final_orders
         })
 
