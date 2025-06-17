@@ -19,16 +19,34 @@ const stylesByType = {
   },
 }
 
-function Toast({ message, type = 'default', onClose }) {
+function Toast({ message, type = 'default', onClose, duration = 20000 }) {
   const [isVisible, setIsVisible] = useState(false)
+  const [progress, setProgress] = useState(0)
   const timeoutRef = useRef(null)
+  const intervalRef = useRef(null)
   const { backgroundColor, color, icon } = stylesByType[type]
 
   useEffect(() => {
     if (message) {
       setIsVisible(true)
+      setProgress(0)
+
+      const step = 100 / (duration / 30)
+      intervalRef.current = setInterval(() => {
+        setProgress((prev) => {
+          const next = prev + step
+          if (next >= 100) {
+            clearInterval(intervalRef.current)
+            setIsVisible(false)
+            return 100
+          }
+          return next
+        })
+      }, 30)
     }
-  }, [message])
+
+    return () => clearInterval(intervalRef.current)
+  }, [message, duration])
 
   useEffect(() => {
     if (!isVisible && message) {
@@ -43,7 +61,7 @@ function Toast({ message, type = 'default', onClose }) {
 
   return (
     <div
-      className={`fixed bottom-[24px] right-[24px] z-50 shadow-lg max-w-[480px] flex items-center justify-between px-[16px] py-[10px] ${
+      className={`fixed bottom-[24px] right-[24px] z-50 shadow-lg max-w-[480px] flex flex-col ${
         isVisible ? 'animate-slide-in' : 'animate-slide-out'
       }`}
       style={{
@@ -52,17 +70,32 @@ function Toast({ message, type = 'default', onClose }) {
         color,
       }}
     >
-      <div className="flex items-center gap-[12px] pr-[80px]">
-        <div className="flex items-center justify-center">{icon}</div>
-        <span className="text-[14px] font-medium">{message}</span>
+      <div className="flex items-center justify-between px-[16px] py-[10px]">
+        <div className="flex items-center gap-[12px] pr-[80px]">
+          <div className="flex items-center justify-center">{icon}</div>
+          <span className="text-[14px] font-medium">{message}</span>
+        </div>
+        <div
+          onClick={() => {
+            setIsVisible(false)
+            clearInterval(intervalRef.current)
+          }}
+          className="cursor-pointer flex items-center justify-center"
+          style={{ color }}
+        >
+          <FiX size={18} />
+        </div>
       </div>
       <div
-        onClick={() => setIsVisible(false)}
-        className="cursor-pointer flex items-center justify-center"
-        style={{ color }}
-      >
-        <FiX size={18} />
-      </div>
+        className="h-[3px] transition-all duration-30"
+        style={{
+          backgroundColor: color,
+          width: `${100 - progress}%`,
+          alignSelf: 'flex-end',
+          borderBottomLeftRadius: '8px',
+          borderBottomRightRadius: '8px',
+        }}
+      />
     </div>
   )
 }

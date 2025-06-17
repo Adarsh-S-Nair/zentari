@@ -70,17 +70,8 @@ export default function LogoutModal({ isOpen, onClose, onLogout }) {
           gap: '15px',
           marginBottom: '16px'
         }}>
-          <div
-            style={{
-              backgroundColor: '#fee2e2',
-              borderRadius: '9999px',
-              padding: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <FiLogOut size={20} color="#b91c1c" />
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: '2px' }}>
+            <FiLogOut size={24} color="#b91c1c" />
           </div>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>
             Log out
