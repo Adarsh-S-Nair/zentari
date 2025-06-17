@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { FiLogOut } from 'react-icons/fi'
 import { supabase } from '../supabaseClient'
+import Button from './Button'
 
 export default function LogoutModal({ isOpen, onClose, onLogout }) {
   const [visible, setVisible] = useState(false)
@@ -96,44 +97,21 @@ export default function LogoutModal({ isOpen, onClose, onLogout }) {
           gap: '10px',
           marginTop: '24px',
         }}>
-          <button
-            disabled={loading}
+          <Button
+            color="#e5e7eb"
+            darkText
             onClick={handleClose}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#d1d5db')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 500,
-              backgroundColor: '#f3f4f6',
-              color: '#111827',
-              border: 'none',
-              cursor: 'pointer',
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            Cancel
-          </button>
-          <button
             disabled={loading}
+            label="Cancel"
+          />
+
+          <Button
+            color="#b91c1c"
             onClick={handleConfirmLogout}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#8e1a1a')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              backgroundColor: '#b91c1c',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            {loading ? 'Logging out...' : 'Log out'}
-          </button>
+            disabled={loading}
+            loading={loading}
+            label={'Log out'}
+          />
         </div>
       </div>
     </div>

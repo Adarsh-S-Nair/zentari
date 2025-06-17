@@ -1,4 +1,5 @@
-// components/SimulationControls.jsx
+import Button from './Button'
+
 function SimulationControls({ form, handleChange, handleSubmit, error, loading }) {
   const groupedFields = [
     [
@@ -68,32 +69,13 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
       )}
 
       <div style={{ marginTop: '28px' }}>
-        <button
-          type="button"
-          onClick={loading ? null : handleSubmit}
+        <Button
+          label={"Run Simulation"}
+          onClick={handleSubmit}
+          loading={loading}
           disabled={loading}
-          style={{
-            width: '100%',
-            backgroundColor: loading ? '#6b7280' : '#3b82f6',
-            color: '#ffffff',
-            padding: '10px 0',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '13px',
-            fontWeight: 700,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.85 : 1,
-            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.12)'
-          }}
-          onMouseEnter={(e) => {
-            if (!loading) e.currentTarget.style.backgroundColor = '#2563eb'
-          }}
-          onMouseLeave={(e) => {
-            if (!loading) e.currentTarget.style.backgroundColor = '#3b82f6'
-          }}
-        >
-          {loading ? 'Running...' : 'Run Simulation'}
-        </button>
+          color="#3b82f6"
+        />
       </div>
     </form>
   )

@@ -3,6 +3,7 @@ import { FiX } from 'react-icons/fi'
 import { MdEmail } from 'react-icons/md'
 import { FaLock, FaUser } from 'react-icons/fa'
 import { supabase } from '../supabaseClient'
+import Button from './Button'
 
 function Field({ icon, type, placeholder, value, onChange }) {
   return (
@@ -175,20 +176,13 @@ export default function LoginModal({ isOpen, onClose }) {
             </div>
           )}
 
-          <button
-            disabled={loading}
+          <Button
+            color="#3b82f6"
             onClick={handleSubmit}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3b82f6')}
-            style={{
-              width: '100%', padding: '10px', borderRadius: '6px',
-              fontSize: '14px', fontWeight: 600, backgroundColor: '#3b82f6',
-              color: '#fff', border: 'none', cursor: 'pointer',
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            {loading ? 'Please wait...' : isSignup ? 'Create account' : 'Log in'}
-          </button>
+            disabled={loading}
+            loading={loading}
+            label={loading ? 'Please wait...' : isSignup ? 'Create account' : 'Log in'}
+          />
 
           <p style={{ fontSize: '13px', textAlign: 'center', marginTop: '6px', color: '#6b7280' }}>
             {isSignup ? (
