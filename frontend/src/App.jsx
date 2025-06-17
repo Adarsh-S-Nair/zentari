@@ -45,8 +45,10 @@ function App() {
     setLoadingPhase('init')
     setCurrentSimDate(null)
 
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
     const socket = new WebSocket(`${protocol}://${baseUrl.replace(/^https?:\/\//, '')}/simulate/ws`)
+
 
     socket.onopen = () => {
       console.log('[WebSocket] Connected')
