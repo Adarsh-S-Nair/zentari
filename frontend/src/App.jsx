@@ -6,6 +6,7 @@ import SimulationPanel from './components/SimulationPanel'
 import Toast from './components/Toast'
 import LoginModal from './components/LoginModal'
 import { supabase } from './supabaseClient'
+import { useMediaQuery } from 'react-responsive'
 
 function App() {
   const [loading, setLoading] = useState(false)
@@ -15,6 +16,7 @@ function App() {
   const [result, setResult] = useState(null)
   const [toast, setToast] = useState({ message: '', type: 'default' })
   const [currentSimDate, setCurrentSimDate] = useState(null)
+  const isTablet = useMediaQuery({ maxWidth: 1024 })
 
   const [form, setForm] = useState({
     start_date: '2025-01-01',
@@ -140,7 +142,7 @@ function App() {
 
   return (
     <Router>
-      <div className="flex h-screen w-screen overflow-hidden">
+      <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
         <CollapsibleSidebar
           form={form}
           handleChange={handleChange}
@@ -150,22 +152,28 @@ function App() {
           user={user}
         />
 
-        <Routes>
-          <Route
-            path="/simulate"
-            element={
-              <SimulationPanel
-                loading={loading}
-                loadingPhase={loadingPhase}
-                result={result}
-                currentSimDate={currentSimDate}
-              />
-            }
-          />
-          <Route path="/portfolio" element={<PortfolioPanel />} />
-          <Route path="*" element={<Navigate to="/simulate" replace />} />
-        </Routes>
-
+        <div
+          className="flex-1 h-full overflow-y-auto flex"
+          style={{
+            marginLeft: isTablet ? '60px' : '0px'
+          }}
+        >
+          <Routes>
+            <Route
+              path="/simulate"
+              element={
+                <SimulationPanel
+                  loading={loading}
+                  loadingPhase={loadingPhase}
+                  result={result}
+                  currentSimDate={currentSimDate}
+                />
+              }
+            />
+            <Route path="/portfolio" element={<PortfolioPanel />} />
+            <Route path="*" element={<Navigate to="/simulate" replace />} />
+          </Routes>
+        </div>
         <Toast
           key={toast.message}
           message={toast.message}
