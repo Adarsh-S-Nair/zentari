@@ -1,58 +1,35 @@
-import React, { useRef, useEffect, useState } from 'react'
-import { useMediaQuery } from 'react-responsive'
-import {
-  FiChevronDown,
-  FiChevronUp,
-  FiBarChart2,
-  FiFolder,
-  FiLogIn,
-} from 'react-icons/fi'
+import React, { useEffect, useRef, useState } from 'react'
+import { FiChevronDown, FiChevronUp, FiBarChart2, FiFolder, FiLogIn } from 'react-icons/fi'
 import { useNavigate, useLocation } from 'react-router-dom'
 import SimulationControls from './SimulationControls'
 import UserProfileTab from './UserProfileTab'
 import LogoutModal from './LogoutModal'
-import logo from '../assets/logo.png'
+import logoCollapsed from '../assets/logo-light.png'
+import logoFull from '../assets/full-logo-light.png'
 import { supabase } from '../supabaseClient'
 
-function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, onLoginClick, user }) {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const isTablet = useMediaQuery({ maxWidth: 1024 })
-  const collapsedWidth = 60
-
-  const [isOpen, setIsOpen] = useState(() => !isTablet)
-  const [isHovering, setIsHovering] = useState(false)
+export default function CollapsibleSidebar({
+  form, handleChange, handleSubmit, error, loading,
+  onLoginClick, user, isTablet, isMobile
+}) {
+  const navigate = useNavigate(), location = useLocation(), collapsedWidth = 60
+  const [isOpen, setIsOpen] = useState(!isTablet), [isHovering, setIsHovering] = useState(false)
+  const [userName, setUserName] = useState(''), [logoutOpen, setLogoutOpen] = useState(false)
   const [contentHeight, setContentHeight] = useState(0)
-  const [userName, setUserName] = useState('')
-  const [logoutOpen, setLogoutOpen] = useState(false)
-
   const contentRef = useRef(null)
-  const isSim = location.pathname === '/simulate'
-  const fullyOpen = isOpen || isHovering
+  const isSim = location.pathname === '/simulate', fullyOpen = isOpen || isHovering
 
-  useEffect(() => {
-    setIsOpen(!isTablet)
-  }, [isTablet])
-
+  useEffect(() => void setIsOpen(!isTablet), [isTablet])
   useEffect(() => {
     if (user) {
-      supabase
-        .from('user_profiles')
-        .select('name')
-        .eq('id', user.id)
-        .single()
-        .then(({ data, error }) => {
-          if (!error && data?.name) setUserName(data.name)
-        })
+      supabase.from('user_profiles').select('name').eq('id', user.id).single()
+        .then(({ data, error }) => { if (!error && data?.name) setUserName(data.name) })
     }
   }, [user])
-
   useEffect(() => {
     if (fullyOpen && isSim && contentRef.current) {
-      const timeout = setTimeout(() => {
-        setContentHeight(contentRef.current.scrollHeight)
-      }, 50)
-      return () => clearTimeout(timeout)
+      const t = setTimeout(() => setContentHeight(contentRef.current.scrollHeight), 50)
+      return () => clearTimeout(t)
     }
   }, [form, isSim, fullyOpen])
 
@@ -61,18 +38,76 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, 
     { label: 'My Portfolio', icon: <FiFolder size={18} />, route: '/portfolio', hasContent: false },
   ]
 
+  const SidebarTab = ({ tab }) => {
+    const isActive = location.pathname === tab.route
+    const isExpandable = tab.hasContent && isActive
+
+    const roundedClass = !fullyOpen
+      ? 'rounded-[8px]'
+      : isExpandable
+      ? 'rounded-t-[8px]'
+      : 'rounded-[8px]'
+
+    const tabClass = `flex items-center gap-[10px] ${
+      fullyOpen ? 'px-[16px] py-[6px]' : 'justify-center h-[50px]'
+    } transition-colors duration-200 ${
+      isActive ? 'bg-[#374151] cursor-default' : 'hover:bg-[#2d384a] cursor-pointer'
+    } ${roundedClass}`
+
+    return (
+      <div>
+        <div className={tabClass} onClick={() => !isActive && navigate(tab.route)}>
+          {tab.icon}
+          {fullyOpen && (
+            <div className="flex justify-between w-full items-center">
+              <h2 className="text-[13px] font-bold text-gray-100">{tab.label}</h2>
+              {tab.hasContent && (isExpandable ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />)}
+            </div>
+          )}
+        </div>
+        {fullyOpen && isExpandable && (
+          <div
+            style={{
+              maxHeight: isActive ? `${contentHeight}px` : '0px',
+              transition: 'max-height 0.3s ease',
+              overflow: 'hidden',
+              backgroundColor: '#1c232f',
+              borderBottomLeftRadius: 8,
+              borderBottomRightRadius: 8,
+              marginBottom: '12px',
+            }}
+          >
+            <div ref={contentRef} className="px-[24px] py-[16px]">
+              <SimulationControls {...{ form, handleChange, handleSubmit, error, loading }} />
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+
   return (
     <>
+      {!isOpen && isMobile && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed top-4 left-4 z-50 w-[44px] h-[44px] bg-gray-800 rounded-full shadow-md flex items-center justify-center text-white"
+        >
+          <FiBarChart2 size={20} />
+        </button>
+      )}
+
       <div
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        className="transition-all duration-300 flex flex-col h-[100vh]"
+        className="transition-all duration-300 flex flex-col h-[100vh] px-[12px]"
         style={{
           backgroundColor: '#1f2937',
           width: fullyOpen ? '300px' : `${collapsedWidth}px`,
           paddingTop: '16px',
           paddingBottom: '16px',
-          boxShadow: `0 0 ${fullyOpen ? '40px 6px' : '30px'} rgba(0, 0, 0, 0.7)`,
+          boxShadow: `0 0 ${fullyOpen ? '40px 6px' : '30px'} rgba(0,0,0,0.7)`,
           fontFamily: '"Inter", system-ui, sans-serif',
           color: '#f3f4f6',
           overflowY: 'auto',
@@ -82,97 +117,35 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, 
           zIndex: isTablet ? 40 : 10,
         }}
       >
-        {/* Logo */}
-        <div className={`w-full mb-[20px] ${fullyOpen ? 'px-[16px]' : 'flex justify-center'}`}>
-          <div className="flex items-center gap-[10px]">
-            <img src={logo} alt="Logo" className="h-[40px] w-[40px] object-contain" />
-            {fullyOpen && (
-              <span
-                className="text-[18px] font-extrabold tracking-wide text-white"
-                style={{ paddingTop: '5px', lineHeight: '30px' }} // aligns text with the logo's height
-              >
-                ZENTARI
-              </span>
-            )}
-          </div>
-        </div>
-        {/* Tabs */}
-        <div className="w-full">
-          {tabs.map((tab, idx) => {
-            const isActive = location.pathname === tab.route
-            const isExpandable = tab.hasContent && isActive
-
-            return (
-              <div key={idx}>
-                <div
-                  className={`flex items-center gap-[10px] ${
-                    fullyOpen ? 'px-[16px] py-[6px]' : 'justify-center h-[50px]'
-                  } transition-colors duration-200 ${
-                    isActive ? 'bg-[#374151] cursor-default' : 'hover:bg-[#2d384a] cursor-pointer'
-                  }`}
-                  onClick={() => {
-                    if (!isActive) navigate(tab.route)
-                  }}
-                >
-                  {tab.icon}
-                  {fullyOpen && (
-                    <div className="flex justify-between w-full items-center">
-                      <h2 className="text-[13px] font-bold text-gray-100">{tab.label}</h2>
-                      {tab.hasContent && (isExpandable ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />)}
-                    </div>
-                  )}
-                </div>
-
-                {fullyOpen && isExpandable && (
-                  <div
-                    style={{
-                      maxHeight: isActive ? `${contentHeight}px` : '0px',
-                      transition: 'max-height 0.3s ease',
-                      overflow: 'hidden',
-                      backgroundColor: '#1c232f',
-                      borderBottomLeftRadius: '6px',
-                      borderBottomRightRadius: '6px',
-                    }}
-                  >
-                    <div ref={contentRef} className="px-[24px] py-[16px]">
-                      <SimulationControls
-                        form={form}
-                        handleChange={handleChange}
-                        handleSubmit={handleSubmit}
-                        error={error}
-                        loading={loading}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })}
+        {/* LOGO */}
+        <div className={`w-full mb-[38px] mt-[20px] ${fullyOpen ? 'ml-[10px]' : 'flex justify-center'}`}>
+          <img
+            src={fullyOpen ? logoFull : logoCollapsed}
+            alt="Logo"
+            className={fullyOpen ? 'h-[18px] w-auto object-contain' : 'h-[18px] w-[18px] object-contain'}
+          />
         </div>
 
-        {/* Auth/Login */}
-        <div style={{ marginTop: 'auto', marginBottom: fullyOpen ? '-10px' : '8px' }}>
+        {/* TABS */}
+        <div className="w-full flex flex-col gap-[10px] mb-[20px]">
+          {tabs.map((tab, i) => <SidebarTab key={i} tab={tab} />)}
+        </div>
+
+        {/* USER / LOGIN */}
+        <div style={{ marginTop: 'auto', paddingBottom: '16px' }}>
           {user ? (
-            <UserProfileTab
-              isOpen={fullyOpen}
-              user={user}
-              userName={userName}
-              setLogoutOpen={setLogoutOpen}
-            />
+            <UserProfileTab {...{ isOpen: fullyOpen, user, userName, setLogoutOpen }} />
           ) : (
-            <div className="w-full mt-[20px] mb-[24px]">
+            <div className="w-full">
               <div
-                className={`flex items-center gap-[10px] ${
-                  fullyOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'
-                } transition-colors duration-200 hover:bg-[#2d384a] cursor-pointer`}
+                className={`flex items-center gap-[10px] ${fullyOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'}
+                transition-colors duration-200 hover:bg-[#2d384a] cursor-pointer rounded-[8px]`}
                 onClick={onLoginClick}
               >
                 <FiLogIn size={18} />
                 {fullyOpen && (
                   <div className="flex justify-between w-full items-center">
-                    <div className="flex items-center gap-[6px]">
-                      <h2 className="text-[13px] font-bold text-gray-100">Log in / Sign Up</h2>
-                    </div>
+                    <h2 className="text-[13px] font-bold text-gray-100">Log in / Sign Up</h2>
                   </div>
                 )}
               </div>
@@ -181,13 +154,7 @@ function CollapsibleSidebar({ form, handleChange, handleSubmit, error, loading, 
         </div>
       </div>
 
-      <LogoutModal
-        isOpen={logoutOpen}
-        onClose={() => setLogoutOpen(false)}
-        onLogout={() => setUserName('')}
-      />
+      <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => setUserName('')} />
     </>
   )
 }
-
-export default CollapsibleSidebar

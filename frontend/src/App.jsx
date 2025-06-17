@@ -5,18 +5,21 @@ import PortfolioPanel from './components/PortfolioPanel'
 import SimulationPanel from './components/SimulationPanel'
 import Toast from './components/Toast'
 import LoginModal from './components/LoginModal'
+import MobileBottomBar from './components/MobileBottomBar'
+import MobileTopbar from './components/MobileTopbar'
 import { supabase } from './supabaseClient'
 import { useMediaQuery } from 'react-responsive'
 
 function App() {
   const [loading, setLoading] = useState(false)
-  const [loadingPhase, setLoadingPhase] = useState('') // 'init' | '' | 'done'
+  const [loadingPhase, setLoadingPhase] = useState('')
   const [loginOpen, setLoginOpen] = useState(false)
   const [user, setUser] = useState(null)
   const [result, setResult] = useState(null)
   const [toast, setToast] = useState({ message: '', type: 'default' })
   const [currentSimDate, setCurrentSimDate] = useState(null)
   const isTablet = useMediaQuery({ maxWidth: 1024 })
+  const isMobile = useMediaQuery({ maxWidth: 670 })
 
   const [form, setForm] = useState({
     start_date: '2025-01-01',
@@ -51,7 +54,6 @@ function App() {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
     const socket = new WebSocket(`${protocol}://${baseUrl.replace(/^https?:\/\//, '')}/simulate/ws`)
 
-
     socket.onopen = () => {
       console.log('[WebSocket] Connected')
       socket.send(JSON.stringify(form))
@@ -61,7 +63,6 @@ function App() {
       const msg = JSON.parse(event.data)
 
       switch (msg.type) {
-
         case 'status':
           console.log('[STATUS]', msg.payload)
           if (msg.payload.toLowerCase().includes('starting simulation')) {
@@ -143,20 +144,23 @@ function App() {
   return (
     <Router>
       <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
-        <CollapsibleSidebar
-          form={form}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          loading={loading}
-          onLoginClick={() => setLoginOpen(true)}
-          user={user}
-        />
+        {!isMobile && (
+          <CollapsibleSidebar
+            form={form}
+            handleChange={handleChange}
+            handleSubmit={handleSubmit}
+            loading={loading}
+            onLoginClick={() => setLoginOpen(true)}
+            user={user}
+            isTablet={isTablet}
+            isMobile={isMobile}
+          />
+        )}
 
+        {isMobile && <MobileTopbar form={form} handleChange={handleChange} handleSubmit={handleSubmit} loading={loading} />}
         <div
-          className="flex-1 h-full overflow-y-auto flex"
-          style={{
-            marginLeft: isTablet ? '60px' : '0px'
-          }}
+          className="flex-1 h-full overflow-y-auto flex pb-[60px] sm:pb-0"
+          style={{ marginLeft: isTablet && !isMobile ? '85px' : '0px' }}
         >
           <Routes>
             <Route
@@ -174,6 +178,14 @@ function App() {
             <Route path="*" element={<Navigate to="/simulate" replace />} />
           </Routes>
         </div>
+
+        {isMobile && (
+          <MobileBottomBar
+            user={user}
+            onLoginClick={() => setLoginOpen(true)}
+          />
+        )}
+
         <Toast
           key={toast.message}
           message={toast.message}
