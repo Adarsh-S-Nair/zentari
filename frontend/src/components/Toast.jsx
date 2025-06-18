@@ -19,7 +19,7 @@ const stylesByType = {
   },
 }
 
-function Toast({ message, type = 'default', onClose, duration = 20000 }) {
+function Toast({ message, type = 'default', onClose, duration = 20000, isMobile = false }) {
   const [isVisible, setIsVisible] = useState(false)
   const [progress, setProgress] = useState(0)
   const timeoutRef = useRef(null)
@@ -69,6 +69,8 @@ function Toast({ message, type = 'default', onClose, duration = 20000 }) {
         borderRadius: '8px',
         color,
         boxShadow: '0 12px 36px rgba(0, 0, 0, 0.25)',
+        bottom: isMobile ? '74px' : '24px',
+        right: '24px',
       }}
     >
       <div className="flex items-center justify-between px-[16px] py-[10px]">

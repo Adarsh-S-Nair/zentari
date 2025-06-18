@@ -22,7 +22,7 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
 
   return (
     <main className={`flex-1 px-[24px] overflow-y-auto overflow-x-hidden ${isMobile ? 'pt-[50px] pb-[60px]' : ''}`}>
-      <div className={`${isMobile ? 'flex flex-col items-center justify-center w-full' : 'min-h-[100vh] flex flex-col items-center justify-center'}`}>
+      <div className={`${isMobile ? 'min-h-[calc(100vh-100px)] flex flex-col items-center justify-center w-full' : 'min-h-[100vh] flex flex-col items-center justify-center'}`}>
         {loading ? (
           <Spinner label={getSpinnerLabel()} />
         ) : result ? (

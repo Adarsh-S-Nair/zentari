@@ -191,6 +191,7 @@ function App() {
           key={toast.message}
           message={toast.message}
           type={toast.type}
+          isMobile={isMobile}
           onClose={() => setToast({ message: '', type: 'default' })}
         />
 
