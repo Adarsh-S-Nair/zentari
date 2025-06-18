@@ -160,7 +160,7 @@ function App() {
         {isMobile && <MobileTopbar form={form} handleChange={handleChange} handleSubmit={handleSubmit} loading={loading} />}
         <div
           className="flex-1 h-full overflow-y-auto flex pb-[60px] sm:pb-0"
-          style={{ marginLeft: isTablet && !isMobile ? '85px' : '0px' }}
+          style={{ marginLeft: isTablet && !isMobile ? '75px' : '0px' }}
         >
           <Routes>
             <Route

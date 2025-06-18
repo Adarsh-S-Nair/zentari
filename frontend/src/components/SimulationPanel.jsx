@@ -21,47 +21,14 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
   }
 
   return (
-    <main className="flex-1 px-[24px] overflow-y-auto flex flex-col items-center justify-center">
-      {loading ? (
-        <Spinner label={getSpinnerLabel()} />
-      ) : result ? (
-        <div className="flex flex-col w-full max-w-[700px] items-center gap-[20px] pt-[24px] pb-[40px]">
+    <main className={`flex-1 px-[24px] overflow-y-auto overflow-x-hidden ${isMobile ? 'pt-[50px] pb-[60px]' : ''}`}>
+      <div className={`${isMobile ? 'flex flex-col items-center justify-center w-full' : 'min-h-[100vh] flex flex-col items-center justify-center'}`}>
+        {loading ? (
+          <Spinner label={getSpinnerLabel()} />
+        ) : result ? (
+          <div className="flex flex-col w-full max-w-[700px] items-center gap-[20px] pt-[24px] pb-[40px]">
 
-          {/* SUMMARY STATS */}
-          {isMobile ? (
-            <div className="grid grid-cols-2 gap-[16px] w-full max-w-[360px] px-[24px]">
-              <div className="flex flex-col gap-[10px]">
-                <SummaryStat label="Starting Value" value={startValue} isCurrency alignLeft />
-                <SummaryStat
-                  label="Duration"
-                  value={
-                    result.duration_sec
-                      ? `${result.duration_sec.toFixed(2)} sec`
-                      : loading
-                      ? 'Running...'
-                      : '-'
-                  }
-                  alignLeft
-                />
-              </div>
-              <div className="flex flex-col gap-[10px]">
-                <SummaryStat
-                  label="Ending Value"
-                  value={finalValue}
-                  diff={((finalValue - startValue) / startValue) * 100}
-                  isCurrency
-                  alignLeft
-                />
-                <SummaryStat
-                  label={`${result.benchmark || 'Benchmark'} Ending Value`}
-                  value={benchmarkValue}
-                  diff={((benchmarkValue - startValue) / startValue) * 100}
-                  isCurrency
-                  alignLeft
-                />
-              </div>
-            </div>
-          ) : (
+            {/* SUMMARY STATS */}
             <div className="flex justify-around w-full px-[20px]">
               <SummaryStat label="Starting Value" value={startValue} isCurrency />
               <SummaryStat
@@ -70,12 +37,15 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
                 diff={((finalValue - startValue) / startValue) * 100}
                 isCurrency
               />
-              <SummaryStat
-                label={`${result.benchmark || 'Benchmark'} Ending Value`}
-                value={benchmarkValue}
-                diff={((benchmarkValue - startValue) / startValue) * 100}
-                isCurrency
-              />
+              {!isMobile && (
+                <SummaryStat
+                  label={`${result.benchmark || 'Benchmark'} Ending Value`}
+                  value={benchmarkValue}
+                  diff={((benchmarkValue - startValue) / startValue) * 100}
+                  isCurrency
+                />
+              ) 
+              }
               <SummaryStat
                 label="Duration"
                 value={
@@ -87,26 +57,26 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
                 }
               />
             </div>
-          )}
 
-          {/* CHART */}
-          <div className="w-full min-h-[300px]">
-            <LineChart result={result} />
-          </div>
+            {/* CHART */}
+            <div className="w-full min-h-[300px]">
+              <LineChart result={result} />
+            </div>
 
-          {/* MONTHLY RETURNS */}
-          <div className="w-full h-[350px]">
-            <CollapsibleMonthlyTable
-              monthlyReturns={result.monthly_returns || []}
-              isMobile={isMobile}
-            />
+            {/* MONTHLY RETURNS */}
+            <div className="w-full h-[350px]">
+              <CollapsibleMonthlyTable
+                monthlyReturns={result.monthly_returns || []}
+                isMobile={isMobile}
+              />
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="text-gray-500 text-[14px] italic text-center pt-[40px]">
-          Run a simulation to see your portfolio performance here.
-        </div>
-      )}
+        ) : (
+          <div className="text-gray-500 text-[14px] italic text-center pt-[40px]">
+            Run a simulation to see your portfolio performance here.
+          </div>
+        )}
+      </div>
     </main>
   )
 }

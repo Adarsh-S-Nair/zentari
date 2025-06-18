@@ -105,9 +105,9 @@ export default function UserProfileTab({ isOpen, user, userName: externalUserNam
           onMouseLeave={(e) => !isHighlighted && (e.currentTarget.style.color = '#9ca3af')}
         >
           <FaUserCircle size={20} />
-          <span style={{ marginTop: '2px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {/* <span style={{ marginTop: '2px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {userName || 'User'}
-          </span>
+          </span> */}
         </button>
         {menuOpen && Menu}
         <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => setUserName('')} />

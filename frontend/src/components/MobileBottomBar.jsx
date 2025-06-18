@@ -20,7 +20,7 @@ export default function MobileBottomBar({ user, onLoginClick }) {
         bottom: 0,
         left: 0,
         width: '100%',
-        height: '60px',
+        height: '50px',
         backgroundColor: '#1f2937',
         display: 'flex',
         justifyContent: 'space-around',
@@ -68,7 +68,7 @@ export default function MobileBottomBar({ user, onLoginClick }) {
               }}
             >
               {tab.icon}
-              <span style={{ marginTop: '2px', fontSize: '11px' }}>{tab.label}</span>
+              {/* <span style={{ marginTop: '2px', fontSize: '11px' }}>{tab.label}</span> */}
             </div>
           </button>
         )
@@ -100,7 +100,7 @@ export default function MobileBottomBar({ user, onLoginClick }) {
           onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
         >
           <FiLogIn size={20} />
-          <span style={{ marginTop: '2px' }}>Log In / Sign Up</span>
+          {/* <span style={{ marginTop: '2px' }}>Log In / Sign Up</span> */}
         </button>
       )}
     </div>

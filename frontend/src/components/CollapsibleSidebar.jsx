@@ -12,7 +12,7 @@ export default function CollapsibleSidebar({
   form, handleChange, handleSubmit, error, loading,
   onLoginClick, user, isTablet, isMobile
 }) {
-  const navigate = useNavigate(), location = useLocation(), collapsedWidth = 60
+  const navigate = useNavigate(), location = useLocation(), collapsedWidth = 50
   const [isOpen, setIsOpen] = useState(!isTablet), [isHovering, setIsHovering] = useState(false)
   const [userName, setUserName] = useState(''), [logoutOpen, setLogoutOpen] = useState(false)
   const [contentHeight, setContentHeight] = useState(0)
@@ -104,7 +104,7 @@ export default function CollapsibleSidebar({
         className="transition-all duration-300 flex flex-col h-[100vh] px-[12px]"
         style={{
           backgroundColor: '#1f2937',
-          width: fullyOpen ? '300px' : `${collapsedWidth}px`,
+          width: fullyOpen ? '290px' : `${collapsedWidth}px`,
           paddingTop: '16px',
           paddingBottom: '16px',
           boxShadow: `0 0 ${fullyOpen ? '40px 6px' : '30px'} rgba(0,0,0,0.7)`,
