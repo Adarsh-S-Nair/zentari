@@ -32,10 +32,12 @@ export default function CollapsibleSidebar({
     }
   }, [user])
 
-  const tabs = [
-    { label: 'My Portfolio', icon: <FiFolder size={18} />, route: '/portfolio', hasContent: false },
-    { label: 'Simulation', icon: <FiBarChart2 size={18} />, route: '/simulate', hasContent: true },
+  const allTabs = [
+    { label: 'My Portfolio', icon: <FiFolder size={18} />, route: '/portfolio', hasContent: false, requiresAuth: true },
+    { label: 'Simulation', icon: <FiBarChart2 size={18} />, route: '/simulate', hasContent: true, requiresAuth: false },
   ]
+
+  const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user)
 
   return (
     <>
@@ -79,7 +81,7 @@ export default function CollapsibleSidebar({
           </div>
 
           <div className="w-full flex flex-col gap-[10px] mb-[20px]">
-            {tabs.map((tab, i) => (
+            {visibleTabs.map((tab, i) => (
               <SidebarTab
                 key={i}
                 tab={tab}
