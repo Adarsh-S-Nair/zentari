@@ -102,7 +102,7 @@ export default function CollapsibleSidebar({
           ) : (
             <div className="w-full" 
                 style={{
-                  marginBottom: fullyOpen ? '12px' : '48px', // or tweak values here
+                  marginBottom: !fullyOpen && !isTablet ? '48px' : '12px', // or tweak values here
                   transition: 'margin-bottom 0.2s ease',
                 }}>
               <div
@@ -181,7 +181,12 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
         {fullyOpen && (
           <div className="flex justify-between w-full items-center">
             <h2 className="text-[13px] font-bold text-gray-100">{tab.label}</h2>
-            {tab.hasContent && (isExpandable ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />)}
+            {tab.hasContent && (
+              <FiChevronDown
+                size={18}
+                className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}
+              />
+            )}
           </div>
         )}
       </div>
