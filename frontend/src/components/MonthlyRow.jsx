@@ -9,11 +9,13 @@ function MonthlyRow({ date, value, benchmark, portfolioChange, benchmarkChange, 
   const [isHovered, setIsHovered] = useState(false)
   const contentRef = useRef(null)
 
-  const formatCurrency = val =>
-    `$${val.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })}`
+  const formatCurrency = (val) =>
+    typeof val === 'number'
+      ? `$${val.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}`
+      : '-'
 
   const formattedDate = new Intl.DateTimeFormat('en-US', {
     month: 'long',

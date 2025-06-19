@@ -4,14 +4,9 @@ import { FiBarChart2, FiFolder, FiLogIn } from 'react-icons/fi'
 import { FaUserCircle } from 'react-icons/fa'
 import UserProfileTab from './UserProfileTab'
 
-export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen }) {
+export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen, visibleTabs }) {
   const navigate = useNavigate()
   const location = useLocation()
-
-  const tabs = [
-    { icon: <FiBarChart2 size={20} />, label: 'Simulation', route: '/simulate' },
-    { icon: <FiFolder size={20} />, label: 'My Portfolio', route: '/portfolio' },
-  ]
 
   return (
     <div
@@ -30,7 +25,7 @@ export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen }) {
         fontFamily: '"Inter", system-ui, sans-serif',
       }}
     >
-      {tabs.map((tab, idx) => {
+      {visibleTabs.map((tab, idx) => {
         const isActive = location.pathname === tab.route
 
         return (

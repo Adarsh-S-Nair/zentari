@@ -10,7 +10,8 @@ import { supabase } from '../supabaseClient'
 
 export default function CollapsibleSidebar({
   form, handleChange, handleSubmit, error, loading,
-  onLoginClick, user, isTablet, isMobile, setLogoutOpen
+  onLoginClick, user, isTablet, isMobile, setLogoutOpen,
+  visibleTabs
 }) {
   const navigate = useNavigate(), location = useLocation()
   const contentRef = useRef(null)
@@ -31,13 +32,6 @@ export default function CollapsibleSidebar({
         .then(({ data, error }) => { if (!error && data?.name) setUserName(data.name) })
     }
   }, [user])
-
-  const allTabs = [
-    { label: 'My Portfolio', icon: <FiFolder size={18} />, route: '/portfolio', hasContent: false, requiresAuth: true },
-    { label: 'Simulation', icon: <FiBarChart2 size={18} />, route: '/simulate', hasContent: true, requiresAuth: false },
-  ]
-
-  const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user)
 
   return (
     <>

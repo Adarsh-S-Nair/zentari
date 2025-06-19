@@ -67,7 +67,10 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
             {/* MONTHLY RETURNS */}
             <div className="w-full h-[350px]">
               <CollapsibleMonthlyTable
-                monthlyReturns={result.monthly_returns || []}
+                tradeHistory={result.trade_history_by_date || {}}
+                dailyValues={result.daily_values || []}
+                dailyBenchmarkValues={result.daily_benchmark_values || []}
+                startingValue={result.starting_value}
                 isMobile={isMobile}
               />
             </div>

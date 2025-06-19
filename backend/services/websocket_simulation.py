@@ -29,7 +29,6 @@ class WebSocketSimulationService:
 
         self.daily_values = []
         self.daily_benchmark_values = []
-        self.monthly_returns = []
 
     async def send(self, event_type, payload):
         await self.websocket.send_text(json.dumps({"type": event_type, "payload": payload}))
@@ -72,25 +71,10 @@ class WebSocketSimulationService:
 
         benchmark_value = await self.get_benchmark_value(date)
 
-        prev_entry = self.monthly_returns[-1] if self.monthly_returns else None
-        prev_portfolio_value = prev_entry["portfolio_value"] if prev_entry else None
-        prev_benchmark_value = prev_entry["benchmark_value"] if prev_entry else None
-
-        self.monthly_returns.append({
-            "date": date.strftime("%Y-%m-%d"),
-            "portfolio_value": current_value,
-            "benchmark_value": benchmark_value,
-            "portfolio_return_pct": self.compute_return_pct(current_value, prev_portfolio_value),
-            "benchmark_return_pct": self.compute_return_pct(benchmark_value, prev_benchmark_value),
-            "orders": sell_orders + buy_orders
-        })
-
         await self.send("rebalance", {
             "date": date.strftime("%Y-%m-%d"),
             "portfolio_value": current_value,
             "benchmark_value": benchmark_value,
-            "portfolio_return_pct": self.compute_return_pct(current_value, prev_portfolio_value),
-            "benchmark_return_pct": self.compute_return_pct(benchmark_value, prev_benchmark_value),
             "orders": sell_orders + buy_orders
         })
 
@@ -144,19 +128,6 @@ class WebSocketSimulationService:
         final_benchmark_value = await self.get_benchmark_value(end)
         duration = round(time.time() - start_time, 2)
 
-        prev_entry = self.monthly_returns[-1] if self.monthly_returns else None
-        prev_portfolio_value = prev_entry["portfolio_value"] if prev_entry else None
-        prev_benchmark_value = prev_entry["benchmark_value"] if prev_entry else None
-
-        self.monthly_returns.append({
-            "date": end.strftime("%Y-%m-%d"),
-            "portfolio_value": final_portfolio_value,
-            "benchmark_value": final_benchmark_value,
-            "portfolio_return_pct": self.compute_return_pct(final_portfolio_value, prev_portfolio_value),
-            "benchmark_return_pct": self.compute_return_pct(final_benchmark_value, prev_benchmark_value),
-            "orders": final_orders
-        })
-
         await self.send("done", {
             "start_date": self.params.start_date,
             "end_date": self.params.end_date,
@@ -168,7 +139,7 @@ class WebSocketSimulationService:
             "final_portfolio_value": final_portfolio_value,
             "final_benchmark_value": final_benchmark_value,
             "total_return_pct": round(((final_portfolio_value - self.params.starting_value) / self.params.starting_value) * 100, 2),
-            "monthly_returns": self.monthly_returns,
+            "trade_history_by_date": self.portfolio.trade_history_by_date,
             "daily_values": self.daily_values,
             "daily_benchmark_values": self.daily_benchmark_values,
             "duration_sec": duration

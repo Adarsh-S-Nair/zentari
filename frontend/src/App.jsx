@@ -10,6 +10,7 @@ import MobileBottomBar from './components/MobileBottomBar'
 import MobileTopbar from './components/MobileTopbar'
 import { supabase } from './supabaseClient'
 import { useMediaQuery } from 'react-responsive'
+import { FiBarChart2, FiFolder} from 'react-icons/fi'
 
 function App() {
   const [loading, setLoading] = useState(false)
@@ -22,6 +23,11 @@ function App() {
   const [logoutOpen, setLogoutOpen] = useState(false)
   const isTablet = useMediaQuery({ maxWidth: 1024 })
   const isMobile = useMediaQuery({ maxWidth: 670 })
+  const allTabs = [
+    { label: 'My Portfolio', icon: <FiFolder size={18} />, route: '/portfolio', hasContent: false, requiresAuth: true },
+    { label: 'Simulation', icon: <FiBarChart2 size={18} />, route: '/simulate', hasContent: true, requiresAuth: false },
+  ]
+  const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user)
 
   const [form, setForm] = useState({
     start_date: '2025-01-01',
@@ -148,6 +154,7 @@ function App() {
       <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
         {!isMobile && (
           <CollapsibleSidebar
+            visibleTabs={visibleTabs}
             form={form}
             handleChange={handleChange}
             handleSubmit={handleSubmit}
@@ -188,6 +195,7 @@ function App() {
             user={user}
             onLoginClick={() => setLoginOpen(true)}
             setLogoutOpen={setLogoutOpen}
+            visibleTabs={visibleTabs}
           />
         )}
 

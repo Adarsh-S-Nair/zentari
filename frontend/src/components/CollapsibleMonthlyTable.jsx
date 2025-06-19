@@ -1,6 +1,27 @@
 import MonthlyRow from './MonthlyRow'
 
-function CollapsibleMonthlyTable({ monthlyReturns, isMobile }) {
+function CollapsibleMonthlyTable({ tradeHistory, dailyValues, dailyBenchmarkValues, startingValue, isMobile }) {
+  const portfolioMap = Object.fromEntries(dailyValues.map(d => [d.date, d.portfolio_value]))
+  const benchmarkMap = Object.fromEntries(dailyBenchmarkValues.map(d => [d.date, d.benchmark_value]))
+
+  const entries = Object.entries(tradeHistory || {}).map(([date, orders]) => {
+    const portfolioValue = portfolioMap[date] ?? null
+    const benchmarkValue = benchmarkMap[date] ?? null
+
+    return {
+      date,
+      orders,
+      portfolio_value: portfolioValue,
+      benchmark_value: benchmarkValue,
+      portfolio_return_pct: portfolioValue != null && startingValue > 0
+        ? ((portfolioValue - startingValue) / startingValue) * 100
+        : null,
+      benchmark_return_pct: benchmarkValue != null && startingValue > 0
+        ? ((benchmarkValue - startingValue) / startingValue) * 100
+        : null
+    }
+  }).sort((a, b) => new Date(b.date) - new Date(a.date))
+  
   return (
     <div
       className="w-full max-w-[700px] h-full bg-white rounded-[8px] flex flex-col"
@@ -52,7 +73,7 @@ function CollapsibleMonthlyTable({ monthlyReturns, isMobile }) {
         }}
       >
         <div className="flex flex-col">
-          {[...monthlyReturns].reverse().map((entry) => (
+          {entries.map((entry) => (
             <MonthlyRow
               key={entry.date}
               date={entry.date}
