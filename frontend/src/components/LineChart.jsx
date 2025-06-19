@@ -67,6 +67,10 @@ const LineChart = ({ result }) => {
     responsive: true,
     maintainAspectRatio: false,
     layout: { padding: 0 },
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
     scales: {
       x: {
         grid: { display: false },

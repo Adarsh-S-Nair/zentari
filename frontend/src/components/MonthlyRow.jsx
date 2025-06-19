@@ -49,27 +49,29 @@ function MonthlyRow({ date, value, benchmark, portfolioChange, benchmarkChange, 
       }}
     >
       <div className="py-[10px] pr-[16px] pl-[6px]">
-        <div className={`grid ${isMobile ? 'grid-cols-[1fr_1fr_32px]' : 'grid-cols-[1fr_1fr_1fr_32px]'} text-[13px] text-gray-700 items-center`}>
+        <div
+          className={`grid text-[13px] text-gray-700 items-center ${
+            isMobile
+              ? 'grid-cols-[1fr_100px_64px_32px]'
+              : 'grid-cols-[1fr_100px_64px_20px_100px_64px_32px]'
+          }`}
+        >
           <div className="text-left">{formattedDate}</div>
 
-          <div className="flex justify-end items-center gap-[6px]">
-            {formatCurrency(value)}
-            <Pill
-              value={safePortfolioChange}
-              isPositive={safePortfolioChange > 0}
-              isZero={isPortfolioZero}
-            />
+          <div className="flex justify-end items-center">{formatCurrency(value)}</div>
+          <div className="flex justify-end items-center">
+            <Pill value={safePortfolioChange} isPositive={safePortfolioChange > 0} isZero={isPortfolioZero} />
           </div>
 
+          {!isMobile && <div />} {/* spacer */}
+
           {!isMobile && (
-            <div className="flex justify-end items-center gap-[6px]">
-              {formatCurrency(benchmark)}
-              <Pill
-                value={safeBenchmarkChange}
-                isPositive={safeBenchmarkChange > 0}
-                isZero={isBenchmarkZero}
-              />
-            </div>
+            <>
+              <div className="flex justify-end items-center">{formatCurrency(benchmark)}</div>
+              <div className="flex justify-end items-center">
+                <Pill value={safeBenchmarkChange} isPositive={safeBenchmarkChange > 0} isZero={isBenchmarkZero} />
+              </div>
+            </>
           )}
 
           <div className="flex justify-end">

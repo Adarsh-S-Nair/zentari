@@ -4,7 +4,7 @@ import { FiBarChart2, FiFolder, FiLogIn } from 'react-icons/fi'
 import { FaUserCircle } from 'react-icons/fa'
 import UserProfileTab from './UserProfileTab'
 
-export default function MobileBottomBar({ user, onLoginClick }) {
+export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen }) {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -68,17 +68,14 @@ export default function MobileBottomBar({ user, onLoginClick }) {
               }}
             >
               {tab.icon}
-              {/* <span style={{ marginTop: '2px', fontSize: '11px' }}>{tab.label}</span> */}
             </div>
           </button>
         )
       })}
 
-
-
       {user ? (
         <div style={{ flex: 1, height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <UserProfileTab isOpen={false} user={user} mobile />
+          <UserProfileTab isOpen={false} user={user} mobile setLogoutOpen={setLogoutOpen} />
         </div>
       ) : (
         <button
@@ -100,7 +97,6 @@ export default function MobileBottomBar({ user, onLoginClick }) {
           onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
         >
           <FiLogIn size={20} />
-          {/* <span style={{ marginTop: '2px' }}>Log In / Sign Up</span> */}
         </button>
       )}
     </div>

@@ -21,11 +21,20 @@ function CollapsibleMonthlyTable({ monthlyReturns, isMobile }) {
             boxSizing: 'border-box'
           }}
         >
-          <div className={`grid ${isMobile ? 'grid-cols-[1fr_1fr_32px]' : 'grid-cols-[1fr_1fr_1fr_32px]'} text-[12px] font-medium text-gray-500 pr-[12px]`}>
+          <div
+            className={`grid text-[12px] font-medium text-gray-500 ${
+              isMobile
+                ? 'grid-cols-[1fr_100px_64px_32px]'
+                : 'grid-cols-[1fr_100px_68px_20px_100px_64px_32px]'
+            }`}
+          >
             <div className="text-left">Date</div>
-            <div className="text-right">Portfolio Value</div>
-            {!isMobile && <div className="text-right">Benchmark Value</div>}
-            <div></div>
+            <div className="text-right">Portfolio</div>
+            <div className="text-center">%</div>
+            {!isMobile && <div />} {/* spacer */}
+            {!isMobile && <div className="text-right">Benchmark</div>}
+            {!isMobile && <div className="text-center">%</div>}
+            <div></div> {/* chevron column */}
           </div>
         </div>
       </div>

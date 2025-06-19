@@ -10,7 +10,7 @@ import { supabase } from '../supabaseClient'
 
 export default function CollapsibleSidebar({
   form, handleChange, handleSubmit, error, loading,
-  onLoginClick, user, isTablet, isMobile
+  onLoginClick, user, isTablet, isMobile, setLogoutOpen
 }) {
   const navigate = useNavigate(), location = useLocation()
   const contentRef = useRef(null)
@@ -18,7 +18,6 @@ export default function CollapsibleSidebar({
   const [isOpen, setIsOpen] = useState(!isTablet)
   const [isHovering, setIsHovering] = useState(false)
   const [userName, setUserName] = useState('')
-  const [logoutOpen, setLogoutOpen] = useState(false)
   const [contentHeight, setContentHeight] = useState(0)
   const [shouldAnimate, setShouldAnimate] = useState(false)
 
@@ -52,7 +51,7 @@ export default function CollapsibleSidebar({
       <div
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        className="transition-all duration-300 flex flex-col h-[100vh] px-[12px]"
+        className="transition-all duration-300 h-[100vh] px-[12px] flex flex-col justify-between"
         style={{
           backgroundColor: '#1f2937',
           width: fullyOpen ? '290px' : '50px',
@@ -68,39 +67,44 @@ export default function CollapsibleSidebar({
           zIndex: isTablet ? 40 : 10,
         }}
       >
-        {/* Logo */}
-        <div className={`w-full mb-[38px] mt-[20px] ${fullyOpen ? 'ml-[10px]' : 'flex justify-center'}`}>
-          <img
-            src={fullyOpen ? logoFull : logoCollapsed}
-            alt="Logo"
-            className="h-[18px] object-contain"
-            style={{ width: fullyOpen ? 'auto' : '18px' }}
-          />
-        </div>
-
-        {/* Tabs */}
-        <div className="w-full flex flex-col gap-[10px] mb-[20px]">
-          {tabs.map((tab, i) => (
-            <SidebarTab
-              key={i}
-              tab={tab}
-              isActive={location.pathname === tab.route}
-              fullyOpen={fullyOpen}
-              contentRef={contentRef}
-              contentHeight={contentHeight}
-              shouldAnimate={shouldAnimate} // ✅ add this
-              formProps={{ form, handleChange, handleSubmit, error, loading }}
-              navigate={navigate}
+        {/* 🧱 Top: Logo + Tabs */}
+        <div>
+          <div className={`w-full mb-[38px] mt-[20px] ${fullyOpen ? 'ml-[10px]' : 'flex justify-center'}`}>
+            <img
+              src={fullyOpen ? logoFull : logoCollapsed}
+              alt="Logo"
+              className="h-[18px] object-contain"
+              style={{ width: fullyOpen ? 'auto' : '18px' }}
             />
-          ))}
+          </div>
+
+          <div className="w-full flex flex-col gap-[10px] mb-[20px]">
+            {tabs.map((tab, i) => (
+              <SidebarTab
+                key={i}
+                tab={tab}
+                isActive={location.pathname === tab.route}
+                fullyOpen={fullyOpen}
+                contentRef={contentRef}
+                contentHeight={contentHeight}
+                shouldAnimate={shouldAnimate}
+                formProps={{ form, handleChange, handleSubmit, error, loading }}
+                navigate={navigate}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Login / Profile */}
-        <div style={{ marginTop: 'auto', paddingBottom: '16px' }}>
+        {/* 📌 Bottom: Profile/Login pinned to bottom */}
+        <div className={!fullyOpen ? `pb-[28px]` : `pb-[16px]`}>
           {user ? (
             <UserProfileTab {...{ isOpen: fullyOpen, user, userName, setLogoutOpen }} />
           ) : (
-            <div className="w-full">
+            <div className="w-full" 
+                style={{
+                  marginBottom: fullyOpen ? '12px' : '48px', // or tweak values here
+                  transition: 'margin-bottom 0.2s ease',
+                }}>
               <div
                 onClick={onLoginClick}
                 className={`flex items-center gap-[10px] ${fullyOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'} 
@@ -117,8 +121,6 @@ export default function CollapsibleSidebar({
           )}
         </div>
       </div>
-
-      <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => setUserName('')} />
     </>
   )
 }

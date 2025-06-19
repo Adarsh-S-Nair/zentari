@@ -14,7 +14,8 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
       const date = new Date(currentSimDate + 'T00:00:00Z')
       return `Running simulation – ${date.toLocaleDateString('en-US', {
         month: 'short',
-        day: 'numeric'
+        day: 'numeric',
+        year: 'numeric'
       })}`
     }
     return 'Running simulation...'

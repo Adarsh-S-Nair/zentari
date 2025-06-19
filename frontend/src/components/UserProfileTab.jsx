@@ -3,13 +3,11 @@ import { FaUserCircle } from 'react-icons/fa'
 import { MdOutlineLogout } from 'react-icons/md'
 import { IoMdSettings } from 'react-icons/io'
 import { FaEllipsisVertical } from 'react-icons/fa6'
-import LogoutModal from './LogoutModal'
 import { supabase } from '../supabaseClient'
 
 export default function UserProfileTab({ isOpen, user, userName: externalUserName, setLogoutOpen: externalSetLogoutOpen, mobile = false }) {
   const [userName, setUserName] = useState(externalUserName || '')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [logoutOpen, setLogoutOpen] = useState(false)
   const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 })
   const iconRef = useRef(null), triggerRef = useRef(null), menuRef = useRef(null)
 
@@ -40,7 +38,7 @@ export default function UserProfileTab({ isOpen, user, userName: externalUserNam
     if (!rect) return
     setMenuCoords({
       top: mobile ? rect.top - 100 : rect.top - 60,
-      left: mobile ? rect.left + rect.width / 2 : rect.right + 8,
+      left: mobile ? rect.left - 24 + rect.width / 2 : rect.right + 8,
     })
     setMenuOpen(true)
   }
@@ -70,7 +68,6 @@ export default function UserProfileTab({ isOpen, user, userName: externalUserNam
         style={{ color: '#dc2626' }}
         onClick={() => {
           setMenuOpen(false)
-          setLogoutOpen(true)
           if (externalSetLogoutOpen) externalSetLogoutOpen(true)
         }}
       >
@@ -105,12 +102,8 @@ export default function UserProfileTab({ isOpen, user, userName: externalUserNam
           onMouseLeave={(e) => !isHighlighted && (e.currentTarget.style.color = '#9ca3af')}
         >
           <FaUserCircle size={20} />
-          {/* <span style={{ marginTop: '2px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {userName || 'User'}
-          </span> */}
         </button>
         {menuOpen && Menu}
-        <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => setUserName('')} />
       </>
     )
   }
@@ -154,7 +147,6 @@ export default function UserProfileTab({ isOpen, user, userName: externalUserNam
         </div>
       </div>
       {menuOpen && Menu}
-      <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => setUserName('')} />
     </>
   )
 }

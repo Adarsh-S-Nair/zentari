@@ -5,6 +5,7 @@ import PortfolioPanel from './components/PortfolioPanel'
 import SimulationPanel from './components/SimulationPanel'
 import Toast from './components/Toast'
 import LoginModal from './components/LoginModal'
+import LogoutModal from './components/LogoutModal'
 import MobileBottomBar from './components/MobileBottomBar'
 import MobileTopbar from './components/MobileTopbar'
 import { supabase } from './supabaseClient'
@@ -18,6 +19,7 @@ function App() {
   const [result, setResult] = useState(null)
   const [toast, setToast] = useState({ message: '', type: 'default' })
   const [currentSimDate, setCurrentSimDate] = useState(null)
+  const [logoutOpen, setLogoutOpen] = useState(false)
   const isTablet = useMediaQuery({ maxWidth: 1024 })
   const isMobile = useMediaQuery({ maxWidth: 670 })
 
@@ -154,6 +156,7 @@ function App() {
             user={user}
             isTablet={isTablet}
             isMobile={isMobile}
+            setLogoutOpen={setLogoutOpen}
           />
         )}
 
@@ -184,6 +187,7 @@ function App() {
           <MobileBottomBar
             user={user}
             onLoginClick={() => setLoginOpen(true)}
+            setLogoutOpen={setLogoutOpen}
           />
         )}
 
@@ -200,6 +204,8 @@ function App() {
           onClose={() => setLoginOpen(false)}
           setToast={setToast}
         />
+
+        <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => {/* clear auth state here */}} />
       </div>
     </Router>
   )
