@@ -34,6 +34,24 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
                 name={name}
                 value={form[name]}
                 onChange={handleChange}
+                min={
+                  name === 'lookback_months' ? 1 :
+                  name === 'skip_recent_months' ? 0 :
+                  name === 'hold_months' ? 1 :
+                  name === 'top_n' ? 1 :
+                  name === 'starting_value' ? 1 :
+                  name === 'start_date' ? '2000-01-01' :
+                  name === 'end_date' ? form.start_date : undefined
+                }
+                max={
+                  name === 'lookback_months' ? 12 :
+                  name === 'skip_recent_months' ? 12 :
+                  name === 'hold_months' ? 3 :
+                  name === 'top_n' ? 20 :
+                  name === 'starting_value' ? 1000000000 :
+                  name === 'start_date' ? form.end_date : undefined
+                }
+                required={name === 'start_date' || name === 'end_date'}
                 style={{
                   width: '100%',
                   height: '30px',
@@ -47,7 +65,6 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
                   fontFamily: '"Inter", system-ui, sans-serif',
                   appearance: 'none'
                 }}
-                required={name === 'start_date' || name === 'end_date'}
               />
             </div>
           ))}

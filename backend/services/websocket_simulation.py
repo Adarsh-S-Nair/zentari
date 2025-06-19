@@ -21,6 +21,8 @@ class WebSocketSimulationService:
             params.skip_recent_months,
             params.benchmark
         )
+        if params.benchmark not in self.price_data:
+            raise ValueError(f"Benchmark ticker '{params.benchmark}' not found in price data.")
         self.benchmark_shares = get_benchmark_shares(
             self.price_data, params.benchmark, params.starting_value, params.start_date
         )
@@ -92,7 +94,7 @@ class WebSocketSimulationService:
             "orders": sell_orders + buy_orders
         })
 
-    async def run(self):
+    async def run(self):        
         await self.send("status", "Loading price data...")
         start_time = time.time()
 

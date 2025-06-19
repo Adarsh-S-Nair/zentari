@@ -16,7 +16,7 @@ function TradeBreakdown({ trades }) {
         <div className="text-right">Price</div>
         <div className="text-right">Shares</div>
         <div className="text-right">Amount</div>
-        <div className="text-right pr-[12px]">Return</div>
+        <div className="flex justify-end pr-[12px]">Return</div>
       </div>
 
       {/* Trade Rows */}

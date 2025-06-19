@@ -41,13 +41,6 @@ function App() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setToast({ message: '', type: 'default' })
-    setResult({
-      starting_value: form.starting_value,
-      benchmark: form.benchmark,
-      monthly_returns: [],
-      daily_values: [],
-      daily_benchmark_values: []
-    })
     setLoading(true)
     setLoadingPhase('init')
     setCurrentSimDate(null)
@@ -63,10 +56,10 @@ function App() {
 
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data)
+      console.log(msg)
 
       switch (msg.type) {
         case 'status':
-          console.log('[STATUS]', msg.payload)
           if (msg.payload.toLowerCase().includes('starting simulation')) {
             setLoadingPhase('')
           }
@@ -74,31 +67,37 @@ function App() {
 
         case 'daily':
           setCurrentSimDate(msg.payload.date)
-          setResult((prev) => ({
-            ...prev,
-            daily_values: [...(prev.daily_values || []), {
-              date: msg.payload.date,
-              portfolio_value: msg.payload.portfolio_value
-            }],
-            daily_benchmark_values: [...(prev.daily_benchmark_values || []), {
-              date: msg.payload.date,
-              benchmark_value: msg.payload.benchmark_value
-            }]
-          }))
+          setResult((prev) => {
+            if (!prev) return null
+            return {
+              ...prev,
+              daily_values: [...(prev.daily_values || []), {
+                date: msg.payload.date,
+                portfolio_value: msg.payload.portfolio_value
+              }],
+              daily_benchmark_values: [...(prev.daily_benchmark_values || []), {
+                date: msg.payload.date,
+                benchmark_value: msg.payload.benchmark_value
+              }]
+            }
+          })
           break
 
         case 'rebalance':
-          setResult((prev) => ({
-            ...prev,
-            monthly_returns: [...(prev.monthly_returns || []), msg.payload],
-            final_portfolio_value: msg.payload.portfolio_value,
-            final_benchmark_value: msg.payload.benchmark_value
-          }))
+          setResult((prev) => {
+            if (!prev) return null
+            return {
+              ...prev,
+              monthly_returns: [...(prev.monthly_returns || []), msg.payload],
+              final_portfolio_value: msg.payload.portfolio_value,
+              final_benchmark_value: msg.payload.benchmark_value
+            }
+          })
           break
 
         case 'done':
           setResult((prev) => ({
-            ...prev,
+            ...(prev || {}), // fallback in case prev was null
             ...msg.payload
           }))
           setLoading(false)
@@ -108,6 +107,7 @@ function App() {
         case 'error':
           setToast({ message: msg.payload || 'Something went wrong.', type: 'error' })
           setLoading(false)
+          setResult(null)
           break
 
         default:
