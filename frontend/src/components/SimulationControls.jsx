@@ -21,7 +21,7 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
   ]
 
   return (
-    <form className="flex flex-col w-full" style={{ gap: '16px' }}>
+    <form className="flex flex-col w-full" style={{ gap: '4px' }}>
       {groupedFields.map((group, i) => (
         <div key={i} className="flex justify-between gap-[12px]">
           {group.map(({ label, name, type }) => (
@@ -34,6 +34,11 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
                 name={name}
                 value={form[name]}
                 onChange={handleChange}
+                onKeyDown={(e) => {
+                  if (type === 'number' && ["e", "E", "+", "-"].includes(e.key)) {
+                    e.preventDefault()
+                  }
+                }}
                 min={
                   name === 'lookback_months' ? 1 :
                   name === 'skip_recent_months' ? 0 :
@@ -41,7 +46,7 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
                   name === 'top_n' ? 1 :
                   name === 'starting_value' ? 1 :
                   name === 'start_date' ? '2000-01-01' :
-                  name === 'end_date' ? form.start_date : undefined
+                  undefined
                 }
                 max={
                   name === 'lookback_months' ? 12 :
@@ -49,7 +54,7 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
                   name === 'hold_months' ? 3 :
                   name === 'top_n' ? 20 :
                   name === 'starting_value' ? 1000000000 :
-                  name === 'start_date' ? form.end_date : undefined
+                  undefined
                 }
                 required={name === 'start_date' || name === 'end_date'}
                 style={{

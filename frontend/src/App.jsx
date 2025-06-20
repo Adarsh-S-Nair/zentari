@@ -89,18 +89,6 @@ function App() {
           })
           break
 
-        case 'rebalance':
-          setResult((prev) => {
-            if (!prev) return null
-            return {
-              ...prev,
-              monthly_returns: [...(prev.monthly_returns || []), msg.payload],
-              final_portfolio_value: msg.payload.portfolio_value,
-              final_benchmark_value: msg.payload.benchmark_value
-            }
-          })
-          break
-
         case 'done':
           setResult((prev) => ({
             ...(prev || {}), // fallback in case prev was null

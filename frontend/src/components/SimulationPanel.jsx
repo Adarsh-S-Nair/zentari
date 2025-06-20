@@ -40,7 +40,7 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
               />
               {!isMobile && (
                 <SummaryStat
-                  label={`${result.benchmark || 'Benchmark'} Ending Value`}
+                  label={`${result.benchmark.toUpperCase() || 'Benchmark'} Ending Value`}
                   value={benchmarkValue}
                   diff={((benchmarkValue - startValue) / startValue) * 100}
                   isCurrency

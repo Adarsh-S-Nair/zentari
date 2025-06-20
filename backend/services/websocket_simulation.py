@@ -2,11 +2,10 @@ from models.schema import SimulationRequest
 from services.portfolio import Portfolio
 from utils.data_fetcher import preload_price_data
 from utils.price_utils import get_price, get_benchmark_shares
-from utils.momentum import get_top_momentum_stocks
-from datetime import datetime, timedelta
-import pandas as pd
-import time
+from strategies.momentum_strategy import MomentumStrategy
 import json
+from datetime import datetime
+import pandas as pd
 
 
 class WebSocketSimulationService:
@@ -27,96 +26,32 @@ class WebSocketSimulationService:
         )
         self.portfolio = Portfolio(params.starting_value, self.price_data)
 
-        self.daily_values = []
-        self.daily_benchmark_values = []
-
     async def send(self, event_type, payload):
         await self.websocket.send_text(json.dumps({"type": event_type, "payload": payload}))
 
     async def get_benchmark_value(self, date):
         try:
-            price = get_price(self.price_data, self.params.benchmark, date.strftime("%Y-%m-%d"))
+            df = self.price_data[self.params.benchmark]
+            ts = pd.to_datetime(date)
+            price = df["adj_close"].asof(ts)
+            if pd.isna(price):
+                return None
             return round(self.benchmark_shares * price, 2)
-        except:
+        except Exception as e:
+            print(f"[ERROR] Failed to get benchmark value on {date}: {e}")
             return None
+    
+    async def run(self):
+        strategy = MomentumStrategy(self.portfolio, self.price_data, self.params)
 
-    def compute_return_pct(self, current, previous):
-        if previous is None or previous == 0:
-            return None
-        return round(((current - previous) / previous) * 100, 2)
+        async def send_daily(date, portfolio_value, benchmark_value):
+            await self.send("daily", {
+                "date": date.strftime("%Y-%m-%d"),
+                "portfolio_value": portfolio_value,
+                "benchmark_value": benchmark_value
+            })
 
-    async def rebalance(self, date):
-        await self.send("status", f"Rebalancing on {date.strftime('%Y-%m-%d')}")
-
-        top = get_top_momentum_stocks(
-            self.price_data,
-            self.params.benchmark,
-            pd.to_datetime(date),
-            self.params.lookback_months,
-            self.params.skip_recent_months,
-            self.params.top_n
-        )
-
-        orders = self.portfolio.rebalance(top, date.strftime("%Y-%m-%d"))
-        current_value = self.portfolio.value_on(date.strftime("%Y-%m-%d"))
-        benchmark_value = await self.get_benchmark_value(date)
-
-        await self.send("rebalance", {
-            "date": date.strftime("%Y-%m-%d"),
-            "portfolio_value": current_value,
-            "benchmark_value": benchmark_value,
-            "orders": orders
-        })
-
-    async def run(self):        
-        await self.send("status", "Loading price data...")
-        start_time = time.time()
-
-        current = datetime.strptime(self.params.start_date, "%Y-%m-%d")
-        end = datetime.strptime(self.params.end_date, "%Y-%m-%d")
-        last_rebalance = None
-
-        await self.send("status", f"Starting simulation from {self.params.start_date} to {self.params.end_date}")
-
-        while current <= end:
-            try:
-                if self.portfolio.should_rebalance(current, last_rebalance):
-                    await self.rebalance(current)
-                    last_rebalance = current
-
-                portfolio_value = self.portfolio.value_on(current.strftime("%Y-%m-%d"))
-                benchmark_value = await self.get_benchmark_value(current)
-
-                self.daily_values.append({
-                    "date": current.strftime("%Y-%m-%d"),
-                    "portfolio_value": portfolio_value
-                })
-                self.daily_benchmark_values.append({
-                    "date": current.strftime("%Y-%m-%d"),
-                    "benchmark_value": benchmark_value
-                })
-
-                await self.send("daily", {
-                    "date": current.strftime("%Y-%m-%d"),
-                    "portfolio_value": portfolio_value,
-                    "benchmark_value": benchmark_value
-                })
-
-                current += timedelta(days=1)
-
-            except Exception as e:
-                await self.send("error", f"Error on {current.strftime('%Y-%m-%d')}: {str(e)}")
-                break
-
-        # Final sell
-        final_orders = []
-        for ticker in list(self.portfolio.holdings.keys()):
-            order = self.portfolio.sell(ticker, end.strftime("%Y-%m-%d"))
-            if order:
-                final_orders.append(order)
-        final_portfolio_value = round(self.portfolio.value, 2)
-        final_benchmark_value = await self.get_benchmark_value(end)
-        duration = round(time.time() - start_time, 2)
+        result = await strategy.run(self.websocket, self.get_benchmark_value, send_daily)
 
         await self.send("done", {
             "start_date": self.params.start_date,
@@ -126,13 +61,15 @@ class WebSocketSimulationService:
             "lookback_months": self.params.lookback_months,
             "skip_recent_months": self.params.skip_recent_months,
             "top_n": self.params.top_n,
-            "final_portfolio_value": final_portfolio_value,
-            "final_benchmark_value": final_benchmark_value,
-            "total_return_pct": round(((final_portfolio_value - self.params.starting_value) / self.params.starting_value) * 100, 2),
+            "final_portfolio_value": round(result["final_value"], 2),
+            "final_benchmark_value": await self.get_benchmark_value(
+                result["daily_values"][-1]["date"] if result["daily_values"] else self.params.end_date
+            ),
+            "total_return_pct": round(((result["final_value"] - self.params.starting_value) / self.params.starting_value) * 100, 2),
             "trade_history_by_date": self.portfolio.trade_history_by_date,
-            "daily_values": self.daily_values,
-            "daily_benchmark_values": self.daily_benchmark_values,
-            "duration_sec": duration
+            "daily_values": result["daily_values"],
+            "daily_benchmark_values": result["daily_benchmark_values"],
+            "duration_sec": result["duration"]
         })
 
         await self.websocket.close()
