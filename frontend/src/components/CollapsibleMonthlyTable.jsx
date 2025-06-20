@@ -4,23 +4,37 @@ function CollapsibleMonthlyTable({ tradeHistory, dailyValues, dailyBenchmarkValu
   const portfolioMap = Object.fromEntries(dailyValues.map(d => [d.date, d.portfolio_value]))
   const benchmarkMap = Object.fromEntries(dailyBenchmarkValues.map(d => [d.date, d.benchmark_value]))
 
-  const entries = Object.entries(tradeHistory || {}).map(([date, orders]) => {
+  const sortedEntries = Object.entries(tradeHistory || {})
+    .sort((a, b) => new Date(a[0]) - new Date(b[0])) // sort ascending for correct sequencing
+
+  let prevPortfolioValue = null
+  let prevBenchmarkValue = null
+
+  const entries = sortedEntries.map(([date, orders]) => {
     const portfolioValue = portfolioMap[date] ?? null
     const benchmarkValue = benchmarkMap[date] ?? null
+
+    const portfolio_return_pct = (portfolioValue != null && prevPortfolioValue != null && prevPortfolioValue > 0)
+      ? ((portfolioValue - prevPortfolioValue) / prevPortfolioValue) * 100
+      : null
+
+    const benchmark_return_pct = (benchmarkValue != null && prevBenchmarkValue != null && prevBenchmarkValue > 0)
+      ? ((benchmarkValue - prevBenchmarkValue) / prevBenchmarkValue) * 100
+      : null
+
+    // Update previous values for next iteration
+    if (portfolioValue != null) prevPortfolioValue = portfolioValue
+    if (benchmarkValue != null) prevBenchmarkValue = benchmarkValue
 
     return {
       date,
       orders,
       portfolio_value: portfolioValue,
       benchmark_value: benchmarkValue,
-      portfolio_return_pct: portfolioValue != null && startingValue > 0
-        ? ((portfolioValue - startingValue) / startingValue) * 100
-        : null,
-      benchmark_return_pct: benchmarkValue != null && startingValue > 0
-        ? ((benchmarkValue - startingValue) / startingValue) * 100
-        : null
+      portfolio_return_pct,
+      benchmark_return_pct
     }
-  }).sort((a, b) => new Date(b.date) - new Date(a.date))
+  }).sort((a, b) => new Date(b.date) - new Date(a.date)) // re-sort descending for UI
   
   return (
     <div

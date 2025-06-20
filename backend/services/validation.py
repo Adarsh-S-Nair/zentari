@@ -11,8 +11,8 @@ def validate_simulation_params(params: SimulationRequest):
     if start > end:
         return False, "Start date must be before or equal to end date."
 
-    if (end - start).days > 365 * 3:
-        return False, "Date range must be 3 years or less."
+    if (end - start).days > 365 * 10:
+        return False, "Date range must be 10 years or less."
 
     if params.starting_value <= 0 or params.starting_value > 1_000_000_000:
         return False, "Starting value must be between $1 and $1,000,000,000."

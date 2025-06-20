@@ -13,7 +13,6 @@ class WebSocketSimulationService:
     def __init__(self, websocket, params: SimulationRequest):
         self.websocket = websocket
         self.params = params
-        self.portfolio = Portfolio(params.starting_value)
         self.price_data = preload_price_data(
             params.start_date,
             params.end_date,
@@ -26,6 +25,7 @@ class WebSocketSimulationService:
         self.benchmark_shares = get_benchmark_shares(
             self.price_data, params.benchmark, params.starting_value, params.start_date
         )
+        self.portfolio = Portfolio(params.starting_value, self.price_data)
 
         self.daily_values = []
         self.daily_benchmark_values = []
@@ -48,10 +48,6 @@ class WebSocketSimulationService:
     async def rebalance(self, date):
         await self.send("status", f"Rebalancing on {date.strftime('%Y-%m-%d')}")
 
-        sell_orders = self.portfolio.sell_all(
-            lambda t, d: get_price(self.price_data, t, d), date.strftime("%Y-%m-%d")
-        )
-
         top = get_top_momentum_stocks(
             self.price_data,
             self.params.benchmark,
@@ -61,21 +57,15 @@ class WebSocketSimulationService:
             self.params.top_n
         )
 
-        buy_orders = self.portfolio.buy(
-            top, lambda t, d: get_price(self.price_data, t, d), date.strftime("%Y-%m-%d")
-        )
-
-        current_value = self.portfolio.value_on(
-            lambda t, d: get_price(self.price_data, t, d), date.strftime("%Y-%m-%d")
-        )
-
+        orders = self.portfolio.rebalance(top, date.strftime("%Y-%m-%d"))
+        current_value = self.portfolio.value_on(date.strftime("%Y-%m-%d"))
         benchmark_value = await self.get_benchmark_value(date)
 
         await self.send("rebalance", {
             "date": date.strftime("%Y-%m-%d"),
             "portfolio_value": current_value,
             "benchmark_value": benchmark_value,
-            "orders": sell_orders + buy_orders
+            "orders": orders
         })
 
     async def run(self):        
@@ -90,13 +80,11 @@ class WebSocketSimulationService:
 
         while current <= end:
             try:
-                if self.portfolio.should_rebalance(current, last_rebalance, lambda t, d: get_price(self.price_data, t, d)):
+                if self.portfolio.should_rebalance(current, last_rebalance):
                     await self.rebalance(current)
                     last_rebalance = current
 
-                portfolio_value = self.portfolio.value_on(
-                    lambda t, d: get_price(self.price_data, t, d), current.strftime("%Y-%m-%d")
-                )
+                portfolio_value = self.portfolio.value_on(current.strftime("%Y-%m-%d"))
                 benchmark_value = await self.get_benchmark_value(current)
 
                 self.daily_values.append({
@@ -121,9 +109,11 @@ class WebSocketSimulationService:
                 break
 
         # Final sell
-        final_orders = self.portfolio.sell_all(
-            lambda t, d: get_price(self.price_data, t, d), end.strftime("%Y-%m-%d")
-        )
+        final_orders = []
+        for ticker in list(self.portfolio.holdings.keys()):
+            order = self.portfolio.sell(ticker, end.strftime("%Y-%m-%d"))
+            if order:
+                final_orders.append(order)
         final_portfolio_value = round(self.portfolio.value, 2)
         final_benchmark_value = await self.get_benchmark_value(end)
         duration = round(time.time() - start_time, 2)

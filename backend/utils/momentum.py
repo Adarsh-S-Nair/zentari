@@ -10,7 +10,7 @@ def get_top_momentum_stocks(price_data, benchmark, rebalance_date, lookback_mont
         if ticker == benchmark:
             continue
         try:
-            prices = df[(df.index >= lookback_start) & (df.index <= lookback_end)]["adj_close"]
+            prices = df[(df.index >= lookback_start) & (df.index <= lookback_end)]["adj_close"].dropna()
             if len(prices) < 2:
                 continue
             momentum = (prices.iloc[-1] / prices.iloc[0]) - 1
