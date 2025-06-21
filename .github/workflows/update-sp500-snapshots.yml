@@ -23,12 +23,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Show working directory and files
-        run: |
-          echo "📁 Current directory:"
-          pwd
-          echo "📄 Files:"
-          ls -R
+      - name: Run update script
+        run: python backend/scripts/update_snapshots.py
+
+      - name: Debug: List backend/data directory
+        run: ls -lh backend/data
 
       - name: Delete existing CSV from release (if exists)
         run: |
@@ -40,6 +39,11 @@ jobs:
       - name: Upload updated file to release
         run: |
           gh auth login --with-token < <(echo "$GH_PAT")
-          gh release upload v1.0.0 backend/data/sp500_snapshot_history.csv --clobber
+          if [ -f "backend/data/sp500_snapshot_history.csv" ]; then
+            gh release upload v1.0.0 backend/data/sp500_snapshot_history.csv --clobber
+          else
+            echo "❌ CSV file not found!"
+            exit 1
+          fi
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
