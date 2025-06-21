@@ -26,7 +26,7 @@ jobs:
       - name: Run update script
         run: python backend/scripts/update_snapshots.py
 
-      - name: Debug: List backend/data directory
+      - name: "Debug: List backend/data directory"
         run: ls -lh backend/data
 
       - name: Delete existing CSV from release (if exists)
