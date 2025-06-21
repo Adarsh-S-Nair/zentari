@@ -1,1 +1,2 @@
 data/sp500_prices.duckdb
+data/sp500_snapshot_history.csv
