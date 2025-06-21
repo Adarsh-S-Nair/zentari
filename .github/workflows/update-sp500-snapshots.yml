@@ -36,4 +36,4 @@ jobs:
       - name: Upload updated file to release
         run: gh release upload v1.0.0 backend/data/sp500_snapshot_history.csv --clobber
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
