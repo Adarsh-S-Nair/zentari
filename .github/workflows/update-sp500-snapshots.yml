@@ -2,7 +2,7 @@ name: Update S&P 500 Snapshot History
 
 on:
   schedule:
-    - cron: "0 6 * * 1"
+    - cron: "0 6 * * 1"  # Every Monday at 6 AM UTC
   workflow_dispatch:
 
 jobs:
@@ -22,6 +22,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
+
+      - name: Show working directory and files
+        run: |
+          echo "📁 Current directory:"
+          pwd
+          echo "📄 Files:"
+          ls -R
 
       - name: Run update script
         run: python backend/scripts/update_snapshots.py

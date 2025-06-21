@@ -16,7 +16,7 @@ STARTING_DATE = "2007-03-06"
 
 def download_csv_from_release():
     print("⬇️ Downloading CSV from GitHub release...")
-    os.makedirs("data", exist_ok=True)
+    os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
     response = requests.get(RELEASE_CSV_URL)
     if response.status_code != 200:
         print(f"❌ Failed to download CSV: {response.status_code}")
