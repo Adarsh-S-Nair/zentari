@@ -30,16 +30,16 @@ jobs:
           echo "📄 Files:"
           ls -R
 
-      - name: Run update script
-        run: python backend/scripts/update_snapshots.py
-
       - name: Delete existing CSV from release (if exists)
         run: |
+          gh auth login --with-token < <(echo "$GH_PAT")
           gh release delete-asset v1.0.0 sp500_snapshot_history.csv -y || echo "No asset to delete"
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
       - name: Upload updated file to release
-        run: gh release upload v1.0.0 backend/data/sp500_snapshot_history.csv --clobber
+        run: |
+          gh auth login --with-token < <(echo "$GH_PAT")
+          gh release upload v1.0.0 backend/data/sp500_snapshot_history.csv --clobber
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
