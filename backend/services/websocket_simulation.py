@@ -1,10 +1,7 @@
 from models.schema import SimulationRequest
-from services.portfolio import Portfolio
-from utils.data_fetcher import preload_price_data
-from utils.price_utils import get_price, get_benchmark_shares
+from utils.price_utils import get_benchmark_shares
 from strategies.momentum_strategy import MomentumStrategy
 import json
-from datetime import datetime
 import pandas as pd
 
 
@@ -12,26 +9,15 @@ class WebSocketSimulationService:
     def __init__(self, websocket, params: SimulationRequest):
         self.websocket = websocket
         self.params = params
-        self.price_data = preload_price_data(
-            params.start_date,
-            params.end_date,
-            params.lookback_months,
-            params.skip_recent_months,
-            params.benchmark
-        )
-        if params.benchmark not in self.price_data:
-            raise ValueError(f"Benchmark ticker '{params.benchmark}' not found in price data.")
-        self.benchmark_shares = get_benchmark_shares(
-            self.price_data, params.benchmark, params.starting_value, params.start_date
-        )
-        self.portfolio = Portfolio(params.starting_value, self.price_data)
+        self.strategy = None
+        self.benchmark_shares = None
 
     async def send(self, event_type, payload):
         await self.websocket.send_text(json.dumps({"type": event_type, "payload": payload}))
 
     async def get_benchmark_value(self, date):
         try:
-            df = self.price_data[self.params.benchmark]
+            df = self.strategy.price_data[self.params.benchmark]
             ts = pd.to_datetime(date)
             price = df["adj_close"].asof(ts)
             if pd.isna(price):
@@ -40,9 +26,23 @@ class WebSocketSimulationService:
         except Exception as e:
             print(f"[ERROR] Failed to get benchmark value on {date}: {e}")
             return None
-    
+
     async def run(self):
-        strategy = MomentumStrategy(self.portfolio, self.price_data, self.params)
+        # Start the timer
+        import time
+        start_time = time.time()
+        
+        # Step 1: Initialize strategy (it will load price data internally)
+        self.strategy = MomentumStrategy(self.params)
+        await self.strategy.initialize()
+
+        # Step 2: Calculate benchmark shares based on initial price data
+        self.benchmark_shares = get_benchmark_shares(
+            self.strategy.price_data,
+            self.params.benchmark,
+            self.params.starting_value,
+            self.params.start_date
+        )
 
         async def send_daily(date, portfolio_value, benchmark_value):
             await self.send("daily", {
@@ -51,7 +51,7 @@ class WebSocketSimulationService:
                 "benchmark_value": benchmark_value
             })
 
-        result = await strategy.run(self.websocket, self.get_benchmark_value, send_daily)
+        result = await self.strategy.run(self.websocket, self.get_benchmark_value, send_daily)
 
         await self.send("done", {
             "start_date": self.params.start_date,
@@ -66,10 +66,10 @@ class WebSocketSimulationService:
                 result["daily_values"][-1]["date"] if result["daily_values"] else self.params.end_date
             ),
             "total_return_pct": round(((result["final_value"] - self.params.starting_value) / self.params.starting_value) * 100, 2),
-            "trade_history_by_date": self.portfolio.trade_history_by_date,
+            "trade_history_by_date": self.strategy.portfolio.trade_history_by_date,
             "daily_values": result["daily_values"],
             "daily_benchmark_values": result["daily_benchmark_values"],
-            "duration_sec": result["duration"]
+            "duration_sec": round(time.time() - start_time, 2)
         })
 
         await self.websocket.close()
