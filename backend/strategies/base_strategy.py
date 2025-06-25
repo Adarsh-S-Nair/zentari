@@ -7,10 +7,6 @@ class BaseStrategy(ABC):
         self.params = params
 
     @abstractmethod
-    def should_rebalance(self, current_date, last_rebalance_date):
-        pass
-
-    @abstractmethod
     def rebalance(self, current_date):
         pass
 

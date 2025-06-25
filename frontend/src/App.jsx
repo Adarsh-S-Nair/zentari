@@ -37,7 +37,10 @@ function App() {
     hold_months: 1,
     top_n: 10,
     starting_value: 10000,
-    benchmark: 'SPY'
+    benchmark: 'SPY',
+    strategy: 'momentum',
+    tp_threshold: 10,
+    sl_threshold: 5
   })
 
   const handleChange = (e) => {

@@ -1,9 +1,14 @@
 from models.schema import SimulationRequest
-from utils.price_utils import get_benchmark_shares
+from utils.price_utils import PriceUtils
 from strategies.momentum_strategy import MomentumStrategy
+from strategies.sma_crossover_strategy import SMACrossoverStrategy
 import json
 import pandas as pd
 
+STRATEGY_MAP = {
+    "momentum": MomentumStrategy,
+    "sma_crossover": SMACrossoverStrategy
+}
 
 class WebSocketSimulationService:
     def __init__(self, websocket, params: SimulationRequest):
@@ -32,12 +37,18 @@ class WebSocketSimulationService:
         import time
         start_time = time.time()
         
-        # Step 1: Initialize strategy (it will load price data internally)
-        self.strategy = MomentumStrategy(self.params)
+        # Step 1: Initialize the selected strategy class
+        strategy_cls = STRATEGY_MAP.get(self.params.strategy)
+        if not strategy_cls:
+            await self.send("error", f"Unknown strategy: {self.params.strategy}")
+            await self.websocket.close()
+            return
+
+        self.strategy = strategy_cls(self.params)
         await self.strategy.initialize()
 
         # Step 2: Calculate benchmark shares based on initial price data
-        self.benchmark_shares = get_benchmark_shares(
+        self.benchmark_shares = PriceUtils.get_benchmark_shares(
             self.strategy.price_data,
             self.params.benchmark,
             self.params.starting_value,

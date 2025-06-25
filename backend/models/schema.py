@@ -9,3 +9,6 @@ class SimulationRequest(BaseModel):
     top_n: int = 10
     starting_value: float = 10000.0
     benchmark: str = "SPY"
+    strategy: str = "momentum",
+    tp_threshold: int = 10,
+    sl_threshold: int = 5

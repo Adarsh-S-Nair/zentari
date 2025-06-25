@@ -1,10 +1,20 @@
 import Button from './Button'
+import Dropdown from './Dropdown'
 
 function SimulationControls({ form, handleChange, handleSubmit, error, loading }) {
-  const groupedFields = [
+  const strategyOptions = [
+    { label: 'Momentum Trading Strategy', value: 'momentum' },
+    { label: 'SMA Crossover Strategy', value: 'sma_crossover' }
+  ]
+
+  const momentumFields = [
     [
       { label: 'Start Date', name: 'start_date', type: 'date' },
       { label: 'End Date', name: 'end_date', type: 'date' }
+    ],
+    [
+      { label: 'Take-Profit (%)', name: 'tp_threshold', type: 'number' },
+      { label: 'Stop-Loss (%)', name: 'sl_threshold', type: 'number' }
     ],
     [
       { label: 'Lookback Months', name: 'lookback_months', type: 'number' },
@@ -20,9 +30,35 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
     ]
   ]
 
+  const smaFields = [
+    [
+      { label: 'Start Date', name: 'start_date', type: 'date' },
+      { label: 'End Date', name: 'end_date', type: 'date' }
+    ],
+    [
+      { label: 'Starting Value ($)', name: 'starting_value', type: 'number' },
+      { label: 'Benchmark Ticker', name: 'benchmark', type: 'text' }
+    ]
+  ]
+
+  const selectedFields = form.strategy === 'sma_crossover' ? smaFields : momentumFields
+
   return (
-    <form className="flex flex-col w-full" style={{ gap: '4px' }}>
-      {groupedFields.map((group, i) => (
+    <form
+      className="flex flex-col w-full overflow-y-auto"
+      style={{ gap: '8px', maxHeight: 'calc(100vh - 100px)', paddingBottom: '20px' }}
+    >
+      <div style={{ width: '100%' }}>
+        <Dropdown
+          label="Trading Strategy"
+          name="strategy"
+          value={form.strategy}
+          onChange={handleChange}
+          options={strategyOptions}
+        />
+      </div>
+
+      {selectedFields.map((group, i) => (
         <div key={i} className="flex justify-between gap-[12px]">
           {group.map(({ label, name, type }) => (
             <div key={name} style={{ width: 'calc(50% - 6px)' }}>
@@ -76,7 +112,6 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
         </div>
       ))}
 
-      {/* Light calendar icon fix */}
       <style>{`
         input[type="date"]::-webkit-calendar-picker-indicator {
           filter: invert(1);

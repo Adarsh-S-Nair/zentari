@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from .base_strategy import BaseStrategy
 from services.portfolio import Portfolio
-from utils.data_fetcher import preload_price_data, get_sp500_tickers_as_of, download_price_data_batch
-from sklearn.linear_model import LinearRegression
+from utils.data_fetcher import preload_price_data, get_sp500_tickers_as_of
+from utils.price_utils import PriceUtils
 import numpy as np
 
 class MomentumStrategy(BaseStrategy):
@@ -15,8 +15,6 @@ class MomentumStrategy(BaseStrategy):
         self.portfolio = None
         self.current_tickers = set()
         self.loaded_dates = set()
-        self.rebalance_on_gain_pct = 5  # Moved here from Portfolio
-        self.rebalance_on_loss_pct = 5  # Moved here from Portfolio
 
     async def initialize(self):
         start_date = self.params.start_date
@@ -38,69 +36,18 @@ class MomentumStrategy(BaseStrategy):
         change = ((now - then) / then) * 100
         return (
             date >= last_date + relativedelta(months=1) or
-            change >= self.rebalance_on_gain_pct or
-            change <= -self.rebalance_on_loss_pct
+            change >= self.params.tp_threshold or
+            change <= -self.params.sl_threshold
         )
 
-    def update_universe_for_date(self, date_str):
-        if date_str in self.loaded_dates:
-            return
-
-        new = set(get_sp500_tickers_as_of(date_str))
-        removed = self.current_tickers - new
-        added = new - self.current_tickers
-
-        if added or removed:
-            print(f"\n📊 S&P 500 Update on {date_str}")
-            if removed:
-                print(f"➖ Removed: {sorted(removed)}")
-            if added:
-                print(f"➕ Added: {sorted(added)}")
-
-        for t in removed:
-            self.price_data.pop(t, None)
-
-        if added:
-            lookback_start = pd.to_datetime(date_str) - relativedelta(
-                months=self.params.lookback_months + self.params.skip_recent_months
-            )
-            new_data = download_price_data_batch(
-                list(added), lookback_start.strftime("%Y-%m-%d"), self.params.end_date
-            )
-            for t, df in new_data.items():
-                df = df.copy()
-                df.set_index("date", inplace=True)
-                df.sort_index(inplace=True)
-                self.price_data[t] = df
-
-        self.current_tickers = new
-        self.loaded_dates.add(date_str)
-        self.portfolio.update_price_data(self.price_data)
-
     def calculate_momentum_score(self, prices: pd.Series):
-        if len(prices) < 20:
+        if len(prices) < 2:
             return None
-        daily_returns = prices.pct_change().dropna()
-        if len(daily_returns) == 0:
+        start_price = prices.iloc[0]
+        end_price = prices.iloc[-1]
+        if start_price == 0:
             return None
-
-        start_price, end_price = prices.iloc[0], prices.iloc[-1]
-        num_days = (prices.index[-1] - prices.index[0]).days
-        if num_days == 0 or start_price == 0:
-            return None
-
-        cagr = (end_price / start_price) ** (365 / num_days) - 1
-        volatility = daily_returns.std() * np.sqrt(252)
-        if volatility == 0:
-            return None
-
-        log_prices = np.log(prices)
-        x = np.arange(len(log_prices)).reshape(-1, 1)
-        y = log_prices.values.reshape(-1, 1)
-        model = LinearRegression().fit(x, y)
-        r_squared = model.score(x, y)
-
-        return (cagr / volatility) * r_squared
+        return (end_price - start_price) / start_price
 
     def get_top_momentum_stocks(self, date):
         end = date - pd.DateOffset(months=self.params.skip_recent_months)
@@ -113,7 +60,7 @@ class MomentumStrategy(BaseStrategy):
             try:
                 prices = df[(df.index >= start) & (df.index <= end)]["adj_close"].dropna()
                 score = self.calculate_momentum_score(prices)
-                if score is not None and isfinite(score):
+                if score is not None and np.isfinite(score):
                     scores.append((t, score))
             except:
                 continue
@@ -122,7 +69,16 @@ class MomentumStrategy(BaseStrategy):
 
     def rebalance(self, date_str):
         if date_str != self.params.start_date:
-            self.update_universe_for_date(date_str)
+            self.current_tickers, self.loaded_dates, self.price_data = PriceUtils.update_universe(
+                self.current_tickers,
+                self.loaded_dates,
+                self.price_data,
+                self.portfolio,
+                date_str,
+                self.params.end_date,
+                self.params.lookback_months,
+                self.params.skip_recent_months
+            )
 
         print(f"\n📆 \033[1mRebalancing on {date_str}\033[0m")
         top_n = self.get_top_momentum_stocks(pd.to_datetime(date_str))
