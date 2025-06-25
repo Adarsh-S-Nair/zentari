@@ -30,25 +30,45 @@ class MomentumStrategy(BaseStrategy):
     def should_rebalance(self, date, last_date):
         if not last_date:
             return True
-        now = self.portfolio.value_on(date.strftime("%Y-%m-%d"))
-        then = self.portfolio.value_on(last_date.strftime("%Y-%m-%d"))
-        if then == 0:
-            return False
-        change = ((now - then) / then) * 100
-        return (
-            date >= last_date + relativedelta(months=1) or
-            change >= self.params.tp_threshold or
-            change <= -self.params.sl_threshold
-        )
+        # Rebalance on a fixed monthly schedule
+        return date >= last_date + relativedelta(months=1)
 
     def calculate_momentum_score(self, prices: pd.Series):
-        if len(prices) < 2:
+        """Calculate momentum using multiple factors for better stock selection"""
+        if len(prices) < 20:  # Need minimum data
             return None
-        start_price = prices.iloc[0]
-        end_price = prices.iloc[-1]
-        if start_price == 0:
+        
+        # 1. Price momentum (current vs historical)
+        current_price = prices.iloc[-1]
+        lookback_price = prices.iloc[0]
+        if lookback_price == 0:
             return None
-        return (end_price - start_price) / start_price
+        price_momentum = (current_price - lookback_price) / lookback_price
+        
+        # 2. Volatility (we want volatility in momentum trading!)
+        returns = prices.pct_change().dropna()
+        if len(returns) < 10:
+            return None
+        
+        volatility = returns.std()
+        if volatility == 0:
+            return None
+        
+        # 3. Recent momentum (last 20% of period)
+        recent_prices = prices.iloc[-int(len(prices) * 0.2):]
+        if len(recent_prices) < 2:
+            recent_momentum = 0
+        else:
+            recent_momentum = (recent_prices.iloc[-1] - recent_prices.iloc[0]) / recent_prices.iloc[0]
+        
+        # 4. Combined score - reward momentum AND volatility
+        momentum_score = (
+            0.5 * price_momentum +      # Overall momentum (50% weight)
+            0.3 * volatility +          # Volatility (30% weight) - we want this!
+            0.2 * recent_momentum       # Recent momentum (20% weight)
+        )
+        
+        return momentum_score if np.isfinite(momentum_score) else None
 
     def get_top_momentum_stocks(self, date):
         end = date - pd.DateOffset(months=self.params.skip_recent_months)
@@ -60,6 +80,11 @@ class MomentumStrategy(BaseStrategy):
                 continue
             try:
                 prices = self.price_data[t][(self.price_data[t].index >= start) & (self.price_data[t].index <= end)]["adj_close"].dropna()
+                
+                # Filter: Minimum data points (ensure we have enough data for reliable calculation)
+                if len(prices) < 20:
+                    continue
+                
                 score = self.calculate_momentum_score(prices)
                 if score is not None and np.isfinite(score):
                     scores.append((t, score))
@@ -93,14 +118,40 @@ class MomentumStrategy(BaseStrategy):
             if trade:
                 orders.append(trade)
 
-        # Open positions for tickers not already held
+        # Open positions for tickers not already held with volatility-based sizing
         to_buy = sorted(top_set - current)
         if to_buy:
-            alloc = self.portfolio.cash / len(to_buy) if to_buy else 0
-            for t in to_buy:
-                trade = self.portfolio.open_long_position(t, alloc, date_str)
-                if trade:
-                    orders.append(trade)
+            # Calculate position sizes based on volatility (inverse volatility weighting)
+            position_sizes = {}
+            total_weight = 0
+            
+            for ticker in to_buy:
+                try:
+                    prices = self.price_data[ticker]
+                    returns = prices.pct_change().dropna()
+                    volatility = returns.std()
+                    
+                    # Inverse volatility weighting (less volatile stocks get more allocation)
+                    if volatility > 0:
+                        position_sizes[ticker] = 1 / volatility
+                        total_weight += position_sizes[ticker]
+                    else:
+                        position_sizes[ticker] = 1
+                        total_weight += 1
+                except:
+                    # Fallback to equal weighting if we can't calculate volatility
+                    position_sizes[ticker] = 1
+                    total_weight += 1
+            
+            # Normalize position sizes to total available cash
+            total_allocation = self.portfolio.cash
+            for ticker in position_sizes:
+                if total_weight > 0:
+                    allocation = (position_sizes[ticker] / total_weight) * total_allocation
+                    trade = self.portfolio.open_long_position(ticker, allocation, date_str)
+                    if trade:
+                        orders.append(trade)
+                        print(f"   📈 Allocated ${allocation:.2f} to {ticker} (volatility-based sizing)")
 
         return orders
 
