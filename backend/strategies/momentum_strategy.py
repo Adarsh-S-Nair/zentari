@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from .base_strategy import BaseStrategy
 from services.portfolio import Portfolio
-from utils.data_fetcher import preload_price_data, get_sp500_tickers_as_of
+from utils.data_fetcher import DataFetcher
 from utils.price_utils import PriceUtils
 import numpy as np
 
@@ -15,11 +15,12 @@ class MomentumStrategy(BaseStrategy):
         self.portfolio = None
         self.current_tickers = set()
         self.loaded_dates = set()
+        self.data_fetcher = DataFetcher()
 
     async def initialize(self):
         start_date = self.params.start_date
-        self.current_tickers = set(get_sp500_tickers_as_of(start_date))
-        self.price_data = preload_price_data(
+        self.current_tickers = set(self.data_fetcher.get_sp500_tickers_as_of(start_date))
+        self.price_data = self.data_fetcher.preload_price_data(
             start_date, self.params.end_date,
             self.params.lookback_months, self.params.skip_recent_months,
             self.params.benchmark, self.current_tickers
@@ -54,11 +55,11 @@ class MomentumStrategy(BaseStrategy):
         start = end - pd.DateOffset(months=self.params.lookback_months)
         scores = []
 
-        for t, df in self.price_data.items():
+        for t in sorted(self.price_data.keys()):
             if t == self.params.benchmark:
                 continue
             try:
-                prices = df[(df.index >= start) & (df.index <= end)]["adj_close"].dropna()
+                prices = self.price_data[t][(self.price_data[t].index >= start) & (self.price_data[t].index <= end)]["adj_close"].dropna()
                 score = self.calculate_momentum_score(prices)
                 if score is not None and np.isfinite(score):
                     scores.append((t, score))
@@ -86,15 +87,20 @@ class MomentumStrategy(BaseStrategy):
         current = set(self.portfolio.holdings.keys())
         orders = []
 
-        for t in current - top_set:
-            o = self.portfolio.sell(t, date_str)
-            if o: orders.append(o)
+        # Close positions for tickers not in top momentum
+        for t in sorted(current - top_set):
+            trade = self.portfolio.close_long_position(t, date_str)
+            if trade:
+                orders.append(trade)
 
-        if top_set - current:
-            alloc = self.portfolio.cash / len(top_set - current)
-            for t in top_set - current:
-                o = self.portfolio.buy(t, alloc, date_str)
-                if o: orders.append(o)
+        # Open positions for tickers not already held
+        to_buy = sorted(top_set - current)
+        if to_buy:
+            alloc = self.portfolio.cash / len(to_buy) if to_buy else 0
+            for t in to_buy:
+                trade = self.portfolio.open_long_position(t, alloc, date_str)
+                if trade:
+                    orders.append(trade)
 
         return orders
 
@@ -117,14 +123,6 @@ class MomentumStrategy(BaseStrategy):
                 benchmark = await get_benchmark_value(current)
                 await send_daily(current, value, benchmark)
 
-                if self.portfolio.cash > 0:
-                    top_n = self.get_top_momentum_stocks(current)
-                    non_held = [t for t, _ in top_n if t not in self.portfolio.holdings]
-                    if non_held:
-                        alloc = self.portfolio.cash / len(non_held)
-                        for t in non_held:
-                            self.portfolio.buy(t, alloc, date_str)
-
                 daily_values.append({"date": date_str, "portfolio_value": value})
                 daily_benchmarks.append({"date": date_str, "benchmark_value": benchmark})
                 current += timedelta(days=1)
@@ -135,10 +133,17 @@ class MomentumStrategy(BaseStrategy):
                 await websocket.send_text(f'{{"type":"error","payload":"Error on {date_str}: {str(e)}"}}')
                 break
 
-        final_orders = [self.portfolio.sell(t, end.strftime("%Y-%m-%d")) for t in list(self.portfolio.holdings.keys())]
+        # Close all remaining positions at the end
+        final_trades = []
+        for ticker in list(self.portfolio.holdings.keys()):
+            trade = self.portfolio.close_long_position(ticker, end.strftime("%Y-%m-%d"))
+            if trade:
+                final_trades.append(trade.to_dict())
+        
         return {
-            "final_orders": [o for o in final_orders if o],
+            "final_orders": final_trades,
             "final_value": self.portfolio.cash,
             "daily_values": daily_values,
-            "daily_benchmark_values": daily_benchmarks
+            "daily_benchmark_values": daily_benchmarks,
+            "all_trades": self.portfolio.get_all_trades()
         }

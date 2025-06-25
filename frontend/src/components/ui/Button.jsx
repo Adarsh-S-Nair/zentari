@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 
 // Blend a hex color with gray to make it duller and darker
-function mixWithGray(hex, gray = '#4b5563', ratio = 0.7) {
+function mixWithGray(hex, gray = 'var(--color-gray-600)', ratio = 0.7) {
   const hexToRgb = h => {
     const bigint = parseInt(h.replace('#', ''), 16)
     return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255]
@@ -30,7 +30,7 @@ function MiniSpinner() {
       style={{
         width: '10px',
         height: '10px',
-        border: '1.5px solid white',
+        border: '1.5px solid var(--color-text-white)',
         borderTop: '1.5px solid transparent',
         borderRadius: '50%',
         marginRight: '6px',
@@ -44,7 +44,7 @@ function Button({
   label,
   children,
   onClick,
-  color = '#3b82f6',
+  color = 'var(--color-primary)',
   width = '100%',
   loading = false,
   disabled = false,
@@ -57,19 +57,19 @@ function Button({
   const isInactive = disabled || loading
 
   const baseBg = color
-  const hoverBg = mixWithGray(color, '#1f2937', 0.3) // darker hover
-  const inactiveBg = mixWithGray(color, '#4b5563', 0.5) // duller inactive
+  const hoverBg = mixWithGray(color, 'var(--color-gray-800)', 0.3) // darker hover
+  const inactiveBg = mixWithGray(color, 'var(--color-gray-600)', 0.5) // duller inactive
 
   const lightText = {
-    base: '#ffffff',
-    hover: '#f3f4f6',
-    inactive: '#d1d5db'
+    base: 'var(--color-text-white)',
+    hover: 'var(--color-gray-100)',
+    inactive: 'var(--color-gray-300)'
   }
 
   const darkTextColors = {
-    base: '#374151',     // dark gray, not black
-    hover: '#1f2937',    // even darker gray
-    inactive: '#6b7280'  // medium muted gray
+    base: 'var(--color-text-secondary)',     // dark gray, not black
+    hover: 'var(--color-text-primary)',    // even darker gray
+    inactive: 'var(--color-text-muted)'  // medium muted gray
   }
 
   const text = darkText ? darkTextColors : lightText
@@ -88,7 +88,7 @@ function Button({
     alignItems: 'center',
     justifyContent: 'center',
     gap: '6px',
-    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.12)',
+    boxShadow: '0 2px 5px var(--color-shadow-medium)',
     transition: 'background-color 0.2s, color 0.2s',
     fontFamily: '"Inter", system-ui, sans-serif',
     ...style

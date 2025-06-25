@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef } from 'react'
 import { FiX } from 'react-icons/fi'
 import { MdEmail } from 'react-icons/md'
 import { FaLock, FaUser } from 'react-icons/fa'
-import { supabase } from '../supabaseClient'
-import Button from './Button'
+import { supabase } from '../../supabaseClient'
+import { Button } from '../ui'
 
 function Field({ icon, type, placeholder, value, onChange }) {
   return (
@@ -188,7 +188,7 @@ export default function LoginModal({ isOpen, onClose }) {
             {isSignup ? (
               <>Already have an account? <span onClick={() => setIsSignup(false)} style={{ color: '#2563eb', cursor: 'pointer' }}>Log in</span></>
             ) : (
-              <>Don’t have an account? <span onClick={() => setIsSignup(true)} style={{ color: '#2563eb', cursor: 'pointer' }}>Sign up</span></>
+              <>Don't have an account? <span onClick={() => setIsSignup(true)} style={{ color: '#2563eb', cursor: 'pointer' }}>Sign up</span></>
             )}
           </p>
         </div>

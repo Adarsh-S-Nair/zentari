@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { FiLogOut } from 'react-icons/fi'
-import { supabase } from '../supabaseClient'
-import Button from './Button'
+import { supabase } from '../../supabaseClient'
+import { Button } from '../ui'
 
 export default function LogoutModal({ isOpen, onClose, onLogout }) {
   const [visible, setVisible] = useState(false)

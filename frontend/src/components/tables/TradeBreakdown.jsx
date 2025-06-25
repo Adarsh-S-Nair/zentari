@@ -1,4 +1,4 @@
-import Pill from './Pill'
+import Pill from '../ui/Pill'
 
 function TradeBreakdown({ trades }) {
   return (

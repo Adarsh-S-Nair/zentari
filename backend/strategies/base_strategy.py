@@ -7,9 +7,5 @@ class BaseStrategy(ABC):
         self.params = params
 
     @abstractmethod
-    def rebalance(self, current_date):
-        pass
-
-    @abstractmethod
     async def run(self, websocket, get_benchmark_value, send_daily, send_rebalance):
         pass

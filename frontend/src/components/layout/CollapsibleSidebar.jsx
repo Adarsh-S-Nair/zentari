@@ -1,12 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { FiChevronDown, FiChevronUp, FiBarChart2, FiFolder, FiLogIn } from 'react-icons/fi'
 import { useNavigate, useLocation } from 'react-router-dom'
-import SimulationControls from './SimulationControls'
-import UserProfileTab from './UserProfileTab'
-import LogoutModal from './LogoutModal'
-import logoCollapsed from '../assets/logo-light.png'
-import logoFull from '../assets/full-logo-light.png'
-import { supabase } from '../supabaseClient'
+import { SimulationControls, UserProfileTab, LogoutModal } from '../index'
+import logoCollapsed from '../../assets/logo-light.png'
+import logoFull from '../../assets/full-logo-light.png'
+import { supabase } from '../../supabaseClient'
 
 export default function CollapsibleSidebar({
   form, handleChange, handleSubmit, error, loading,

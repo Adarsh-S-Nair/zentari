@@ -1,13 +1,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import CollapsibleSidebar from './components/CollapsibleSidebar'
-import PortfolioPanel from './components/PortfolioPanel'
-import SimulationPanel from './components/SimulationPanel'
-import Toast from './components/Toast'
-import LoginModal from './components/LoginModal'
-import LogoutModal from './components/LogoutModal'
-import MobileBottomBar from './components/MobileBottomBar'
-import MobileTopbar from './components/MobileTopbar'
+import { 
+  CollapsibleSidebar, 
+  PortfolioPanel, 
+  SimulationPanel, 
+  Toast, 
+  LoginModal, 
+  LogoutModal, 
+  MobileBottomBar, 
+  MobileTopbar 
+} from './components'
 import { supabase } from './supabaseClient'
 import { useMediaQuery } from 'react-responsive'
 import { FiBarChart2, FiFolder} from 'react-icons/fi'
@@ -30,8 +32,8 @@ function App() {
   const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user)
 
   const [form, setForm] = useState({
-    start_date: '2025-01-01',
-    end_date: '2025-06-01',
+    start_date: '2023-01-01',
+    end_date: '2023-12-31',
     lookback_months: 12,
     skip_recent_months: 1,
     hold_months: 1,
@@ -39,8 +41,8 @@ function App() {
     starting_value: 10000,
     benchmark: 'SPY',
     strategy: 'momentum',
-    tp_threshold: 10,
-    sl_threshold: 5
+    tp_threshold: 18,
+    sl_threshold: 3
   })
 
   const handleChange = (e) => {

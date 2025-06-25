@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react'
-import SimulationControls from './SimulationControls'
+import { SimulationControls } from './index'
 
 export default function SimulationControlWrapper({ form, handleChange, handleSubmit, error, loading }) {
   const contentRef = useRef(null)

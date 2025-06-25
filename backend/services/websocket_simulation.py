@@ -2,12 +2,14 @@ from models.schema import SimulationRequest
 from utils.price_utils import PriceUtils
 from strategies.momentum_strategy import MomentumStrategy
 from strategies.sma_crossover_strategy import SMACrossoverStrategy
+from strategies.cointegration_strategy import CointegrationStrategy
 import json
 import pandas as pd
 
 STRATEGY_MAP = {
     "momentum": MomentumStrategy,
-    "sma_crossover": SMACrossoverStrategy
+    "sma_crossover": SMACrossoverStrategy,
+    "cointegration": CointegrationStrategy
 }
 
 class WebSocketSimulationService:
@@ -80,6 +82,7 @@ class WebSocketSimulationService:
             "trade_history_by_date": self.strategy.portfolio.trade_history_by_date,
             "daily_values": result["daily_values"],
             "daily_benchmark_values": result["daily_benchmark_values"],
+            "all_trades": result.get("all_trades", []),
             "duration_sec": round(time.time() - start_time, 2)
         })
 

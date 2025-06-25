@@ -3,18 +3,18 @@ import { FiAlertCircle, FiCheckCircle, FiInfo, FiX } from 'react-icons/fi'
 
 const stylesByType = {
   error: {
-    backgroundColor: '#fee2e2',
-    color: '#dc2626',
+    backgroundColor: 'var(--color-danger-bg)',
+    color: 'var(--color-danger)',
     icon: <FiAlertCircle size={20} />,
   },
   success: {
-    backgroundColor: '#dcfce7',
-    color: '#16a34a',
+    backgroundColor: 'var(--color-success-bg)',
+    color: 'var(--color-success)',
     icon: <FiCheckCircle size={20} />,
   },
   default: {
-    backgroundColor: '#dbeafe',
-    color: '#2563eb',
+    backgroundColor: 'var(--color-info-bg)',
+    color: 'var(--color-info)',
     icon: <FiInfo size={20} />,
   },
 }
@@ -68,7 +68,7 @@ function Toast({ message, type = 'default', onClose, duration = 20000, isMobile 
         backgroundColor,
         borderRadius: '8px',
         color,
-        boxShadow: '0 12px 36px rgba(0, 0, 0, 0.25)',
+        boxShadow: '0 12px 36px var(--color-shadow-heavy)',
         bottom: isMobile ? '74px' : '24px',
         right: '24px',
       }}

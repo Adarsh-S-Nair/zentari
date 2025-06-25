@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { RiListSettingsFill } from 'react-icons/ri'
-import logo from '../assets/full-logo-light.png'
+import logo from '../../assets/full-logo-light.png'
 import RightDrawer from './RightDrawer'
-import SimulationControls from './SimulationControls'
+import SimulationControls from '../forms/SimulationControls'
 
 export default function MobileTopbar({ form, handleChange, handleSubmit, error, loading }) {
   const [drawerOpen, setDrawerOpen] = useState(false)

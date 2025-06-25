@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { FiChevronDown } from 'react-icons/fi'
-import Pill from './Pill'
-import TradeBreakdown from './TradeBreakdown'
+import { Pill } from '../ui'
+import { TradeBreakdown } from './index'
 
 function MonthlyRow({ date, value, benchmark, portfolioChange, benchmarkChange, trades, isMobile }) {
   const [expanded, setExpanded] = useState(false)

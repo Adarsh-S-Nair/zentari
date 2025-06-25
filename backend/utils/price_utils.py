@@ -1,7 +1,8 @@
 import pandas as pd
-from utils.data_fetcher import get_sp500_tickers_as_of, download_price_data_batch
+from utils.data_fetcher import DataFetcher
 
 class PriceUtils:
+    _data_fetcher = DataFetcher()
 
     @staticmethod
     def get_price(price_data, ticker, date_str):
@@ -28,7 +29,7 @@ class PriceUtils:
         if date_str in loaded_dates:
             return current_tickers, loaded_dates, price_data
 
-        new = set(get_sp500_tickers_as_of(date_str))
+        new = set(PriceUtils._data_fetcher.get_sp500_tickers_as_of(date_str))
         removed = current_tickers - new
         added = new - current_tickers
 
@@ -46,7 +47,7 @@ class PriceUtils:
             lookback_start = pd.to_datetime(date_str) - pd.DateOffset(
                 months=lookback_months + skip_recent_months
             )
-            new_data = download_price_data_batch(
+            new_data = PriceUtils._data_fetcher.download_price_data_batch(
                 list(added), lookback_start.strftime("%Y-%m-%d"), end_date_str
             )
             for t, df in new_data.items():

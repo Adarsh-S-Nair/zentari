@@ -1,0 +1,161 @@
+/* Color System for Trading App */
+
+:root {
+  /* Primary Colors */
+  --color-primary: #3b82f6;
+  --color-primary-light: #60a5fa;
+  --color-primary-dark: #2563eb;
+  --color-primary-hover: #1d4ed8;
+
+  /* Success Colors */
+  --color-success: #16a34a;
+  --color-success-light: #22c55e;
+  --color-success-bg: #dcfce7;
+  --color-success-border: #bbf7d0;
+
+  /* Error/Danger Colors */
+  --color-danger: #dc2626;
+  --color-danger-light: #ef4444;
+  --color-danger-bg: #fee2e2;
+  --color-danger-border: #fecaca;
+
+  /* Warning Colors */
+  --color-warning: #f59e0b;
+  --color-warning-light: #fbbf24;
+  --color-warning-bg: #fef3c7;
+  --color-warning-border: #fde68a;
+
+  /* Info Colors */
+  --color-info: #1e40af;
+  --color-info-light: #3b82f6;
+  --color-info-bg: #dbeafe;
+  --color-info-border: #bfdbfe;
+
+  /* Neutral Colors */
+  --color-white: #ffffff;
+  --color-black: #000000;
+  
+  /* Gray Scale */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+
+  /* Background Colors */
+  --color-bg-primary: var(--color-white);
+  --color-bg-secondary: var(--color-gray-50);
+  --color-bg-tertiary: var(--color-gray-100);
+  --color-bg-hover: #fdfdfd;
+  --color-bg-dark: var(--color-gray-800);
+
+  /* Text Colors */
+  --color-text-primary: var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-700);
+  --color-text-muted: var(--color-gray-500);
+  --color-text-light: var(--color-gray-400);
+  --color-text-white: var(--color-white);
+
+  /* Border Colors */
+  --color-border-primary: var(--color-gray-200);
+  --color-border-secondary: var(--color-gray-300);
+  --color-border-dark: var(--color-gray-400);
+
+  /* Shadow Colors */
+  --color-shadow-light: rgba(0, 0, 0, 0.06);
+  --color-shadow-medium: rgba(0, 0, 0, 0.12);
+  --color-shadow-heavy: rgba(0, 0, 0, 0.25);
+
+  /* Chart Colors */
+  --color-chart-primary: #509cf4;
+  --color-chart-secondary: #c5c5c5;
+  --color-chart-bg: var(--color-gray-50);
+
+  /* Status Colors */
+  --color-status-open: var(--color-info);
+  --color-status-open-bg: var(--color-info-bg);
+  --color-status-closed: var(--color-gray-500);
+  --color-status-closed-bg: var(--color-gray-100);
+
+  /* Position Colors */
+  --color-position-long: var(--color-success);
+  --color-position-long-bg: var(--color-success-bg);
+  --color-position-short: var(--color-danger);
+  --color-position-short-bg: var(--color-danger-bg);
+
+  /* Action Colors */
+  --color-action-buy: var(--color-success);
+  --color-action-buy-bg: var(--color-success-bg);
+  --color-action-sell: var(--color-danger);
+  --color-action-sell-bg: var(--color-danger-bg);
+
+  /* Modal Colors */
+  --color-modal-bg: var(--color-white);
+  --color-modal-overlay: rgba(0, 0, 0, 0.45);
+  --color-modal-shadow: rgba(0, 0, 0, 0.3);
+
+  /* Sidebar Colors */
+  --color-sidebar-bg: var(--color-gray-800);
+  --color-sidebar-hover: #2d384a;
+  --color-sidebar-active: var(--color-gray-700);
+  --color-sidebar-text: var(--color-gray-100);
+  --color-sidebar-text-muted: var(--color-gray-400);
+
+  /* Form Colors */
+  --color-input-bg: var(--color-gray-50);
+  --color-input-border: var(--color-gray-200);
+  --color-input-focus: var(--color-primary);
+  --color-input-error: var(--color-danger);
+
+  /* Button Colors */
+  --color-button-primary: var(--color-primary);
+  --color-button-primary-hover: var(--color-primary-hover);
+  --color-button-secondary: var(--color-gray-200);
+  --color-button-secondary-hover: var(--color-gray-300);
+  --color-button-danger: var(--color-danger);
+  --color-button-danger-hover: var(--color-danger-light);
+  --color-button-disabled: var(--color-gray-400);
+  --color-button-disabled-bg: var(--color-gray-100);
+}
+
+/* Utility classes for common color combinations */
+.color-success {
+  color: var(--color-success);
+}
+
+.color-danger {
+  color: var(--color-danger);
+}
+
+.color-muted {
+  color: var(--color-text-muted);
+}
+
+.bg-success {
+  background-color: var(--color-success-bg);
+}
+
+.bg-danger {
+  background-color: var(--color-danger-bg);
+}
+
+.bg-muted {
+  background-color: var(--color-bg-tertiary);
+}
+
+.border-primary {
+  border-color: var(--color-border-primary);
+}
+
+.border-success {
+  border-color: var(--color-success-border);
+}
+
+.border-danger {
+  border-color: var(--color-danger-border);
+} 

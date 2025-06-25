@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from .base_strategy import BaseStrategy
 from services.portfolio import Portfolio
-from utils.data_fetcher import preload_price_data, get_sp500_tickers_as_of
+from utils.data_fetcher import DataFetcher
 from utils.price_utils import PriceUtils
 
 
@@ -13,11 +13,12 @@ class SMACrossoverStrategy(BaseStrategy):
         self.portfolio = None
         self.current_tickers = set()
         self.loaded_dates = set()
+        self.data_fetcher = DataFetcher()
 
     async def initialize(self):
         start_date = self.params.start_date
-        self.current_tickers = set(get_sp500_tickers_as_of(start_date))
-        self.price_data = preload_price_data(
+        self.current_tickers = set(self.data_fetcher.get_sp500_tickers_as_of(start_date))
+        self.price_data = self.data_fetcher.preload_price_data(
             start_date, self.params.end_date,
             16, 0,  # load more history for SMA200
             self.params.benchmark, self.current_tickers

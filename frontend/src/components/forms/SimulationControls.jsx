@@ -1,10 +1,10 @@
-import Button from './Button'
-import Dropdown from './Dropdown'
+import { Button, Dropdown } from '../ui'
 
 function SimulationControls({ form, handleChange, handleSubmit, error, loading }) {
   const strategyOptions = [
     { label: 'Momentum Trading Strategy', value: 'momentum' },
-    { label: 'SMA Crossover Strategy', value: 'sma_crossover' }
+    { label: 'SMA Crossover Strategy', value: 'sma_crossover' },
+    { label: 'Cointegration Strategy', value: 'cointegration' }
   ]
 
   const momentumFields = [
@@ -41,7 +41,32 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
     ]
   ]
 
-  const selectedFields = form.strategy === 'sma_crossover' ? smaFields : momentumFields
+  const cointegrationFields = [
+    [
+      { label: 'Start Date', name: 'start_date', type: 'date' },
+      { label: 'End Date', name: 'end_date', type: 'date' }
+    ],
+    [
+      { label: 'Lookback Months', name: 'lookback_months', type: 'number' },
+      { label: 'Starting Value ($)', name: 'starting_value', type: 'number' }
+    ],
+    [
+      { label: 'Benchmark Ticker', name: 'benchmark', type: 'text' }
+    ]
+  ]
+
+  const getSelectedFields = () => {
+    switch (form.strategy) {
+      case 'sma_crossover':
+        return smaFields
+      case 'cointegration':
+        return cointegrationFields
+      default:
+        return momentumFields
+    }
+  }
+
+  const selectedFields = getSelectedFields()
 
   return (
     <form
@@ -61,7 +86,7 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
       {selectedFields.map((group, i) => (
         <div key={i} className="flex justify-between gap-[12px]">
           {group.map(({ label, name, type }) => (
-            <div key={name} style={{ width: 'calc(50% - 6px)' }}>
+            <div key={name} style={{ width: group.length === 1 ? '100%' : 'calc(50% - 6px)' }}>
               <label className="text-[11px] font-medium mb-[4px]" style={{ color: '#d1d5db' }}>
                 {label}
               </label>
@@ -76,7 +101,7 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
                   }
                 }}
                 min={
-                  name === 'lookback_months' ? 1 :
+                  name === 'lookback_months' ? (form.strategy === 'cointegration' ? 3 : 1) :
                   name === 'skip_recent_months' ? 0 :
                   name === 'hold_months' ? 1 :
                   name === 'top_n' ? 1 :
@@ -85,7 +110,7 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
                   undefined
                 }
                 max={
-                  name === 'lookback_months' ? 12 :
+                  name === 'lookback_months' ? (form.strategy === 'cointegration' ? 24 : 12) :
                   name === 'skip_recent_months' ? 12 :
                   name === 'hold_months' ? 3 :
                   name === 'top_n' ? 20 :

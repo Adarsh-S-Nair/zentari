@@ -3,7 +3,7 @@ import { FaUserCircle } from 'react-icons/fa'
 import { MdOutlineLogout } from 'react-icons/md'
 import { IoMdSettings } from 'react-icons/io'
 import { FaEllipsisVertical } from 'react-icons/fa6'
-import { supabase } from '../supabaseClient'
+import { supabase } from '../../supabaseClient'
 
 export default function UserProfileTab({ isOpen, user, userName: externalUserName, setLogoutOpen: externalSetLogoutOpen, mobile = false }) {
   const [userName, setUserName] = useState(externalUserName || '')
