@@ -104,7 +104,11 @@ function Table({
                 }}
               >
                 {columns.map((column, index) => (
-                  <div key={index} className={column.headerAlign || 'text-left'}>
+                  <div 
+                    key={index} 
+                    className={column.headerAlign || 'text-left'}
+                    style={column.style}
+                  >
                     {column.header}
                   </div>
                 ))}
@@ -145,7 +149,11 @@ function Table({
                     }}
                   >
                     {columns.map((column, colIndex) => (
-                      <div key={colIndex} className={column.align || 'text-left'}>
+                      <div 
+                        key={colIndex} 
+                        className={column.align || 'text-left'}
+                        style={column.style}
+                      >
                         {column.render ? column.render(row[column.key], row) : formatCellValue(row[column.key], column)}
                       </div>
                     ))}

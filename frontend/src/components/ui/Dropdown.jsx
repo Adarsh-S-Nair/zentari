@@ -3,12 +3,14 @@ import { FiChevronDown } from 'react-icons/fi'
 
 function Dropdown({ label, name, value, onChange, options }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const dropdownRef = useRef(null)
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsOpen(false)
+        setIsFocused(false)
       }
     }
 
@@ -27,6 +29,29 @@ function Dropdown({ label, name, value, onChange, options }) {
     }
     onChange(fakeEvent)
     setIsOpen(false)
+    setIsFocused(false)
+  }
+
+  const getDropdownStyles = () => {
+    return {
+      width: '100%',
+      height: '30px',
+      borderRadius: '6px',
+      backgroundColor: '#374151',
+      color: '#e5e7eb',
+      fontSize: '13px',
+      boxSizing: 'border-box',
+      fontFamily: '"Inter", system-ui, sans-serif',
+      padding: '0 10px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      boxShadow: isFocused 
+        ? '0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+        : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+      border: `1px solid ${isFocused ? '#3b82f6' : '#4b5563'}`,
+      transition: 'all 0.15s ease-in-out'
+    }
   }
 
   return (
@@ -35,22 +60,12 @@ function Dropdown({ label, name, value, onChange, options }) {
         {label}
       </label>
       <div
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative cursor-pointer select-none"
-        style={{
-          width: '100%',
-          height: '30px',
-          borderRadius: '6px',
-          backgroundColor: '#374151',
-          color: '#e5e7eb',
-          fontSize: '13px',
-          boxSizing: 'border-box',
-          fontFamily: '"Inter", system-ui, sans-serif',
-          padding: '0 10px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
+        onClick={() => {
+          setIsOpen(!isOpen)
+          setIsFocused(true)
         }}
+        className="relative cursor-pointer select-none"
+        style={getDropdownStyles()}
       >
         <span>{selectedLabel}</span>
         <FiChevronDown
@@ -59,22 +74,37 @@ function Dropdown({ label, name, value, onChange, options }) {
         />
         {isOpen && (
           <div
-            className="absolute z-10 mt-[4px] w-full rounded-[6px] shadow-lg"
+            className="absolute z-10 w-full rounded-[6px] shadow-lg"
             style={{
-              top: '100%',
+              top: 'calc(100% + 4px)',
               left: 0,
               backgroundColor: '#374151',
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              border: '1px solid #4b5563',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+              animation: 'slideDown 0.2s ease-out',
+              overflow: 'hidden'
             }}
           >
             {options.map((opt, idx) => (
               <div
                 key={opt.value}
                 onClick={() => handleSelect(opt.value)}
-                className={`px-[10px] py-[6px] text-[13px] hover:bg-[#4b5563] transition-colors duration-150 cursor-pointer ${
+                className={`px-[10px] py-[6px] text-[13px] transition-colors duration-150 cursor-pointer ${
                   idx === 0 ? 'rounded-t-[6px]' : ''
                 } ${idx === options.length - 1 ? 'rounded-b-[6px]' : ''}`}
-                style={{ color: '#e5e7eb' }}
+                style={{ 
+                  color: '#e5e7eb',
+                  borderBottom: idx < options.length - 1 ? '1px solid #4a5568' : 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#4b5563';
+                  e.target.style.color = '#f9fafb';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = '#e5e7eb';
+                }}
               >
                 {opt.label}
               </div>
@@ -82,6 +112,18 @@ function Dropdown({ label, name, value, onChange, options }) {
           </div>
         )}
       </div>
+      <style jsx>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   )
 }

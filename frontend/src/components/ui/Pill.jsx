@@ -51,11 +51,6 @@ function Pill({ value, isPositive, isZero = false, type = 'percentage', customTe
     background: bgColor
   }
 
-  // Add margin only for percentage pills
-  if (type === 'percentage') {
-    baseStyles.marginLeft = '6px'
-  }
-
   return (
     <div style={baseStyles}>
       {type === 'percentage' && !isZero && isPositive ? '+' : ''}

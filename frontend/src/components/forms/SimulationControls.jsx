@@ -1,10 +1,12 @@
 import { Button, Dropdown } from '../ui'
+import { useState, useEffect } from 'react'
 
 function SimulationControls({ form, handleChange, handleSubmit, error, loading }) {
+  const [focusedInput, setFocusedInput] = useState(null)
+  
   const strategyOptions = [
-    { label: 'Momentum Trading Strategy', value: 'momentum' },
-    { label: 'SMA Crossover Strategy', value: 'sma_crossover' },
-    { label: 'Cointegration Strategy', value: 'cointegration' }
+    { label: 'Momentum Trading', value: 'momentum' },
+    { label: 'Statistical Arbitrage ', value: 'cointegration' }
   ]
 
   const momentumFields = [
@@ -68,9 +70,66 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
 
   const selectedFields = getSelectedFields()
 
+  // Force container to recalculate scrollable area when strategy changes
+  useEffect(() => {
+    // Trigger a resize event to force recalculation
+    window.dispatchEvent(new Event('resize'))
+    
+    // Also scroll to top to ensure user can see all content
+    const formElement = document.querySelector('.simulation-controls-form')
+    if (formElement) {
+      formElement.scrollTop = 0
+    }
+  }, [form.strategy])
+
+  const getInputStyles = (name, type) => {
+    const isFocused = focusedInput === name
+    const baseStyles = {
+      width: '100%',
+      height: '30px',
+      border: `1px solid ${isFocused ? '#3b82f6' : '#4b5563'}`,
+      borderRadius: '6px',
+      padding: '0 10px',
+      backgroundColor: '#374151',
+      color: '#e5e7eb',
+      fontSize: '13px',
+      boxSizing: 'border-box',
+      fontFamily: '"Inter", system-ui, sans-serif',
+      appearance: 'none',
+      boxShadow: isFocused 
+        ? '0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+        : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+      transition: 'all 0.15s ease-in-out',
+      outline: 'none'
+    }
+
+    // Add specific styles for date inputs
+    if (type === 'date') {
+      baseStyles['::-webkit-calendar-picker-indicator'] = {
+        filter: 'invert(1) brightness(0) saturate(100%) invert(100%)',
+        cursor: 'pointer'
+      }
+    }
+
+    // Add specific styles for number inputs
+    if (type === 'number') {
+      baseStyles['::-webkit-inner-spin-button'] = {
+        WebkitAppearance: 'none',
+        margin: 0
+      }
+      baseStyles['::-webkit-outer-spin-button'] = {
+        WebkitAppearance: 'none',
+        margin: 0
+      }
+      baseStyles['-moz-appearance'] = 'textfield'
+    }
+
+    return baseStyles
+  }
+
   return (
     <form
-      className="flex flex-col w-full overflow-y-auto"
+      className="simulation-controls-form flex flex-col w-full overflow-y-auto"
       style={{ gap: '8px', maxHeight: 'calc(100vh - 100px)', paddingBottom: '20px' }}
     >
       <div style={{ width: '100%' }}>
@@ -95,6 +154,8 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
                 name={name}
                 value={form[name]}
                 onChange={handleChange}
+                onFocus={() => setFocusedInput(name)}
+                onBlur={() => setFocusedInput(null)}
                 onKeyDown={(e) => {
                   if (type === 'number' && ["e", "E", "+", "-"].includes(e.key)) {
                     e.preventDefault()
@@ -118,19 +179,7 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
                   undefined
                 }
                 required={name === 'start_date' || name === 'end_date'}
-                style={{
-                  width: '100%',
-                  height: '30px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '0 10px',
-                  backgroundColor: '#374151',
-                  color: '#e5e7eb',
-                  fontSize: '13px',
-                  boxSizing: 'border-box',
-                  fontFamily: '"Inter", system-ui, sans-serif',
-                  appearance: 'none'
-                }}
+                style={getInputStyles(name, type)}
               />
             </div>
           ))}
@@ -139,10 +188,16 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
 
       <style>{`
         input[type="date"]::-webkit-calendar-picker-indicator {
-          filter: invert(1);
+          filter: invert(1) brightness(0) saturate(100%) invert(100%);
+          cursor: pointer;
         }
-        input[type="date"]::-moz-calendar-picker-indicator {
-          filter: invert(1);
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type="number"] {
+          -moz-appearance: textfield;
         }
       `}</style>
 

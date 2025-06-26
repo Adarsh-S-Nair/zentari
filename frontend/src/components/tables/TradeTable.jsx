@@ -47,18 +47,18 @@ function TradeTable({ trades, isMobile }) {
       pillType: 'position',
       render: (value, row) => {
         const isOpen = row.status === 'open'
-        return (
-          <div className="flex justify-center items-center gap-1">
+            return (
+                    <div className="flex justify-center items-center gap-1">
             <Pill type="position" value={value} />
-            {isOpen && (
-              <Pill 
-                type="status" 
-                customText="Open"
+                      {isOpen && (
+                        <Pill 
+                          type="status" 
+                          customText="Open"
                 customBgColor="var(--color-status-open-bg)"
                 customTextColor="var(--color-status-open)"
-              />
-            )}
-          </div>
+                        />
+                      )}
+                    </div>
         )
       }
     },
@@ -108,7 +108,7 @@ function TradeTable({ trades, isMobile }) {
       width: '78px',
       align: 'text-right',
       headerAlign: 'text-right',
-      type: 'currency'
+      type: 'currency',
     },
     {
       key: 'pnl_pct',
@@ -116,7 +116,8 @@ function TradeTable({ trades, isMobile }) {
       width: '60px',
       align: 'text-center',
       headerAlign: 'text-center',
-      type: 'pill-with-condition'
+      type: 'pill-with-condition',
+      style: { marginLeft: '6px' }
     }
   ]
 

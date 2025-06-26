@@ -12,7 +12,9 @@ import {
 } from './components'
 import { supabase } from './supabaseClient'
 import { useMediaQuery } from 'react-responsive'
-import { FiBarChart2, FiFolder} from 'react-icons/fi'
+import { FaChartArea } from "react-icons/fa";
+import { IoFolderOpen } from "react-icons/io5";
+
 
 function App() {
   const [loading, setLoading] = useState(false)
@@ -26,8 +28,8 @@ function App() {
   const isTablet = useMediaQuery({ maxWidth: 1024 })
   const isMobile = useMediaQuery({ maxWidth: 670 })
   const allTabs = [
-    { label: 'My Portfolio', icon: <FiFolder size={18} />, route: '/portfolio', hasContent: false, requiresAuth: true },
-    { label: 'Simulation', icon: <FiBarChart2 size={18} />, route: '/simulate', hasContent: true, requiresAuth: false },
+    { label: 'Portfolio', icon: <IoFolderOpen size={18} />, route: '/portfolio', hasContent: false, requiresAuth: true },
+    { label: 'Simulation', icon: <FaChartArea size={18} />, route: '/simulate', hasContent: true, requiresAuth: false },
   ]
   const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user)
 
