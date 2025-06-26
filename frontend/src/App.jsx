@@ -177,6 +177,7 @@ function App() {
                   result={result}
                   currentSimDate={currentSimDate}
                   isMobile={isMobile}
+                  form={form}
                 />
               }
             />

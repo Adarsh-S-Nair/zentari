@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { LineChart } from '../charts'
 import { TradeTable, OrdersTable } from '../tables'
-import { SummaryStat, Tab } from '../ui'
+import { SummaryStat, Tab, LoadingBar } from '../ui'
 import Spinner from '../ui/Spinner'
 
-function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobile }) {
+function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobile, form }) {
   const [activeTab, setActiveTab] = useState('trades') // 'trades' or 'orders'
   const [tabWidths, setTabWidths] = useState({ orders: 0, trades: 0 })
   const [tabPositions, setTabPositions] = useState({ orders: 0, trades: 0 })
@@ -102,7 +102,16 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
     <main className={`flex-1 px-[24px] overflow-y-auto overflow-x-hidden ${isMobile ? 'pt-[50px] pb-[60px]' : ''}`}>
       <div className={`${isMobile ? 'min-h-[calc(100vh-100px)] flex flex-col items-center justify-center w-full' : 'min-h-[100vh] flex flex-col items-center justify-center'}`}>
         {loading ? (
-          <Spinner label={getSpinnerLabel()} />
+          currentSimDate ? (
+            <LoadingBar 
+              currentDate={currentSimDate} 
+              startDate={form?.start_date}
+              endDate={form?.end_date}
+              label="Running simulation"
+            />
+          ) : (
+            <Spinner label={getSpinnerLabel()} />
+          )
         ) : result ? (
           <div className="flex flex-col w-full max-w-[700px] items-center gap-[20px] pt-[24px] pb-[40px]">
 
