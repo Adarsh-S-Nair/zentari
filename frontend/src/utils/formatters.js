@@ -113,4 +113,35 @@ export const formatLargeNumber = (value, decimals = 1) => {
 export const formatDuration = (days) => {
   if (days === null || days === undefined || isNaN(days)) return '-'
   return `${days} day${days !== 1 ? 's' : ''}`
+}
+
+/**
+ * Format last updated timestamp to relative time
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted relative time string
+ */
+export const formatLastUpdated = (dateString) => {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInMinutes = (now - date) / (1000 * 60)
+  
+  if (diffInMinutes < 1) {
+    return 'Just now'
+  } else if (diffInMinutes < 60) {
+    const minutes = Math.floor(diffInMinutes)
+    return `${minutes}m ago`
+  } else if (diffInMinutes < 1440) { // 24 hours
+    const hours = Math.floor(diffInMinutes / 60)
+    return `${hours}h ago`
+  } else if (diffInMinutes < 10080) { // 7 days
+    const days = Math.floor(diffInMinutes / 1440)
+    return `${days}d ago`
+  } else {
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    })
+  }
 } 

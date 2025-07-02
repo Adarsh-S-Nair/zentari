@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 
 // Blend a hex color with gray to make it duller and darker
-function mixWithGray(hex, gray = 'var(--color-gray-600)', ratio = 0.7) {
+function mixWithGray(hex, gray = '#6b7280', ratio = 0.7) {
   const hexToRgb = h => {
     const bigint = parseInt(h.replace('#', ''), 16)
     return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255]
@@ -22,18 +22,36 @@ function mixWithGray(hex, gray = 'var(--color-gray-600)', ratio = 0.7) {
   ])
 }
 
+// Make a color darker for button backgrounds
+function darkenColor(hex, amount = 0.3) {
+  const hexToRgb = h => {
+    const bigint = parseInt(h.replace('#', ''), 16)
+    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255]
+  }
+
+  const rgbToString = ([r, g, b]) => `rgb(${r}, ${g}, ${b})`
+
+  const [r, g, b] = hexToRgb(hex)
+  
+  return rgbToString([
+    Math.max(0, Math.round(r * (1 - amount))),
+    Math.max(0, Math.round(g * (1 - amount))),
+    Math.max(0, Math.round(b * (1 - amount)))
+  ])
+}
+
 // Smaller mini spinner
 function MiniSpinner() {
   return (
     <div
       className="mini-spinner"
       style={{
-        width: '10px',
-        height: '10px',
-        border: '1.5px solid var(--color-text-white)',
-        borderTop: '1.5px solid transparent',
+        width: '8px',
+        height: '8px',
+        border: '1px solid var(--color-text-white)',
+        borderTop: '1px solid transparent',
         borderRadius: '50%',
-        marginRight: '6px',
+        marginRight: '4px',
         animation: 'spin 0.6s linear infinite'
       }}
     />
@@ -56,9 +74,37 @@ function Button({
 
   const isInactive = disabled || loading
 
-  const baseBg = color
-  const hoverBg = mixWithGray(color, 'var(--color-gray-800)', 0.3) // darker hover
-  const inactiveBg = mixWithGray(color, 'var(--color-gray-600)', 0.5) // duller inactive
+  // Convert CSS variable to hex for color blending
+  const getComputedColor = (cssVar) => {
+    if (cssVar.startsWith('var(--')) {
+      // For CSS variables, use a fallback approach
+      if (cssVar === 'var(--color-primary)') return '#3b82f6'
+      if (cssVar === 'var(--color-danger)') return '#dc2626'
+      if (cssVar === 'var(--color-gray-200)') return '#e5e7eb'
+      if (cssVar === 'var(--color-success)') return '#16a34a'
+      if (cssVar === 'var(--color-warning)') return '#f59e0b'
+      if (cssVar === 'var(--color-white)') return '#ffffff'
+      return '#6b7280' // fallback
+    }
+    return cssVar
+  }
+
+  const baseColor = getComputedColor(color)
+  
+  // Special handling for white colors
+  const isWhite = baseColor === '#ffffff' || baseColor === 'var(--color-white)'
+  
+  let darkerBg, hoverBg
+  
+  if (isWhite) {
+    darkerBg = '#f1f3f4' // Slightly darker gray, still very light
+    hoverBg = '#e8eaed'  // Darker on hover for better feedback
+  } else {
+    darkerBg = darkenColor(baseColor, 0.15) // Make background slightly darker
+    hoverBg = darkenColor(baseColor, 0.25) // Darker on hover
+  }
+  
+  const inactiveBg = mixWithGray(baseColor, '#6b7280', 0.5) // duller inactive
 
   const lightText = {
     base: 'var(--color-text-white)',
@@ -76,21 +122,24 @@ function Button({
 
   const buttonStyle = {
     width,
-    backgroundColor: isInactive ? inactiveBg : isHovering ? hoverBg : baseBg,
+    backgroundColor: isInactive ? inactiveBg : isHovering ? hoverBg : darkerBg,
     color: isInactive ? text.inactive : isHovering ? text.hover : text.base,
-    padding: '10px 16px',
-    border: 'none',
-    borderRadius: '6px',
-    fontSize: '13px',
-    fontWeight: 700,
+    padding: '6px 12px',
+    border: `1px solid ${baseColor}`,
+    borderRadius: '4px',
+    fontSize: '11px',
+    fontWeight: 600,
     cursor: isInactive ? 'not-allowed' : 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '6px',
-    boxShadow: '0 2px 5px var(--color-shadow-medium)',
+    gap: '4px',
+    boxShadow: '0 1px 3px var(--color-shadow-medium)',
     transition: 'background-color 0.2s, color 0.2s',
     fontFamily: '"Inter", system-ui, sans-serif',
+    WebkitFontSmoothing: 'antialiased',
+    MozOsxFontSmoothing: 'grayscale',
+    textRendering: 'optimizeLegibility',
     ...style
   }
 

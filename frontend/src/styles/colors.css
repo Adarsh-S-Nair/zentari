@@ -78,6 +78,12 @@
   --color-chart-secondary: #c5c5c5;
   --color-chart-bg: var(--color-gray-50);
 
+  /* Breakdown Bar Colors */
+  --color-breakdown-cash: #62d48b;
+  --color-breakdown-investment: #87bdff;
+  --color-breakdown-credit: #f58787;
+  --color-breakdown-loan: #ffd66e;
+
   /* Status Colors */
   --color-status-open: var(--color-info);
   --color-status-open-bg: var(--color-info-bg);
@@ -107,6 +113,7 @@
   --color-sidebar-active: var(--color-gray-700);
   --color-sidebar-text: var(--color-gray-100);
   --color-sidebar-text-muted: var(--color-gray-400);
+  --color-sidebar-inactive: var(--color-gray-500);
 
   /* Form Colors */
   --color-input-bg: var(--color-gray-50);

@@ -3,13 +3,15 @@ from utils.price_utils import PriceUtils
 from strategies.momentum_strategy import MomentumStrategy
 from strategies.sma_crossover_strategy import SMACrossoverStrategy
 from strategies.cointegration_strategy import CointegrationStrategy
+from strategies.leveraged_etf_strategy import LeveragedETFSwingStrategy
 import json
 import pandas as pd
 
 STRATEGY_MAP = {
     "momentum": MomentumStrategy,
     "sma_crossover": SMACrossoverStrategy,
-    "cointegration": CointegrationStrategy
+    "cointegration": CointegrationStrategy,
+    "leveraged_etf": LeveragedETFSwingStrategy
 }
 
 class WebSocketSimulationService:

@@ -6,7 +6,8 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
   
   const strategyOptions = [
     { label: 'Momentum Trading', value: 'momentum' },
-    { label: 'Statistical Arbitrage ', value: 'cointegration' }
+    { label: 'Statistical Arbitrage ', value: 'cointegration' },
+    { label: 'Leveraged ETF Swing', value: 'leveraged_etf' }
   ]
 
   const momentumFields = [
@@ -57,12 +58,29 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
     ]
   ]
 
+  const leveragedEtfFields = [
+    [
+      { label: 'Start Date', name: 'start_date', type: 'date' },
+      { label: 'End Date', name: 'end_date', type: 'date' }
+    ],
+    [
+      { label: 'Lookback Months', name: 'lookback_months', type: 'number' },
+      { label: 'Skip Recent Months', name: 'skip_recent_months', type: 'number' }
+    ],
+    [
+      { label: 'Starting Value ($)', name: 'starting_value', type: 'number' },
+      { label: 'Benchmark Ticker', name: 'benchmark', type: 'text' }
+    ]
+  ]
+
   const getSelectedFields = () => {
     switch (form.strategy) {
       case 'sma_crossover':
         return smaFields
       case 'cointegration':
         return cointegrationFields
+      case 'leveraged_etf':
+        return leveragedEtfFields
       default:
         return momentumFields
     }
@@ -86,42 +104,21 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
     const isFocused = focusedInput === name
     const baseStyles = {
       width: '100%',
-      height: '30px',
+      height: '24px',
       border: `1px solid ${isFocused ? '#3b82f6' : '#4b5563'}`,
-      borderRadius: '6px',
-      padding: '0 10px',
+      borderRadius: '4px',
+      padding: '0 8px',
       backgroundColor: '#374151',
       color: '#e5e7eb',
-      fontSize: '13px',
+      fontSize: '10px',
       boxSizing: 'border-box',
       fontFamily: '"Inter", system-ui, sans-serif',
       appearance: 'none',
       boxShadow: isFocused 
-        ? '0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-        : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        ? '0 0 0 2px rgba(59, 130, 246, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06)'
+        : '0 1px 2px 0 rgba(0, 0, 0, 0.1), 0 1px 1px 0 rgba(0, 0, 0, 0.06)',
       transition: 'all 0.15s ease-in-out',
       outline: 'none'
-    }
-
-    // Add specific styles for date inputs
-    if (type === 'date') {
-      baseStyles['::-webkit-calendar-picker-indicator'] = {
-        filter: 'invert(1) brightness(0) saturate(100%) invert(100%)',
-        cursor: 'pointer'
-      }
-    }
-
-    // Add specific styles for number inputs
-    if (type === 'number') {
-      baseStyles['::-webkit-inner-spin-button'] = {
-        WebkitAppearance: 'none',
-        margin: 0
-      }
-      baseStyles['::-webkit-outer-spin-button'] = {
-        WebkitAppearance: 'none',
-        margin: 0
-      }
-      baseStyles['-moz-appearance'] = 'textfield'
     }
 
     return baseStyles
@@ -130,7 +127,7 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
   return (
     <form
       className="simulation-controls-form flex flex-col w-full overflow-y-auto"
-      style={{ gap: '8px', maxHeight: 'calc(100vh - 100px)', paddingBottom: '20px' }}
+      style={{ gap: '6px', maxHeight: 'calc(100vh - 80px)', paddingBottom: '16px' }}
     >
       <div style={{ width: '100%' }}>
         <Dropdown
@@ -143,10 +140,10 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
       </div>
 
       {selectedFields.map((group, i) => (
-        <div key={i} className="flex justify-between gap-[12px]">
+        <div key={i} className="flex justify-between gap-[8px]">
           {group.map(({ label, name, type }) => (
-            <div key={name} style={{ width: group.length === 1 ? '100%' : 'calc(50% - 6px)' }}>
-              <label className="text-[11px] font-medium mb-[4px]" style={{ color: '#d1d5db' }}>
+            <div key={name} style={{ width: group.length === 1 ? '100%' : 'calc(50% - 4px)' }}>
+              <label className="text-[9px] font-medium mb-[2px]" style={{ color: '#d1d5db' }}>
                 {label}
               </label>
               <input
@@ -202,10 +199,10 @@ function SimulationControls({ form, handleChange, handleSubmit, error, loading }
       `}</style>
 
       {error && (
-        <p className="text-red-400 text-[11px] text-center">{error}</p>
+        <p className="text-red-400 text-[9px] text-center">{error}</p>
       )}
 
-      <div style={{ marginTop: '28px' }}>
+      <div style={{ marginTop: '20px' }}>
         <Button
           label={"Run Simulation"}
           onClick={handleSubmit}

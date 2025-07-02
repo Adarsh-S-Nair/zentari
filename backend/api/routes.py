@@ -3,6 +3,7 @@ from models.schema import SimulationRequest
 from services.websocket_simulation import WebSocketSimulationService
 import json
 from services.validation import validate_simulation_params
+from api.plaid_routes import router as plaid_router
 
 router = APIRouter()
 
@@ -32,3 +33,6 @@ async def simulate_websocket(websocket: WebSocket):
         await websocket.send_text(json.dumps({"type": "error", "payload": str(e)}))
         await websocket.close()
         return
+
+# Include Plaid routes
+router.include_router(plaid_router)

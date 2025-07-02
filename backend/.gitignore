@@ -1,2 +1,8 @@
 data/sp500_prices.duckdb
 data/sp500_snapshot_history.csv
+.env
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class

@@ -97,7 +97,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
         const { error: profileError } = await supabase
           .from('user_profiles')
-          .insert({ id: userId, name })
+          .insert({ id: userId, name, environment: 'development' })
 
         if (profileError) throw profileError
       } else {

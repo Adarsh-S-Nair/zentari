@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useState, useEffect } from 'react'
 import { 
   CollapsibleSidebar, 
-  PortfolioPanel, 
+  AccountsPanel, 
   SimulationPanel, 
   Toast, 
   LoginModal, 
@@ -14,6 +14,7 @@ import { supabase } from './supabaseClient'
 import { useMediaQuery } from 'react-responsive'
 import { FaChartArea } from "react-icons/fa";
 import { IoFolderOpen } from "react-icons/io5";
+import { FinancialProvider } from './contexts/FinancialContext'
 
 
 function App() {
@@ -28,7 +29,7 @@ function App() {
   const isTablet = useMediaQuery({ maxWidth: 1024 })
   const isMobile = useMediaQuery({ maxWidth: 670 })
   const allTabs = [
-    { label: 'Portfolio', icon: <IoFolderOpen size={18} />, route: '/portfolio', hasContent: false, requiresAuth: true },
+    { label: 'Accounts', icon: <IoFolderOpen size={18} />, route: '/accounts', hasContent: false, requiresAuth: true },
     { label: 'Simulation', icon: <FaChartArea size={18} />, route: '/simulate', hasContent: true, requiresAuth: false },
   ]
   const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user)
@@ -145,73 +146,74 @@ function App() {
   }, [])
 
   return (
-    <Router>
-      <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
-        {!isMobile && (
-          <CollapsibleSidebar
-            visibleTabs={visibleTabs}
-            form={form}
-            handleChange={handleChange}
-            handleSubmit={handleSubmit}
-            loading={loading}
-            onLoginClick={() => setLoginOpen(true)}
-            user={user}
-            isTablet={isTablet}
-            isMobile={isMobile}
-            setLogoutOpen={setLogoutOpen}
-          />
-        )}
-
-        {isMobile && <MobileTopbar form={form} handleChange={handleChange} handleSubmit={handleSubmit} loading={loading} />}
-        <div
-          className="flex-1 h-full overflow-y-auto flex pb-[60px] sm:pb-0"
-          style={{ marginLeft: isTablet && !isMobile ? '75px' : '0px' }}
-        >
-          <Routes>
-            <Route
-              path="/simulate"
-              element={
-                <SimulationPanel
-                  loading={loading}
-                  loadingPhase={loadingPhase}
-                  result={result}
-                  currentSimDate={currentSimDate}
-                  isMobile={isMobile}
-                  form={form}
-                />
-              }
+    <FinancialProvider>
+      <Router>
+        <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
+          {!isMobile && (
+            <CollapsibleSidebar
+              visibleTabs={visibleTabs}
+              form={form}
+              handleChange={handleChange}
+              handleSubmit={handleSubmit}
+              loading={loading}
+              onLoginClick={() => setLoginOpen(true)}
+              user={user}
+              isTablet={isTablet}
+              isMobile={isMobile}
+              setLogoutOpen={setLogoutOpen}
             />
-            <Route path="/portfolio" element={<PortfolioPanel />} />
-            <Route path="*" element={<Navigate to="/simulate" replace />} />
-          </Routes>
-        </div>
+          )}
 
-        {isMobile && (
-          <MobileBottomBar
-            user={user}
-            onLoginClick={() => setLoginOpen(true)}
-            setLogoutOpen={setLogoutOpen}
-            visibleTabs={visibleTabs}
+          {isMobile && <MobileTopbar form={form} handleChange={handleChange} handleSubmit={handleSubmit} loading={loading} />}
+          <div
+            className={`flex-1 h-full overflow-y-auto flex pb-[60px] sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}
+          >
+            <Routes>
+              <Route
+                path="/simulate"
+                element={
+                  <SimulationPanel
+                    loading={loading}
+                    loadingPhase={loadingPhase}
+                    result={result}
+                    currentSimDate={currentSimDate}
+                    isMobile={isMobile}
+                    form={form}
+                  />
+                }
+              />
+              <Route path="/accounts" element={<AccountsPanel />} />
+              <Route path="*" element={<Navigate to="/simulate" replace />} />
+            </Routes>
+          </div>
+
+          {isMobile && (
+            <MobileBottomBar
+              user={user}
+              onLoginClick={() => setLoginOpen(true)}
+              setLogoutOpen={setLogoutOpen}
+              visibleTabs={visibleTabs}
+            />
+          )}
+
+          <Toast
+            key={toast.message}
+            message={toast.message}
+            type={toast.type}
+            isMobile={isMobile}
+            onClose={() => setToast({ message: '', type: 'default' })}
           />
-        )}
 
-        <Toast
-          key={toast.message}
-          message={toast.message}
-          type={toast.type}
-          isMobile={isMobile}
-          onClose={() => setToast({ message: '', type: 'default' })}
-        />
+          <LoginModal
+            isOpen={loginOpen}
+            onClose={() => setLoginOpen(false)}
+            setToast={setToast}
+          />
 
-        <LoginModal
-          isOpen={loginOpen}
-          onClose={() => setLoginOpen(false)}
-          setToast={setToast}
-        />
-
-        <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => {/* clear auth state here */}} />
-      </div>
-    </Router>
+          <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => {/* clear auth state here */}} />
+        </div>
+      </Router>
+    </FinancialProvider>
   )
 }
 

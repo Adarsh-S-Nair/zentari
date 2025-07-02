@@ -56,19 +56,21 @@ function Tab({
       }}
     >
       <span>{label}</span>
-      <div style={{
-        backgroundColor: isActive ? 'var(--color-primary)' : 'var(--color-gray-200)',
-        color: isActive ? 'white' : 'var(--color-text-muted)',
-        fontSize: '11px',
-        fontWeight: '600',
-        padding: '2px 6px',
-        borderRadius: '10px',
-        minWidth: '16px',
-        textAlign: 'center',
-        transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)'
-      }}>
-        {count}
-      </div>
+      {typeof count === 'number' ? (
+        <div style={{
+          backgroundColor: isActive ? 'var(--color-primary)' : 'var(--color-gray-200)',
+          color: isActive ? 'white' : 'var(--color-text-muted)',
+          fontSize: '11px',
+          fontWeight: '600',
+          padding: '2px 6px',
+          borderRadius: '10px',
+          minWidth: '16px',
+          textAlign: 'center',
+          transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}>
+          {count}
+        </div>
+      ) : null}
     </button>
   )
 }

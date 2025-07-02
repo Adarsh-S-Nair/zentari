@@ -35,20 +35,20 @@ function Dropdown({ label, name, value, onChange, options }) {
   const getDropdownStyles = () => {
     return {
       width: '100%',
-      height: '30px',
-      borderRadius: '6px',
+      height: '24px',
+      borderRadius: '4px',
       backgroundColor: '#374151',
       color: '#e5e7eb',
-      fontSize: '13px',
+      fontSize: '10px',
       boxSizing: 'border-box',
       fontFamily: '"Inter", system-ui, sans-serif',
-      padding: '0 10px',
+      padding: '0 8px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       boxShadow: isFocused 
-        ? '0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-        : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        ? '0 0 0 2px rgba(59, 130, 246, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06)'
+        : '0 1px 2px 0 rgba(0, 0, 0, 0.1), 0 1px 1px 0 rgba(0, 0, 0, 0.06)',
       border: `1px solid ${isFocused ? '#3b82f6' : '#4b5563'}`,
       transition: 'all 0.15s ease-in-out'
     }
@@ -56,7 +56,7 @@ function Dropdown({ label, name, value, onChange, options }) {
 
   return (
     <div style={{ width: '100%' }} ref={dropdownRef}>
-      <label className="text-[11px] font-medium mb-[4px]" style={{ color: '#d1d5db' }}>
+      <label className="text-[9px] font-medium mb-[2px]" style={{ color: '#d1d5db' }}>
         {label}
       </label>
       <div
@@ -69,19 +69,19 @@ function Dropdown({ label, name, value, onChange, options }) {
       >
         <span>{selectedLabel}</span>
         <FiChevronDown
-          size={16}
+          size={12}
           className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
         {isOpen && (
           <div
-            className="absolute z-10 w-full rounded-[6px] shadow-lg"
+            className="absolute z-10 w-full rounded-[4px] shadow-lg"
             style={{
               top: 'calc(100% + 4px)',
               left: 0,
               backgroundColor: '#374151',
               boxSizing: 'border-box',
               border: '1px solid #4b5563',
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+              boxShadow: '0 8px 12px -3px rgba(0, 0, 0, 0.1), 0 3px 4px -2px rgba(0, 0, 0, 0.05)',
               animation: 'slideDown 0.2s ease-out',
               overflow: 'hidden'
             }}
@@ -90,9 +90,9 @@ function Dropdown({ label, name, value, onChange, options }) {
               <div
                 key={opt.value}
                 onClick={() => handleSelect(opt.value)}
-                className={`px-[10px] py-[6px] text-[13px] transition-colors duration-150 cursor-pointer ${
-                  idx === 0 ? 'rounded-t-[6px]' : ''
-                } ${idx === options.length - 1 ? 'rounded-b-[6px]' : ''}`}
+                className={`px-[8px] py-[4px] text-[10px] transition-colors duration-150 cursor-pointer ${
+                  idx === 0 ? 'rounded-t-[4px]' : ''
+                } ${idx === options.length - 1 ? 'rounded-b-[4px]' : ''}`}
                 style={{ 
                   color: '#e5e7eb',
                   borderBottom: idx < options.length - 1 ? '1px solid #4a5568' : 'none'
@@ -112,11 +112,11 @@ function Dropdown({ label, name, value, onChange, options }) {
           </div>
         )}
       </div>
-      <style jsx>{`
+      <style>{`
         @keyframes slideDown {
           from {
             opacity: 0;
-            transform: translateY(-8px);
+            transform: translateY(-6px);
           }
           to {
             opacity: 1;

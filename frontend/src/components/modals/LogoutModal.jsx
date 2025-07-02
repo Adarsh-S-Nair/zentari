@@ -89,7 +89,7 @@ export default function LogoutModal({ isOpen, onClose, onLogout }) {
           marginTop: '24px',
         }}>
           <Button
-            color="#e5e7eb"
+            color="var(--color-white)"
             darkText
             onClick={handleClose}
             disabled={loading}
@@ -97,7 +97,7 @@ export default function LogoutModal({ isOpen, onClose, onLogout }) {
           />
 
           <Button
-            color="#b91c1c"
+            color="var(--color-danger)"
             onClick={handleConfirmLogout}
             disabled={loading}
             loading={loading}

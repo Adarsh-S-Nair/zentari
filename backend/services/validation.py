@@ -23,10 +23,12 @@ def validate_simulation_params(params: SimulationRequest):
     if params.skip_recent_months < 0 or params.skip_recent_months > 6:
         return False, "Skip recent months must be between 0 and 6."
 
-    if params.hold_months < 1 or params.hold_months > 3:
-        return False, "Hold months must be between 1 and 3."
+    # Strategy-specific validations
+    if params.strategy in ["momentum", "sma_crossover"]:
+        if params.hold_months < 1 or params.hold_months > 3:
+            return False, "Hold months must be between 1 and 3."
 
-    if params.top_n < 1 or params.top_n > 20:
-        return False, "Top N must be between 1 and 20."
+        if params.top_n < 1 or params.top_n > 20:
+            return False, "Top N must be between 1 and 20."
 
     return True, ""

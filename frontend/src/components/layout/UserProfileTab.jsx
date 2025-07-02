@@ -53,25 +53,25 @@ export default function UserProfileTab({ isOpen, user, userName: externalUserNam
         transform: mobile ? 'translateX(-50%)' : 'none',
         backgroundColor: '#f9fafb',
         color: '#374151',
-        borderRadius: '10px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.25)',
-        padding: '8px 0',
-        minWidth: '140px',
+        borderRadius: '8px',
+        boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
+        padding: '6px 0',
+        minWidth: '120px',
         zIndex: 9999,
       }}
     >
-      <div className="flex items-center gap-[6px] text-[13px] font-semibold px-[12px] py-[8px] hover:bg-[#f3f4f6] cursor-pointer transition" onClick={() => setMenuOpen(false)}>
-        <IoMdSettings size={14} color="#374151" /> Settings
+      <div className="flex items-center gap-[4px] text-[11px] font-semibold px-[10px] py-[6px] hover:bg-[#f3f4f6] cursor-pointer transition" onClick={() => setMenuOpen(false)}>
+        <IoMdSettings size={12} color="#374151" /> Settings
       </div>
       <div
-        className="flex items-center gap-[6px] text-[13px] font-semibold px-[12px] py-[8px] hover:bg-[#f3f4f6] cursor-pointer transition"
+        className="flex items-center gap-[4px] text-[11px] font-semibold px-[10px] py-[6px] hover:bg-[#f3f4f6] cursor-pointer transition"
         style={{ color: '#dc2626' }}
         onClick={() => {
           setMenuOpen(false)
           if (externalSetLogoutOpen) externalSetLogoutOpen(true)
         }}
       >
-        <MdOutlineLogout size={14} color="#dc2626" /> Log out
+        <MdOutlineLogout size={12} color="#dc2626" /> Log out
       </div>
     </div>
   )
@@ -94,14 +94,14 @@ export default function UserProfileTab({ isOpen, user, userName: externalUserNam
             justifyContent: 'center',
             alignItems: 'center',
             color: isHighlighted ? '#ffffff' : '#9ca3af',
-            fontSize: '11px',
+            fontSize: '9px',
             cursor: 'pointer',
             transition: 'color 0.2s ease',
           }}
           onMouseEnter={(e) => !isHighlighted && (e.currentTarget.style.color = '#d1d5db')}
           onMouseLeave={(e) => !isHighlighted && (e.currentTarget.style.color = '#9ca3af')}
         >
-          <FaUserCircle size={20} />
+          <FaUserCircle size={16} />
         </button>
         {menuOpen && Menu}
       </>
@@ -110,20 +110,20 @@ export default function UserProfileTab({ isOpen, user, userName: externalUserNam
 
   return (
     <>
-      <div className="w-full mt-[20px] mb-[12px]">
-        <div className={`flex items-center gap-[10px] ${isOpen ? 'px-[16px] py-[6px]' : 'justify-center py-[10px]'}`}>
+      <div className="w-full mt-[12px] mb-[8px]">
+        <div className={`flex items-center gap-[8px] ${isOpen ? 'px-[12px] py-[4px]' : 'justify-center py-[8px]'}`}>
           <div
             ref={iconRef}
             className="flex items-center"
             onClick={() => !isOpen && openMenu()}
             style={{ cursor: !isOpen ? 'pointer' : 'default' }}
           >
-            <FaUserCircle size={18} color="#f3f4f6" />
+            <FaUserCircle size={14} color="#f3f4f6" />
           </div>
           {isOpen && (
             <div className="flex justify-between w-full items-center">
-              <div className="flex items-center gap-[6px]">
-                <h2 className="text-[13px] font-bold text-gray-100">{userName || 'Logged in'}</h2>
+              <div className="flex items-center gap-[4px]">
+                <h2 className="text-[11px] font-bold text-gray-100">{userName || 'Logged in'}</h2>
               </div>
               <div
                 ref={triggerRef}
@@ -132,15 +132,15 @@ export default function UserProfileTab({ isOpen, user, userName: externalUserNam
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '6px',
-                  borderRadius: '6px',
+                  padding: '4px',
+                  borderRadius: '4px',
                   cursor: 'pointer',
                   transition: 'background-color 0.1s ease-in-out',
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#374151')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
-                <FaEllipsisVertical size={16} color="#d1d5db" />
+                <FaEllipsisVertical size={12} color="#d1d5db" />
               </div>
             </div>
           )}
