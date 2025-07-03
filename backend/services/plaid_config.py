@@ -43,7 +43,6 @@ class PlaidConfig:
         
         # Create API client without any additional parameters
         # Filter out any proxy-related environment variables that might be automatically passed
-        import os
         original_proxy_vars = {}
         proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']
         

@@ -17,9 +17,8 @@ import {
 function AccountsPanel() {
   const [plaidModalOpen, setPlaidModalOpen] = useState(false)
   const [plaidLoading, setPlaidLoading] = useState(false)
-  const [plaidError, setPlaidError] = useState(null)
   const [activeTab, setActiveTab] = useState('cash')
-  const { accounts, loading, error, refreshAccounts } = useFinancial()
+  const { accounts, loading, error, refreshAccounts, setToast } = useFinancial()
   const hasSetInitialTab = React.useRef(false)
 
   const grouped = groupAccountsByType(accounts || []) || {
@@ -47,18 +46,16 @@ function AccountsPanel() {
   const handlePlaidSuccess = () => {
     refreshAccounts()
     setPlaidModalOpen(false)
-    setPlaidError(null)
     setPlaidLoading(false)
+    setToast({ message: 'Accounts added successfully!', type: 'success' })
   }
 
   const handlePlaidClose = () => {
     setPlaidModalOpen(false)
-    setPlaidError(null)
     setPlaidLoading(false)
   }
 
   const handleAddAccounts = () => {
-    setPlaidError(null)
     setPlaidLoading(true)
     setPlaidModalOpen(true)
   }
@@ -167,19 +164,7 @@ function AccountsPanel() {
           </div>
         )}
 
-        {plaidError && (
-          <div className="w-full px-[20px] max-w-[700px] mt-[20px]">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-700 text-sm">{plaidError}</p>
-              <Button
-                label="Try Again"
-                onClick={handleAddAccounts}
-                width="auto"
-                style={{ marginTop: '8px' }}
-              />
-            </div>
-          </div>
-        )}
+
       </div>
 
       <PlaidLinkModal
@@ -187,7 +172,7 @@ function AccountsPanel() {
         onClose={handlePlaidClose}
         onSuccess={handlePlaidSuccess}
         onError={(error) => {
-          setPlaidError(error)
+          setToast({ message: error, type: 'error' })
           setPlaidLoading(false)
         }}
       />

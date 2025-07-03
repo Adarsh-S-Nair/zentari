@@ -11,7 +11,7 @@ export const useFinancial = () => {
   return context
 }
 
-export const FinancialProvider = ({ children }) => {
+export const FinancialProvider = ({ children, setToast }) => {
   const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -94,7 +94,8 @@ export const FinancialProvider = ({ children }) => {
     user,
     refreshAccounts,
     addAccounts,
-    fetchAccounts
+    fetchAccounts,
+    setToast
   }
 
   return (

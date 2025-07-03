@@ -10,17 +10,20 @@ Write-Host ""
 Write-Host "Starting Backend..." -ForegroundColor Yellow
 Set-Location backend
 
-Write-Host "Creating virtual environment if it doesn't exist..." -ForegroundColor Cyan
+Write-Host "Checking virtual environment..." -ForegroundColor Cyan
 if (-not (Test-Path "venv")) {
-    Write-Host "Creating new virtual environment..." -ForegroundColor Cyan
+    Write-Host "Creating new virtual environment..." -ForegroundColor Yellow
     python -m venv venv
+    Write-Host "Activating virtual environment..." -ForegroundColor Yellow
+    & .\venv\Scripts\Activate.ps1
+    Write-Host "Installing requirements..." -ForegroundColor Yellow
+    pip install -r requirements.txt
+} else {
+    Write-Host "Virtual environment already exists." -ForegroundColor Green
+    Write-Host "Activating virtual environment..." -ForegroundColor Yellow
+    & .\venv\Scripts\Activate.ps1
+    Write-Host "Skipping requirements installation (already installed)." -ForegroundColor Green
 }
 
-Write-Host "Activating virtual environment..." -ForegroundColor Cyan
-& .\venv\Scripts\Activate.ps1
-
-Write-Host "Installing requirements..." -ForegroundColor Cyan
-pip install -r requirements.txt
-
-Write-Host "Starting backend server..." -ForegroundColor Green
+Write-Host "Starting backend server..." -ForegroundColor Yellow
 uvicorn main:app --reload --host 0.0.0.0 --port 8000 

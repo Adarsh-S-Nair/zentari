@@ -150,7 +150,7 @@ function App() {
   }, [])
 
   return (
-    <FinancialProvider>
+    <FinancialProvider setToast={setToast}>
       <Router>
         <AppContent 
           loading={loading}
