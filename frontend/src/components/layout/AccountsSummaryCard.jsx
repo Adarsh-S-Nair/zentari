@@ -22,7 +22,7 @@ const AccountsSummaryCard = ({ grouped }) => {
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '12px 20px',
-          backgroundColor: '#f9fafb',
+          backgroundColor: '#ffffff',
           borderBottom: '1px solid #e5e7eb',
         }}
       >

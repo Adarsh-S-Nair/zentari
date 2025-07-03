@@ -1,37 +1,60 @@
-import React from 'react'
-import { FaUniversity } from 'react-icons/fa'
-import { Card } from '../ui'
-import { formatCurrency, formatLastUpdated } from '../../utils/formatters'
+import React, { useState, useRef, useEffect } from 'react';
+import { FaUniversity } from 'react-icons/fa';
+import { HiOutlineDotsVertical } from 'react-icons/hi';
+import { Card } from '../ui';
+import ContextMenu from '../ui/ContextMenu';
+import { formatCurrency, formatLastUpdated } from '../../utils/formatters';
 
 const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => {
-  const capitalizeWords = (str) => {
-    return str.split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ')
-  }
-  
+  const [menuOpenId, setMenuOpenId] = useState(null);
+  const menuRef = useRef(null);
+
+  const capitalizeWords = (str) =>
+    str
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+
+  // Close menu on outside click or Escape
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpenId(null);
+      }
+    };
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setMenuOpenId(null);
+    };
+
+    if (menuOpenId) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEsc);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [menuOpenId]);
+
   return (
     <Card className="p-0 w-full overflow-hidden">
-      {/* Card Header */}
+      {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '4px 20px',
-        backgroundColor: '#f9fafb',
+        padding: '12px 20px',
+        backgroundColor: '#ffffff',
         borderBottom: '1px solid #e5e7eb'
       }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {(() => {
-            const { icon: IconComponent, color: iconColor } = getAccountTypeIcon(activeTab)
+            const { icon: IconComponent, color: iconColor } = getAccountTypeIcon(activeTab);
             return (
               <div style={{
-                width: '32px',
-                height: '32px',
+                width: '36px',
+                height: '36px',
                 borderRadius: '8px',
                 backgroundColor: iconColor + '15',
                 display: 'flex',
@@ -41,38 +64,49 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
               }}>
                 <IconComponent size={18} />
               </div>
-            )
+            );
           })()}
-                      <h2 style={{
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <h2 style={{
               fontSize: '14px',
-              fontWeight: '500',
-              color: '#1f2937'
+              fontWeight: '600',
+              color: '#111827',
+              margin: 0
             }}>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h2>
+            <span style={{
+              fontSize: '12px',
+              color: '#6b7280',
+              marginTop: '2px'
+            }}>{accounts.length} accounts</span>
           </div>
-          <p style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: '#1f2937'
-          }}>{formatCurrency(getTotal(accounts))}</p>
+        </div>
+        <div style={{
+          fontSize: '14px',
+          fontWeight: '600',
+          color: '#111827'
+        }}>
+          {formatCurrency(getTotal(accounts))}
+        </div>
       </div>
-      
-      {/* Card Content */}
+
+      {/* Content */}
       <div style={{ padding: '12px 20px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {accounts.map(acc => {
-            const balance = acc.balances?.current || 0
-            const isPositive = balance > 0
-            const isZero = balance === 0
-            
+            const balance = acc.balances?.current || 0;
+            const isPositive = balance > 0;
+            const isZero = balance === 0;
+
             return (
               <div key={acc.account_id} style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                paddingBottom: '4px',
-                paddingTop: '4px',
+                paddingBottom: '6px',
+                paddingTop: '6px',
                 borderBottom: '1px solid #f3f4f6',
-                minHeight: '48px'
+                minHeight: '52px',
+                position: 'relative'
               }}>
                 <div style={{ flex: 1 }}>
                   <div style={{
@@ -80,7 +114,7 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                     justifyContent: 'space-between',
                     alignItems: 'center'
                   }}>
-                    <div style={{ 
+                    <div style={{
                       flex: 1,
                       display: 'flex',
                       alignItems: 'center',
@@ -97,8 +131,8 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                         overflow: 'hidden'
                       }}>
                         {acc.institution_logo ? (
-                          <img 
-                            src={acc.institution_logo} 
+                          <img
+                            src={acc.institution_logo}
                             alt={acc.institution_name || 'Bank'}
                             style={{
                               width: '100%',
@@ -106,8 +140,8 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                               objectFit: 'cover'
                             }}
                             onError={(e) => {
-                              e.target.style.display = 'none'
-                              e.target.nextSibling.style.display = 'flex'
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
                             }}
                           />
                         ) : null}
@@ -162,13 +196,55 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                     </div>
                   </div>
                 </div>
+
+                {/* 3-dots icon + context menu */}
+                <div ref={menuRef} style={{ marginLeft: 12 }}>
+                  <div
+                    role="button"
+                    onClick={() =>
+                      setMenuOpenId(menuOpenId === acc.account_id ? null : acc.account_id)
+                    }
+                    style={{
+                      padding: '4px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <HiOutlineDotsVertical size={16} color="#6b7280" />
+                  </div>
+
+                  <ContextMenu
+                    isOpen={menuOpenId === acc.account_id}
+                    onClose={() => setMenuOpenId(null)}
+                    position={{ top: 28, right: 0 }}
+                    items={[
+                      {
+                        label: 'Edit',
+                        icon: <span style={{ fontSize: 12 }}>✏️</span>,
+                        onClick: () => {} // TODO: implement edit handler
+                      },
+                      {
+                        label: 'Delete',
+                        icon: <span style={{ fontSize: 12 }}>🗑️</span>,
+                        onClick: () => {} // TODO: implement delete handler
+                      }
+                    ]}
+                  />
+                </div>
               </div>
-            )
+            );
           })}
         </div>
       </div>
     </Card>
-  )
-}
+  );
+};
 
-export default AccountsList 
+export default AccountsList;

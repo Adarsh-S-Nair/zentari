@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FiUser, FiLogOut, FiBell, FiHelpCircle } from 'react-icons/fi';
+import { FaUser } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
 import { LogoutModal } from '../modals';
+import ContextMenu from '../ui/ContextMenu';
 
 const Topbar = ({ user, onLoginClick, currentPage }) => {
   const [userName, setUserName] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const menuRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
 
+  // Fetch user's name from user_profiles table
   useEffect(() => {
     if (user) {
       supabase
@@ -17,33 +19,14 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
         .eq('id', user.id)
         .single()
         .then(({ data, error }) => {
-          if (!error && data?.name) setUserName(data.name);
+          if (!error && data?.name) {
+            setUserName(data.name);
+          }
         });
+    } else {
+      setUserName('');
     }
   }, [user]);
-
-  // Close on outside click or Escape
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setShowProfileMenu(false);
-      }
-    };
-
-    const handleEsc = (e) => {
-      if (e.key === 'Escape') setShowProfileMenu(false);
-    };
-
-    if (showProfileMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEsc);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEsc);
-    };
-  }, [showProfileMenu]);
 
   const handleLogout = async () => {
     try {
@@ -54,10 +37,36 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
     }
   };
 
+  const userMenuItems = [
+    {
+      label: userName || user?.email || 'User',
+      icon: <FaUser size={13} />,
+      disabled: true
+    },
+    {
+      label: 'Sign Out',
+      icon: <FiLogOut size={14} style={{ marginTop: 1 }} />,
+      onClick: () => setLogoutOpen(true)
+    }
+  ];
+
   return (
     <>
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', borderBottom: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
-        <div style={{ width: '100%', maxWidth: 700, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        borderBottom: '1px solid #e5e7eb',
+        backgroundColor: '#fff'
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: 700,
+          padding: '16px 20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#1f2937' }}>
             {currentPage || 'Trading API'}
           </div>
@@ -71,55 +80,23 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
             )}
 
             {user ? (
-              <div style={{ position: 'relative' }} ref={menuRef}>
+              <div style={{ position: 'relative' }}>
                 <div
                   role="button"
-                  onClick={() => setShowProfileMenu((prev) => !prev)}
+                  onClick={() => setShowMenu(prev => !prev)}
                   style={iconButtonStyle}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                 >
-                  <FiUser size={16} color="#4b5563" />
+                  <FaUser size={16} color="#4b5563" />
                 </div>
 
-                {showProfileMenu && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 40,
-                      width: 192,
-                      backgroundColor: '#fff',
-                      borderRadius: 8,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      border: '1px solid #e5e7eb',
-                      zIndex: 50,
-                      fontSize: 13,
-                      color: '#374151'
-                    }}
-                  >
-                    <div style={{ padding: '8px 0' }}>
-                      <div style={{ padding: '8px 16px', borderBottom: '1px solid #f3f4f6' }}>
-                        {userName || user.email}
-                      </div>
-                      <div
-                        role="button"
-                        onClick={() => setLogoutOpen(true)}
-                        style={{
-                          padding: '8px 16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          cursor: 'pointer',
-                          transition: 'background-color 0.2s ease',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <FiLogOut size={14} />
-                        <span>Sign Out</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <ContextMenu
+                  isOpen={showMenu}
+                  onClose={() => setShowMenu(false)}
+                  items={userMenuItems}
+                  position={{ top: 40, right: 0 }}
+                />
               </div>
             ) : (
               <div

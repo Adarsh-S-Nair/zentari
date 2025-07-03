@@ -1,23 +1,20 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { 
-  CollapsibleSidebar, 
-  AccountsPanel, 
-  SimulationPanel, 
-  Toast, 
-  LoginModal, 
-  LogoutModal, 
-  MobileBottomBar, 
-  MobileTopbar,
-  Topbar
-} from './components'
-import { supabase } from './supabaseClient'
-import { useMediaQuery } from 'react-responsive'
-import { useLocation } from 'react-router-dom'
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { supabase } from './supabaseClient';
+import { FinancialProvider } from './contexts/FinancialContext';
+import {
+  CollapsibleSidebar,
+  Topbar,
+  SimulationPanel,
+  AccountsPanel,
+  MobileBottomBar,
+  LoginModal,
+  LogoutModal,
+  Toast
+} from './components';
+import { useMediaQuery } from 'react-responsive';
 import { FaChartArea } from "react-icons/fa";
 import { IoFolderOpen } from "react-icons/io5";
-import { FinancialProvider } from './contexts/FinancialContext'
-
 
 function App() {
   const [loading, setLoading] = useState(false)
@@ -35,8 +32,6 @@ function App() {
     { label: 'Simulation', icon: <FaChartArea size={18} />, route: '/simulate', hasContent: true, requiresAuth: false },
   ]
   const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user)
-
-
 
   const [form, setForm] = useState({
     start_date: '2023-01-01',
@@ -217,11 +212,10 @@ function AppContent({
         />
       )}
 
-      {isMobile && <MobileTopbar form={form} handleChange={handleChange} handleSubmit={handleSubmit} loading={loading} />}
       <div
         className={`flex-1 h-full overflow-y-auto flex flex-col pb-[60px] sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}
       >
-        {!isMobile && <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={getCurrentPageName()} />}
+        <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={getCurrentPageName()} />
         <div className="flex-1 overflow-y-auto">
         <Routes>
           <Route
