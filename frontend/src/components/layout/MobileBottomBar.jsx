@@ -67,33 +67,6 @@ export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen, vis
           </button>
         )
       })}
-
-      {user ? (
-        <div style={{ flex: 1, height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <UserProfileTab isOpen={false} user={user} mobile setLogoutOpen={setLogoutOpen} />
-        </div>
-      ) : (
-        <button
-          onClick={onLoginClick}
-          style={{
-            flex: 1,
-            height: '100%',
-            backgroundColor: 'transparent',
-            border: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            fontSize: '11px',
-            color: '#9ca3af',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#d1d5db')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
-        >
-          <FiLogIn size={20} />
-        </button>
-      )}
     </div>
   )
 }

@@ -86,3 +86,12 @@ html, body, #root {
 .animate-slide-out {
   animation: slide-out 0.3s ease-in forwards;
 }
+
+/* tailwind-compatible global style */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

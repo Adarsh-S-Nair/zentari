@@ -114,26 +114,28 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
 
             {/* TABLE SECTION */}
             <div className="w-full">
-              <Tabs
-                tabs={[
-                  {
-                    id: 'trades',
-                    label: 'Trades',
-                    count: result.all_trades?.length || 0
-                  },
-                  {
-                    id: 'orders',
-                    label: 'Orders',
-                    count: Object.values(result.trade_history_by_date || {}).reduce(
-                      (total, orders) => total + orders.length,
-                      0
-                    )
-                  }
-                ]}
-                activeId={activeTab}
-                onChange={handleTabSwitch}
-                showCount={true}
-              />
+              <div className='mb-[12px]'>
+                <Tabs
+                  tabs={[
+                    {
+                      id: 'trades',
+                      label: 'Trades',
+                      count: result.all_trades?.length || 0
+                    },
+                    {
+                      id: 'orders',
+                      label: 'Orders',
+                      count: Object.values(result.trade_history_by_date || {}).reduce(
+                        (total, orders) => total + orders.length,
+                        0
+                      )
+                    }
+                  ]}
+                  activeId={activeTab}
+                  onChange={handleTabSwitch}
+                  showCount={true}
+                />
+              </div>
 
               <div style={{ height: '350px' }}>
                 {renderTableContent()}

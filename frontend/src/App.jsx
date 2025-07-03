@@ -225,10 +225,10 @@ function AppContent({
       )}
 
       <div
-        className={`flex-1 h-full overflow-y-auto flex flex-col pb-[60px] sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}
+        className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}
       >
         <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={getCurrentPageName()} />
-        <div className="flex-1 overflow-y-auto">
+        <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
         <Routes>
           <Route
             path="/simulate"
@@ -246,7 +246,7 @@ function AppContent({
           <Route 
             path="/accounts" 
             element={
-              user ? <AccountsPanel /> : <Navigate to="/simulate" replace />
+              user ? <AccountsPanel isMobile={isMobile} /> : <Navigate to="/simulate" replace />
             } 
           />
           <Route path="*" element={

@@ -4,7 +4,7 @@ import { Card } from '../ui';
 import { formatCurrency } from '../../utils/formatters';
 import { getTotal } from './accountsUtils';
 
-const AccountsSummaryCard = ({ grouped }) => {
+const AccountsSummaryCard = ({ grouped, isMobile }) => {
   if (!grouped) return null;
 
   const assets = [...(grouped.cash || []), ...(grouped.investment || [])];
@@ -21,7 +21,7 @@ const AccountsSummaryCard = ({ grouped }) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '12px 20px',
+          padding: isMobile ? '10px 16px' : '12px 20px',
           backgroundColor: '#ffffff',
           borderBottom: '1px solid #e5e7eb',
         }}
@@ -29,9 +29,9 @@ const AccountsSummaryCard = ({ grouped }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
+              width: 28,
+              height: 28,
+              borderRadius: 6,
               backgroundColor: 'rgba(59, 130, 246, 0.1)',
               display: 'flex',
               alignItems: 'center',
@@ -39,13 +39,13 @@ const AccountsSummaryCard = ({ grouped }) => {
               color: '#3b82f6',
             }}
           >
-            <FiBarChart2 size={18} />
+            <FiBarChart2 size={16} />
           </div>
           <h2 style={{ fontSize: 14, fontWeight: 600, color: '#1f2937' }}>Net Worth</h2>
         </div>
         <div
           style={{
-            fontSize: 16,
+            fontSize: isMobile ? 14 : 16,
             fontWeight: 600,
             color: '#1f2937',
           }}
@@ -55,9 +55,16 @@ const AccountsSummaryCard = ({ grouped }) => {
       </div>
 
       {/* Content */}
-      <div style={{ display: 'flex', padding: '20px' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          padding: isMobile ? 16 : 20,
+          gap: isMobile ? 24 : 0,
+        }}
+      >
         {/* Assets */}
-        <div style={{ flex: 1, marginRight: 20 }}>
+        <div style={{ flex: 1, marginRight: isMobile ? 0 : 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 13, color: '#6b7280' }}>Assets</span>
             <span style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>
