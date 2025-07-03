@@ -5,7 +5,7 @@ import { FaLock, FaUser } from 'react-icons/fa'
 import { supabase } from '../../supabaseClient'
 import { Button } from '../ui'
 
-function Field({ icon, type, placeholder, value, onChange }) {
+function Field({ icon, type, placeholder, value, onChange, onKeyPress }) {
   return (
     <div
       style={{
@@ -24,6 +24,7 @@ function Field({ icon, type, placeholder, value, onChange }) {
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        onKeyDown={onKeyPress}
         style={{
           flex: 1,
           border: 'none',
@@ -38,7 +39,7 @@ function Field({ icon, type, placeholder, value, onChange }) {
   )
 }
 
-export default function LoginModal({ isOpen, onClose }) {
+export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [visible, setVisible] = useState(false)
   const [isSignup, setIsSignup] = useState(false)
   const modalRef = useRef(null)
@@ -109,10 +110,19 @@ export default function LoginModal({ isOpen, onClose }) {
       }
 
       handleClose()
+      if (onLoginSuccess) {
+        onLoginSuccess()
+      }
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSubmit()
     }
   }
 
@@ -153,6 +163,7 @@ export default function LoginModal({ isOpen, onClose }) {
               placeholder="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onKeyPress={handleKeyPress}
             />
           )}
           <Field
@@ -161,6 +172,7 @@ export default function LoginModal({ isOpen, onClose }) {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onKeyPress={handleKeyPress}
           />
           <Field
             icon={<FaLock size={16} color="#6b7280" />}
@@ -168,6 +180,7 @@ export default function LoginModal({ isOpen, onClose }) {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyPress={handleKeyPress}
           />
 
           {error && (

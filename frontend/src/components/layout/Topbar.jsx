@@ -9,8 +9,9 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
   const [userName, setUserName] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const triggerRef = useRef(null);
 
-  // Fetch user's name from user_profiles table
+  // Fetch user's name
   useEffect(() => {
     if (user) {
       supabase
@@ -82,6 +83,7 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
             {user ? (
               <div style={{ position: 'relative' }}>
                 <div
+                  ref={triggerRef}
                   role="button"
                   onClick={() => setShowMenu(prev => !prev)}
                   style={iconButtonStyle}
@@ -94,8 +96,9 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
                 <ContextMenu
                   isOpen={showMenu}
                   onClose={() => setShowMenu(false)}
+                  triggerRef={triggerRef}
+                  offset={{ x: -175, y: 35 }}
                   items={userMenuItems}
-                  position={{ top: 40, right: 0 }}
                 />
               </div>
             ) : (

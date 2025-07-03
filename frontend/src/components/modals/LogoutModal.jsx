@@ -31,8 +31,10 @@ export default function LogoutModal({ isOpen, onClose, onLogout }) {
     setLoading(true)
     try {
       await supabase.auth.signOut()
-      if (onLogout) onLogout()
       handleClose()
+      if (onLogout) {
+        onLogout()
+      }
     } catch (err) {
       console.error('Logout failed:', err)
     } finally {

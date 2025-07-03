@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { FinancialProvider } from './contexts/FinancialContext';
 import {
@@ -183,6 +183,7 @@ function AppContent({
   form, setForm, handleChange, handleSubmit
 }) {
   const location = useLocation()
+  const navigate = useNavigate()
 
   // Get current page name based on route
   const getCurrentPageName = () => {
@@ -195,6 +196,17 @@ function AppContent({
         return 'Trading API'
     }
   }
+
+  // Handle navigation after login/logout
+  const handleLoginSuccess = () => {
+    navigate('/accounts')
+  }
+
+  const handleLogoutSuccess = () => {
+    navigate('/simulate')
+  }
+
+
 
   return (
     <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
@@ -231,8 +243,15 @@ function AppContent({
               />
             }
           />
-          <Route path="/accounts" element={<AccountsPanel />} />
-          <Route path="*" element={<Navigate to="/simulate" replace />} />
+          <Route 
+            path="/accounts" 
+            element={
+              user ? <AccountsPanel /> : <Navigate to="/simulate" replace />
+            } 
+          />
+          <Route path="*" element={
+            user ? <Navigate to="/accounts" replace /> : <Navigate to="/simulate" replace />
+          } />
         </Routes>
         </div>
       </div>
@@ -258,9 +277,10 @@ function AppContent({
         isOpen={loginOpen}
         onClose={() => setLoginOpen(false)}
         setToast={setToast}
+        onLoginSuccess={handleLoginSuccess}
       />
 
-      <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => {/* clear auth state here */}} />
+      <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={handleLogoutSuccess} />
     </div>
   )
 }

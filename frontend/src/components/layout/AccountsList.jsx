@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaUniversity } from 'react-icons/fa';
+import { FaUniversity, FaTrash } from 'react-icons/fa';
 import { HiOutlineDotsVertical } from 'react-icons/hi';
+import { MdEdit } from 'react-icons/md';
 import { Card } from '../ui';
 import ContextMenu from '../ui/ContextMenu';
 import { formatCurrency, formatLastUpdated } from '../../utils/formatters';
@@ -8,6 +9,7 @@ import { formatCurrency, formatLastUpdated } from '../../utils/formatters';
 const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => {
   const [menuOpenId, setMenuOpenId] = useState(null);
   const menuRef = useRef(null);
+  const triggerRefs = useRef({});
 
   const capitalizeWords = (str) =>
     str
@@ -83,7 +85,8 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
         <div style={{
           fontSize: '14px',
           fontWeight: '600',
-          color: '#111827'
+          color: '#111827',
+          marginRight: '32px'
         }}>
           {formatCurrency(getTotal(accounts))}
         </div>
@@ -92,10 +95,13 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
       {/* Content */}
       <div style={{ padding: '12px 20px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {accounts.map(acc => {
+          {accounts.map((acc) => {
             const balance = acc.balances?.current || 0;
             const isPositive = balance > 0;
             const isZero = balance === 0;
+            if (!triggerRefs.current[acc.account_id]) {
+              triggerRefs.current[acc.account_id] = React.createRef();
+            }
 
             return (
               <div key={acc.account_id} style={{
@@ -200,6 +206,7 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                 {/* 3-dots icon + context menu */}
                 <div ref={menuRef} style={{ marginLeft: 12 }}>
                   <div
+                    ref={triggerRefs.current[acc.account_id]}
                     role="button"
                     onClick={() =>
                       setMenuOpenId(menuOpenId === acc.account_id ? null : acc.account_id)
@@ -223,17 +230,18 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                   <ContextMenu
                     isOpen={menuOpenId === acc.account_id}
                     onClose={() => setMenuOpenId(null)}
-                    position={{ top: 28, right: 0 }}
+                    triggerRef={triggerRefs.current[acc.account_id]}
+                    offset={{ x: -175, y: 30 }}
                     items={[
                       {
                         label: 'Edit',
-                        icon: <span style={{ fontSize: 12 }}>✏️</span>,
-                        onClick: () => {} // TODO: implement edit handler
+                        icon: <MdEdit size={14} />,
+                        onClick: () => {}
                       },
                       {
                         label: 'Delete',
-                        icon: <span style={{ fontSize: 12 }}>🗑️</span>,
-                        onClick: () => {} // TODO: implement delete handler
+                        icon: <FaTrash size={13} />,
+                        onClick: () => {}
                       }
                     ]}
                   />
