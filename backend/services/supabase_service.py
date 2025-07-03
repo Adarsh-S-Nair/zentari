@@ -14,7 +14,6 @@ class SupabaseService:
             print(f"Creating Supabase client with URL: {supabase_url}")
             
             # Temporarily remove proxy environment variables that might interfere
-            import os
             original_proxy_vars = {}
             proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']
             
