@@ -10,7 +10,30 @@ class SupabaseService:
         if not supabase_url or not supabase_key:
             raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables")
         
-        self.client: Client = create_client(supabase_url, supabase_key)
+        try:
+            print(f"Creating Supabase client with URL: {supabase_url}")
+            
+            # Temporarily remove proxy environment variables that might interfere
+            import os
+            original_proxy_vars = {}
+            proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']
+            
+            for var in proxy_vars:
+                if var in os.environ:
+                    original_proxy_vars[var] = os.environ[var]
+                    del os.environ[var]
+            
+            try:
+                self.client: Client = create_client(supabase_url, supabase_key)
+                print("Supabase client created successfully")
+            finally:
+                # Restore original proxy environment variables
+                for var, value in original_proxy_vars.items():
+                    os.environ[var] = value
+                    
+        except Exception as e:
+            print(f"Error creating Supabase client: {e}")
+            raise
     
     def get_user_environment(self, user_id: str) -> Optional[str]:
         """
