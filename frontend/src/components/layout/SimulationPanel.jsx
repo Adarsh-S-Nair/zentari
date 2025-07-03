@@ -1,66 +1,25 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { LineChart } from '../charts'
 import { TradeTable, OrdersTable } from '../tables'
-import { SummaryStat, Tab, LoadingBar } from '../ui'
-import Spinner from '../ui/Spinner'
+import { SummaryStat, LoadingBar, Spinner, Tabs } from '../ui'
 
 function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobile, form }) {
   const [activeTab, setActiveTab] = useState('trades') // 'trades' or 'orders'
-  const [tabWidths, setTabWidths] = useState({ orders: 0, trades: 0 })
-  const [tabPositions, setTabPositions] = useState({ orders: 0, trades: 0 })
   const [tableLoading, setTableLoading] = useState({ orders: false, trades: false })
-  
+
   const finalValue = result?.final_portfolio_value || 0
   const benchmarkValue = result?.final_benchmark_value || 0
   const startValue = result?.starting_value || 10000
 
-  // Handle tab switching with instant response and loading state
+  // Handle tab switching
   const handleTabSwitch = (newTab) => {
     setActiveTab(newTab)
     setTableLoading(prev => ({ ...prev, [newTab]: true }))
-    
-    // Immediately update tab positions for instant blue bar animation
-    requestAnimationFrame(() => {
-      const ordersTab = document.getElementById('orders-tab')
-      const tradesTab = document.getElementById('trades-tab')
-      
-      if (ordersTab && tradesTab) {
-        setTabPositions({
-          orders: ordersTab.offsetLeft,
-          trades: tradesTab.offsetLeft
-        })
-        setTabWidths({
-          orders: ordersTab.offsetWidth,
-          trades: tradesTab.offsetWidth
-        })
-      }
-      
-      // Then remove loading state
-      setTableLoading(prev => ({ ...prev, [newTab]: false }))
-    })
-  }
 
-  // Measure tab widths and positions when component mounts or result changes
-  useEffect(() => {
-    if (result) {
-      // Use requestAnimationFrame for immediate measurement without delay
-      requestAnimationFrame(() => {
-        const ordersTab = document.getElementById('orders-tab')
-        const tradesTab = document.getElementById('trades-tab')
-        
-        if (ordersTab && tradesTab) {
-          setTabWidths({
-            orders: ordersTab.offsetWidth,
-            trades: tradesTab.offsetWidth
-          })
-          setTabPositions({
-            orders: ordersTab.offsetLeft,
-            trades: tradesTab.offsetLeft
-          })
-        }
-      })
-    }
-  }, [result])
+    setTimeout(() => {
+      setTableLoading(prev => ({ ...prev, [newTab]: false }))
+    }, 100) // Simulate loading transition
+  }
 
   const getSpinnerLabel = () => {
     if (loadingPhase === 'init') return 'Loading price data...'
@@ -76,7 +35,6 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
   }
 
   const renderTableContent = () => {
-    // Show spinner if the current tab is loading
     if (tableLoading[activeTab]) {
       return <Spinner label="Loading table..." />
     }
@@ -131,8 +89,7 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
                   diff={((benchmarkValue - startValue) / startValue) * 100}
                   isCurrency
                 />
-              ) 
-              }
+              )}
               <SummaryStat
                 label="Duration"
                 value={
@@ -145,50 +102,31 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
               />
             </div>
 
-            {/* CHART - Always Visible */}
+            {/* CHART */}
             <div className="w-full min-h-[300px]">
               <LineChart result={result} />
             </div>
 
-            {/* TABLE SECTION WITH TABS */}
+            {/* TABLE SECTION */}
             <div className="w-full">
-              {/* Tabs Container */}
-              <div style={{
-                display: 'flex',
-                position: 'relative',
-                marginBottom: '16px',
-                gap: '8px'
-              }}>
-                <Tab
-                  id="trades-tab"
-                  label="Trades"
-                  count={result.all_trades?.length || 0}
-                  isActive={activeTab === 'trades'}
-                  onClick={() => handleTabSwitch('trades')}
-                />
-                <Tab
-                  id="orders-tab"
-                  label="Orders"
-                  count={Object.values(result.trade_history_by_date || {}).reduce((total, orders) => total + orders.length, 0)}
-                  isActive={activeTab === 'orders'}
-                  onClick={() => handleTabSwitch('orders')}
-                />
-                
-                {/* Sliding Blue Bar */}
-                <div style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: tabPositions[activeTab],
-                  width: tabWidths[activeTab],
-                  height: '2px',
-                  backgroundColor: 'var(--color-primary)',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  zIndex: 0,
-                  borderRadius: '1px'
-                }} />
-              </div>
+              <Tabs
+                tabs={[
+                  {
+                    id: 'trades',
+                    label: 'Trades',
+                    count: result.all_trades?.length || 0
+                  },
+                  {
+                    id: 'orders',
+                    label: 'Orders',
+                    count: Object.values(result.trade_history_by_date || {}).reduce((total, orders) => total + orders.length, 0)
+                  }
+                ]}
+                activeId={activeTab}
+                onChange={handleTabSwitch}
+                showCount={true}
+              />
 
-              {/* Table Content */}
               <div style={{ height: '350px' }}>
                 {renderTableContent()}
               </div>

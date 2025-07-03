@@ -4,6 +4,7 @@ import { PlaidLinkModal } from '../modals'
 import { useFinancial } from '../../contexts/FinancialContext'
 import AccountsSummaryCard from './AccountsSummaryCard'
 import AccountsList from './AccountsList'
+import Tabs from '../ui/Tabs'
 import AccountsTabs from './AccountsTabs'
 import { 
   getAccountTypeIcon, 
@@ -147,10 +148,15 @@ function AccountsPanel() {
             maxWidth: '700px',
             padding: '0 20px'
           }}>
-            <AccountsTabs 
-              grouped={grouped} 
-              activeTab={activeTab} 
-              setActiveTab={setActiveTab} 
+            <Tabs
+              tabs={[
+                grouped.cash?.length > 0 && { id: 'cash', label: 'Cash', count: grouped.cash.length },
+                grouped.credit?.length > 0 && { id: 'credit', label: 'Credit Cards', count: grouped.credit.length },
+                grouped.investment?.length > 0 && { id: 'investment', label: 'Investments', count: grouped.investment.length },
+                grouped.loan?.length > 0 && { id: 'loan', label: 'Loans', count: grouped.loan.length }
+              ].filter(Boolean)}
+              activeId={activeTab}
+              onChange={setActiveTab}
             />
 
             {/* Account Content */}

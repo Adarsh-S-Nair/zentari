@@ -1,48 +1,28 @@
 import React from 'react'
-import { Tab } from '../ui'
+import Tab from '../ui/Tab'
 
 const AccountsTabs = ({ grouped, activeTab, setActiveTab }) => {
+  const tabs = [
+    { key: 'cash', label: 'Cash', count: grouped?.cash?.length || 0 },
+    { key: 'credit', label: 'Credit Cards', count: grouped?.credit?.length || 0 },
+    { key: 'investment', label: 'Investments', count: grouped?.investment?.length || 0 },
+    { key: 'loan', label: 'Loans', count: grouped?.loan?.length || 0 },
+  ].filter(tab => tab.count > 0)
+
   return (
-    <div style={{
-      display: 'flex',
-      position: 'relative',
-      marginBottom: '16px',
-      gap: '8px'
-    }}>
-      {grouped?.cash?.length > 0 && (
+    <div className="flex border-b border-gray-200 mb-4 gap-2">
+      {tabs.map(tab => (
         <Tab
-          id="cash-tab"
-          label="Cash"
-          isActive={activeTab === 'cash'}
-          onClick={() => setActiveTab('cash')}
+          key={tab.key}
+          id={`${tab.key}-tab`}
+          label={tab.label}
+          count={tab.count}
+          isActive={activeTab === tab.key}
+          onClick={() => setActiveTab(tab.key)}
         />
-      )}
-      {grouped?.credit?.length > 0 && (
-        <Tab
-          id="credit-tab"
-          label="Credit Cards"
-          isActive={activeTab === 'credit'}
-          onClick={() => setActiveTab('credit')}
-        />
-      )}
-      {grouped?.investment?.length > 0 && (
-        <Tab
-          id="investment-tab"
-          label="Investments"
-          isActive={activeTab === 'investment'}
-          onClick={() => setActiveTab('investment')}
-        />
-      )}
-      {grouped?.loan?.length > 0 && (
-        <Tab
-          id="loan-tab"
-          label="Loans"
-          isActive={activeTab === 'loan'}
-          onClick={() => setActiveTab('loan')}
-        />
-      )}
+      ))}
     </div>
   )
 }
 
-export default AccountsTabs 
+export default AccountsTabs

@@ -38,6 +38,7 @@ class PlaidConfig:
             }
         )
         
+        # Create API client without any additional parameters
         api_client = ApiClient(configuration)
         self.client = plaid_api.PlaidApi(api_client)
     
