@@ -38,8 +38,32 @@ class PlaidConfig:
             }
         )
         
+        # Disable proxy settings in configuration
+        configuration.proxy = None
+        
         # Create API client without any additional parameters
-        api_client = ApiClient(configuration)
+        # Filter out any proxy-related environment variables that might be automatically passed
+        import os
+        original_proxy_vars = {}
+        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy']
+        
+        # Temporarily remove proxy environment variables
+        for var in proxy_vars:
+            if var in os.environ:
+                original_proxy_vars[var] = os.environ[var]
+                del os.environ[var]
+        
+        try:
+            print(f"Creating Plaid ApiClient with configuration: host={self.host}")
+            api_client = ApiClient(configuration)
+            print("Plaid ApiClient created successfully")
+        except Exception as e:
+            print(f"Error creating Plaid ApiClient: {e}")
+            raise
+        finally:
+            # Restore original proxy environment variables
+            for var, value in original_proxy_vars.items():
+                os.environ[var] = value
         self.client = plaid_api.PlaidApi(api_client)
     
     def get_client(self):

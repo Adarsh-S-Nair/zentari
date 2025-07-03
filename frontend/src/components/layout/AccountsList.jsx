@@ -45,14 +45,14 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
           })()}
                       <h2 style={{
               fontSize: '14px',
-              fontWeight: '600',
+              fontWeight: '500',
               color: '#1f2937'
             }}>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h2>
           </div>
           <p style={{
             fontSize: '14px',
-            fontWeight: '400',
-            color: getTotal(accounts) >= 0 ? 'var(--color-success)' : 'var(--color-danger)'
+            fontWeight: '600',
+            color: '#1f2937'
           }}>{formatCurrency(getTotal(accounts))}</p>
       </div>
       
@@ -145,8 +145,8 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                     }}>
                       <div style={{
                         fontSize: '13px',
-                        fontWeight: '600',
-                        color: isZero ? '#6b7280' : (isPositive ? 'var(--color-success)' : 'var(--color-danger)'),
+                        fontWeight: '500',
+                        color: isZero ? '#6b7280' : '#1f2937',
                         marginBottom: '2px'
                       }}>
                         {formatCurrency(balance)}

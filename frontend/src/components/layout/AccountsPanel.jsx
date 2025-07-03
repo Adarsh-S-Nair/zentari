@@ -118,7 +118,7 @@ function AccountsPanel() {
     <main className="flex-1 px-[24px] overflow-y-auto overflow-x-hidden">
       <div className="flex flex-col pt-[24px] items-center">
         <div className="flex items-center justify-between w-full max-w-[700px] px-[20px] mb-[20px]">
-          <h1 className="text-[16px] font-[500] text-white tracking-tight">Accounts</h1>
+          <h1 className="text-[16px] font-[600] text-white tracking-tight">Accounts</h1>
             <Button 
               label="Add Accounts" 
               onClick={handleAddAccounts}

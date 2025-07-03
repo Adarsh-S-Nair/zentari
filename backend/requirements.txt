@@ -8,5 +8,5 @@ uvicorn==0.34.0
 numpy==1.26.4
 requests==2.31.0
 beautifulsoup4==4.12.2
-plaid-python==17.0.0
+plaid-python==16.0.0
 supabase==2.3.4

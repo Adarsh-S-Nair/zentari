@@ -47,7 +47,7 @@ const AccountsSummaryCard = ({ grouped }) => {
           style={{
             fontSize: 16,
             fontWeight: 600,
-            color: netWorth >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
+            color: '#1f2937',
           }}
         >
           {formatCurrency(netWorth)}
@@ -60,18 +60,19 @@ const AccountsSummaryCard = ({ grouped }) => {
         <div style={{ flex: 1, marginRight: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 13, color: '#6b7280' }}>Assets</span>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-success)' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>
               {formatCurrency(assetTotal)}
             </span>
           </div>
 
           {/* Breakdown Bar */}
-          <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
+          <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 12, gap: 2 }}>
             {getTotal(grouped?.cash || []) > 0 && (
               <div
                 style={{
                   flex: getTotal(grouped?.cash || []) / assetTotal,
                   backgroundColor: 'var(--color-breakdown-cash)',
+                  borderRadius: 4,
                 }}
               />
             )}
@@ -80,6 +81,7 @@ const AccountsSummaryCard = ({ grouped }) => {
                 style={{
                   flex: getTotal(grouped?.investment || []) / assetTotal,
                   backgroundColor: 'var(--color-breakdown-investment)',
+                  borderRadius: 4,
                 }}
               />
             )}
@@ -96,18 +98,19 @@ const AccountsSummaryCard = ({ grouped }) => {
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 13, color: '#6b7280' }}>Liabilities</span>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-danger)' }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>
               {formatCurrency(liabilityTotal)}
             </span>
           </div>
 
           {/* Breakdown Bar */}
-          <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
+          <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 12, gap: 2 }}>
             {Math.abs(getTotal(grouped?.credit || [])) > 0 && (
               <div
                 style={{
                   flex: Math.abs(getTotal(grouped?.credit || [])) / Math.abs(liabilityTotal),
                   backgroundColor: 'var(--color-breakdown-credit)',
+                  borderRadius: 4,
                 }}
               />
             )}
@@ -116,6 +119,7 @@ const AccountsSummaryCard = ({ grouped }) => {
                 style={{
                   flex: Math.abs(getTotal(grouped?.loan || [])) / Math.abs(liabilityTotal),
                   backgroundColor: 'var(--color-breakdown-loan)',
+                  borderRadius: 4,
                 }}
               />
             )}
