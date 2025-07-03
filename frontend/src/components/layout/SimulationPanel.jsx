@@ -57,8 +57,8 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
   }
 
   return (
-    <main className={`flex-1 px-[24px] overflow-y-auto overflow-x-hidden ${isMobile ? 'pt-[50px] pb-[60px]' : ''}`}>
-      <div className={`${isMobile ? 'min-h-[calc(100vh-100px)] flex flex-col items-center justify-center w-full' : 'min-h-[100vh] flex flex-col items-center justify-center'}`}>
+    <main className="flex-1 px-[24px] overflow-y-auto overflow-x-hidden">
+      <div className="flex flex-col pt-[24px] items-center">
         {loading ? (
           currentSimDate ? (
             <LoadingBar 
@@ -71,7 +71,7 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
             <Spinner label={getSpinnerLabel()} />
           )
         ) : result ? (
-          <div className="flex flex-col w-full max-w-[700px] items-center gap-[20px] pt-[24px] pb-[40px]">
+          <div className="flex flex-col w-full max-w-[700px] items-center gap-[20px]">
 
             {/* SUMMARY STATS */}
             <div className="flex justify-around w-full px-[20px]">
@@ -133,7 +133,7 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
             </div>
           </div>
         ) : (
-          <div className="text-gray-500 text-[14px] italic text-center pt-[40px]">
+          <div className="text-gray-500 text-[14px] italic text-center">
             Run a simulation to see your portfolio performance here.
           </div>
         )}

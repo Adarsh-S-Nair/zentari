@@ -8,10 +8,12 @@ import {
   LoginModal, 
   LogoutModal, 
   MobileBottomBar, 
-  MobileTopbar 
+  MobileTopbar,
+  Topbar
 } from './components'
 import { supabase } from './supabaseClient'
 import { useMediaQuery } from 'react-responsive'
+import { useLocation } from 'react-router-dom'
 import { FaChartArea } from "react-icons/fa";
 import { IoFolderOpen } from "react-icons/io5";
 import { FinancialProvider } from './contexts/FinancialContext'
@@ -33,6 +35,8 @@ function App() {
     { label: 'Simulation', icon: <FaChartArea size={18} />, route: '/simulate', hasContent: true, requiresAuth: false },
   ]
   const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user)
+
+
 
   const [form, setForm] = useState({
     start_date: '2023-01-01',
@@ -148,72 +152,122 @@ function App() {
   return (
     <FinancialProvider>
       <Router>
-        <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
-          {!isMobile && (
-            <CollapsibleSidebar
-              visibleTabs={visibleTabs}
-              form={form}
-              handleChange={handleChange}
-              handleSubmit={handleSubmit}
-              loading={loading}
-              onLoginClick={() => setLoginOpen(true)}
-              user={user}
-              isTablet={isTablet}
-              isMobile={isMobile}
-              setLogoutOpen={setLogoutOpen}
-            />
-          )}
-
-          {isMobile && <MobileTopbar form={form} handleChange={handleChange} handleSubmit={handleSubmit} loading={loading} />}
-          <div
-            className={`flex-1 h-full overflow-y-auto flex pb-[60px] sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}
-          >
-            <Routes>
-              <Route
-                path="/simulate"
-                element={
-                  <SimulationPanel
-                    loading={loading}
-                    loadingPhase={loadingPhase}
-                    result={result}
-                    currentSimDate={currentSimDate}
-                    isMobile={isMobile}
-                    form={form}
-                  />
-                }
-              />
-              <Route path="/accounts" element={<AccountsPanel />} />
-              <Route path="*" element={<Navigate to="/simulate" replace />} />
-            </Routes>
-          </div>
-
-          {isMobile && (
-            <MobileBottomBar
-              user={user}
-              onLoginClick={() => setLoginOpen(true)}
-              setLogoutOpen={setLogoutOpen}
-              visibleTabs={visibleTabs}
-            />
-          )}
-
-          <Toast
-            key={toast.message}
-            message={toast.message}
-            type={toast.type}
-            isMobile={isMobile}
-            onClose={() => setToast({ message: '', type: 'default' })}
-          />
-
-          <LoginModal
-            isOpen={loginOpen}
-            onClose={() => setLoginOpen(false)}
-            setToast={setToast}
-          />
-
-          <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => {/* clear auth state here */}} />
-        </div>
+        <AppContent 
+          loading={loading}
+          loadingPhase={loadingPhase}
+          loginOpen={loginOpen}
+          setLoginOpen={setLoginOpen}
+          user={user}
+          setUser={setUser}
+          result={result}
+          setResult={setResult}
+          toast={toast}
+          setToast={setToast}
+          currentSimDate={currentSimDate}
+          setCurrentSimDate={setCurrentSimDate}
+          logoutOpen={logoutOpen}
+          setLogoutOpen={setLogoutOpen}
+          isTablet={isTablet}
+          isMobile={isMobile}
+          allTabs={allTabs}
+          visibleTabs={visibleTabs}
+          form={form}
+          setForm={setForm}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
+        />
       </Router>
     </FinancialProvider>
+  )
+}
+
+function AppContent({
+  loading, loadingPhase, loginOpen, setLoginOpen, user, setUser,
+  result, setResult, toast, setToast, currentSimDate, setCurrentSimDate,
+  logoutOpen, setLogoutOpen, isTablet, isMobile, allTabs, visibleTabs,
+  form, setForm, handleChange, handleSubmit
+}) {
+  const location = useLocation()
+
+  // Get current page name based on route
+  const getCurrentPageName = () => {
+    switch (location.pathname) {
+      case '/accounts':
+        return 'Accounts'
+      case '/simulate':
+        return 'Simulation'
+      default:
+        return 'Trading API'
+    }
+  }
+
+  return (
+    <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
+      {!isMobile && (
+        <CollapsibleSidebar
+          visibleTabs={visibleTabs}
+          form={form}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
+          loading={loading}
+          onLoginClick={() => setLoginOpen(true)}
+          user={user}
+          isTablet={isTablet}
+          isMobile={isMobile}
+        />
+      )}
+
+      {isMobile && <MobileTopbar form={form} handleChange={handleChange} handleSubmit={handleSubmit} loading={loading} />}
+      <div
+        className={`flex-1 h-full overflow-y-auto flex flex-col pb-[60px] sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}
+      >
+        {!isMobile && <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={getCurrentPageName()} />}
+        <div className="flex-1 overflow-y-auto">
+        <Routes>
+          <Route
+            path="/simulate"
+            element={
+              <SimulationPanel
+                loading={loading}
+                loadingPhase={loadingPhase}
+                result={result}
+                currentSimDate={currentSimDate}
+                isMobile={isMobile}
+                form={form}
+              />
+            }
+          />
+          <Route path="/accounts" element={<AccountsPanel />} />
+          <Route path="*" element={<Navigate to="/simulate" replace />} />
+        </Routes>
+        </div>
+      </div>
+
+      {isMobile && (
+        <MobileBottomBar
+          user={user}
+          onLoginClick={() => setLoginOpen(true)}
+          setLogoutOpen={setLogoutOpen}
+          visibleTabs={visibleTabs}
+        />
+      )}
+
+      <Toast
+        key={toast.message}
+        message={toast.message}
+        type={toast.type}
+        isMobile={isMobile}
+        onClose={() => setToast({ message: '', type: 'default' })}
+      />
+
+      <LoginModal
+        isOpen={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        setToast={setToast}
+      />
+
+      <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={() => {/* clear auth state here */}} />
+    </div>
   )
 }
 

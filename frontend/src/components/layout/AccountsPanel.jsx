@@ -6,23 +6,21 @@ import AccountsSummaryCard from './AccountsSummaryCard'
 import AccountsList from './AccountsList'
 import Tabs from '../ui/Tabs'
 import AccountsTabs from './AccountsTabs'
-import { 
-  getAccountTypeIcon, 
-  groupAccountsByType, 
-  getTotal, 
-  getActiveTabAccounts, 
-  getActiveTabLabel 
+import {
+  getAccountTypeIcon,
+  groupAccountsByType,
+  getTotal,
+  getActiveTabAccounts,
+  getActiveTabLabel
 } from './accountsUtils'
 
 function AccountsPanel() {
   const [plaidModalOpen, setPlaidModalOpen] = useState(false)
   const [plaidLoading, setPlaidLoading] = useState(false)
   const [plaidError, setPlaidError] = useState(null)
-  const [activeTab, setActiveTab] = useState('cash') // 'cash', 'credit', 'investment', 'loan'
+  const [activeTab, setActiveTab] = useState('cash')
   const { accounts, loading, error, refreshAccounts } = useFinancial()
   const hasSetInitialTab = React.useRef(false)
-
-
 
   const grouped = groupAccountsByType(accounts || []) || {
     cash: [],
@@ -31,7 +29,6 @@ function AccountsPanel() {
     loan: []
   }
 
-  // Set initial active tab based on available account types
   React.useEffect(() => {
     if (accounts && accounts.length > 0 && grouped && !hasSetInitialTab.current) {
       if (grouped.cash?.length > 0) {
@@ -66,8 +63,6 @@ function AccountsPanel() {
     setPlaidModalOpen(true)
   }
 
-
-
   const renderActiveTabContent = () => {
     if (!grouped) {
       return (
@@ -82,10 +77,10 @@ function AccountsPanel() {
         </div>
       )
     }
-    
+
     const accounts = getActiveTabAccounts(grouped, activeTab)
     const label = getActiveTabLabel(activeTab)
-    
+
     if (accounts.length === 0) {
       return (
         <div style={{
@@ -99,16 +94,16 @@ function AccountsPanel() {
         </div>
       )
     }
-    
-    return <AccountsList 
-      accounts={accounts} 
-      activeTab={activeTab} 
-      getAccountTypeIcon={getAccountTypeIcon} 
-      getTotal={getTotal} 
-    />
+
+    return (
+      <AccountsList
+        accounts={accounts}
+        activeTab={activeTab}
+        getAccountTypeIcon={getAccountTypeIcon}
+        getTotal={getTotal}
+      />
+    )
   }
-
-
 
   const renderSummaryCard = () => {
     return <AccountsSummaryCard grouped={grouped} />
@@ -117,18 +112,7 @@ function AccountsPanel() {
   return (
     <main className="flex-1 px-[24px] overflow-y-auto overflow-x-hidden">
       <div className="flex flex-col pt-[24px] items-center">
-        <div className="flex items-center justify-between w-full max-w-[700px] px-[20px] mb-[20px]">
-          <h1 className="text-[16px] font-[600] text-white tracking-tight">Accounts</h1>
-            <Button 
-              label="Add Accounts" 
-              onClick={handleAddAccounts}
-              width="auto"
-            loading={plaidLoading}
-              disabled={plaidLoading}
-            color="var(--color-primary)"
-            />
-          </div>
-          
+
         {/* Summary Card */}
         {(grouped?.cash?.length > 0 || grouped?.credit?.length > 0 || grouped?.investment?.length > 0 || grouped?.loan?.length > 0) && (
           <div style={{
@@ -141,23 +125,40 @@ function AccountsPanel() {
           </div>
         )}
 
-        {/* Accounts Tabs */}
+        {/* Tabs + Add Button */}
         {(grouped?.cash?.length > 0 || grouped?.credit?.length > 0 || grouped?.investment?.length > 0 || grouped?.loan?.length > 0) && (
           <div style={{
             width: '100%',
             maxWidth: '700px',
-            padding: '0 20px'
+            padding: '0 20px',
+            marginBottom: '8px'
           }}>
-            <Tabs
-              tabs={[
-                grouped.cash?.length > 0 && { id: 'cash', label: 'Cash', count: grouped.cash.length },
-                grouped.credit?.length > 0 && { id: 'credit', label: 'Credit Cards', count: grouped.credit.length },
-                grouped.investment?.length > 0 && { id: 'investment', label: 'Investments', count: grouped.investment.length },
-                grouped.loan?.length > 0 && { id: 'loan', label: 'Loans', count: grouped.loan.length }
-              ].filter(Boolean)}
-              activeId={activeTab}
-              onChange={setActiveTab}
-            />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <Tabs
+                tabs={[
+                  grouped.cash?.length > 0 && { id: 'cash', label: 'Cash', count: grouped.cash.length },
+                  grouped.credit?.length > 0 && { id: 'credit', label: 'Credit', count: grouped.credit.length },
+                  grouped.investment?.length > 0 && { id: 'investment', label: 'Investments', count: grouped.investment.length },
+                  grouped.loan?.length > 0 && { id: 'loan', label: 'Loans', count: grouped.loan.length }
+                ].filter(Boolean)}
+                activeId={activeTab}
+                onChange={setActiveTab}
+              />
+              <Button
+                label="Add Accounts"
+                onClick={handleAddAccounts}
+                width="auto"
+                loading={plaidLoading}
+                disabled={plaidLoading}
+                color="var(--color-primary)"
+              />
+            </div>
 
             {/* Account Content */}
             <div style={{ minHeight: '200px' }}>
@@ -166,22 +167,22 @@ function AccountsPanel() {
           </div>
         )}
 
-          {plaidError && (
+        {plaidError && (
           <div className="w-full px-[20px] max-w-[700px] mt-[20px]">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-700 text-sm">{plaidError}</p>
-                <Button 
-                  label="Try Again" 
-                  onClick={handleAddAccounts}
-                  width="auto"
-                  style={{ marginTop: '8px' }}
-                />
-              </div>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-700 text-sm">{plaidError}</p>
+              <Button
+                label="Try Again"
+                onClick={handleAddAccounts}
+                width="auto"
+                style={{ marginTop: '8px' }}
+              />
             </div>
-          )}
+          </div>
+        )}
       </div>
 
-      <PlaidLinkModal 
+      <PlaidLinkModal
         isOpen={plaidModalOpen}
         onClose={handlePlaidClose}
         onSuccess={handlePlaidSuccess}
@@ -194,4 +195,4 @@ function AccountsPanel() {
   )
 }
 
-export default AccountsPanel 
+export default AccountsPanel

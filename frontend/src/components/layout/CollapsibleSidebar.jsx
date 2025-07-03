@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { FiChevronDown, FiChevronUp, FiBarChart2, FiFolder, FiLogIn } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp, FiBarChart2, FiFolder } from 'react-icons/fi'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { SimulationControls, UserProfileTab, LogoutModal } from '../index'
+import { SimulationControls } from '../index'
 import logoCollapsed from '../../assets/logo-light.png'
 import logoFull from '../../assets/full-logo-light.png'
-import { supabase } from '../../supabaseClient'
+
 
 export default function CollapsibleSidebar({
   form, handleChange, handleSubmit, error, loading,
-  onLoginClick, user, isTablet, isMobile, setLogoutOpen,
+  onLoginClick, user, isTablet, isMobile,
   visibleTabs
 }) {
   const navigate = useNavigate(), location = useLocation()
@@ -16,7 +16,7 @@ export default function CollapsibleSidebar({
   const isSim = location.pathname === '/simulate'
   const [isOpen, setIsOpen] = useState(false) // Always start collapsed
   const [isHovering, setIsHovering] = useState(false)
-  const [userName, setUserName] = useState('')
+
   const [contentHeight, setContentHeight] = useState(0)
   const [shouldAnimate, setShouldAnimate] = useState(false)
 
@@ -25,12 +25,7 @@ export default function CollapsibleSidebar({
   // Remove the useEffect that sets isOpen based on isTablet
   // useEffect(() => setIsOpen(!isTablet), [isTablet])
 
-  useEffect(() => {
-    if (user) {
-      supabase.from('user_profiles').select('name').eq('id', user.id).single()
-        .then(({ data, error }) => { if (!error && data?.name) setUserName(data.name) })
-    }
-  }, [user])
+
 
   return (
     <>
@@ -46,7 +41,7 @@ export default function CollapsibleSidebar({
       <div
         onMouseEnter={() => !isMobile && setIsHovering(true)}
         onMouseLeave={() => !isMobile && setIsHovering(false)}
-        className="transition-all duration-200 ease-out h-[100vh] px-[8px] flex flex-col justify-between"
+        className="transition-all duration-200 ease-out h-[100vh] px-[8px] flex flex-col"
         style={{
           backgroundColor: '#1f2937',
           width: fullyOpen ? '220px' : '40px',
@@ -90,31 +85,8 @@ export default function CollapsibleSidebar({
           </div>
         </div>
 
-        {/* 📌 Bottom: Profile/Login pinned to bottom */}
-        <div className={!fullyOpen ? `pb-[20px]` : `pb-[12px]`}>
-          {user ? (
-            <UserProfileTab {...{ isOpen: fullyOpen, user, userName, setLogoutOpen }} />
-          ) : (
-            <div className="w-full" 
-                style={{
-                  marginBottom: !fullyOpen && !isMobile ? '36px' : '8px',
-                  transition: 'margin-bottom 0.2s ease',
-                }}>
-              <div
-                onClick={onLoginClick}
-                className={`flex items-center gap-[8px] ${fullyOpen ? 'px-[12px] py-[4px]' : 'justify-center py-[8px]'} 
-                  transition-colors duration-200 hover:bg-[#2d384a] cursor-pointer rounded-[6px]`}
-              >
-                <FiLogIn size={14} />
-                {fullyOpen && (
-                  <div className="flex justify-between w-full items-center">
-                    <h2 className="text-[11px] font-bold text-gray-100">Log in / Sign Up</h2>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        {/* 📌 Bottom: Spacer to push content up */}
+        <div className="flex-1" />
       </div>
     </>
   )
