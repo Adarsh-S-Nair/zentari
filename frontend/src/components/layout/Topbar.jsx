@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiUser, FiLogOut, FiBell, FiHelpCircle } from 'react-icons/fi';
+import { FiLogOut, FiBell, FiHelpCircle} from 'react-icons/fi';
+import { MdLogin } from "react-icons/md";
 import { FaUser } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
 import { LogoutModal } from '../modals';
@@ -110,19 +111,19 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
                   alignItems: 'center',
                   gap: 8,
                   padding: '6px 12px',
-                  backgroundColor: '#2563eb',
-                  color: '#fff',
+                  backgroundColor: 'transparent',
+                  color: '#374151',
                   fontSize: 13,
                   fontWeight: 500,
-                  borderRadius: 9999,
+                  borderRadius: 6,
                   cursor: 'pointer',
                   transition: 'background-color 0.2s ease',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
-                <FiUser size={14} />
-                Log In
+                <MdLogin size={16} />
+                Log in / Sign up
               </div>
             )}
           </div>
