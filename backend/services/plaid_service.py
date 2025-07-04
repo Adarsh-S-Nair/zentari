@@ -7,7 +7,10 @@ from plaid.model.accounts_get_request import AccountsGetRequest
 from plaid.model.accounts_get_request_options import AccountsGetRequestOptions
 from plaid.model.item_get_request import ItemGetRequest
 from plaid.model.institutions_get_by_id_request import InstitutionsGetByIdRequest
+from plaid.model.transactions_get_request import TransactionsGetRequest
+from plaid.model.transactions_get_request_options import TransactionsGetRequestOptions
 from services.plaid_config import get_plaid_client
+from datetime import datetime, timedelta
 import json
 
 class PlaidService:
@@ -172,4 +175,80 @@ class PlaidService:
             "success": True,
             "username": "user_good",
             "password": "pass_good"
-        } 
+        }
+    
+    def get_transactions(self, access_token: str, account_ids: list = None, days_back: int = 730):
+        """
+        Get transactions for given account IDs over the specified period
+        """
+        try:
+            # Calculate date range (default to 2 years back)
+            end_date = datetime.now().date()
+            start_date = end_date - timedelta(days=days_back)
+            
+            request = TransactionsGetRequest(
+                access_token=access_token,
+                start_date=start_date,
+                end_date=end_date,
+                options=TransactionsGetRequestOptions(
+                    account_ids=account_ids
+                ) if account_ids else None
+            )
+            
+            response = self.client.transactions_get(request)
+            
+
+            
+            transactions = []
+            for transaction in response.transactions:
+                # Convert PersonalFinanceCategory object to dict if it exists
+                personal_finance_category = getattr(transaction, 'personal_finance_category', None)
+                if personal_finance_category:
+                    try:
+                        # Convert the PersonalFinanceCategory object to a dictionary
+                        personal_finance_category = {
+                            'confidence_level': str(personal_finance_category.confidence_level) if hasattr(personal_finance_category, 'confidence_level') else None,
+                            'detailed': str(personal_finance_category.detailed) if hasattr(personal_finance_category, 'detailed') else None,
+                            'primary': str(personal_finance_category.primary) if hasattr(personal_finance_category, 'primary') else None
+                        }
+                    except Exception as e:
+                        print(f"Error converting personal_finance_category: {e}")
+                        personal_finance_category = None
+
+                # Determine the best icon URL: merchant logo first, then category icon as fallback
+                merchant_logo = getattr(transaction, 'logo_url', None)
+                category_icon = getattr(transaction, 'personal_finance_category_icon_url', None)
+                icon_url = merchant_logo if merchant_logo else category_icon
+
+                # Get the primary category from personal finance category
+                primary_category = None
+                if personal_finance_category and isinstance(personal_finance_category, dict):
+                    primary_category = personal_finance_category.get('primary')
+
+                transaction_data = {
+                    "plaid_transaction_id": transaction.transaction_id,
+                    "date": transaction.date.isoformat() if transaction.date else None,
+                    "description": transaction.name,
+                    "category": primary_category,  # Use personal finance category primary
+                    "category_id": getattr(transaction, 'category_id', None),
+                    "merchant_name": getattr(transaction, 'merchant_name', None),
+                    "icon_url": icon_url,  # Use merchant logo with fallback to category icon
+                    "personal_finance_category": personal_finance_category,
+                    "amount": float(transaction.amount),
+                    "currency_code": transaction.iso_currency_code or "USD",
+                    "pending": transaction.pending,
+                    "account_id": transaction.account_id
+                }
+                transactions.append(transaction_data)
+            
+            return {
+                "success": True,
+                "transactions": transactions,
+                "total_transactions": response.total_transactions,
+                "request_id": response.request_id
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            } 

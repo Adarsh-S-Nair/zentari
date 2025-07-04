@@ -13,7 +13,9 @@ export const useFinancial = () => {
 
 export const FinancialProvider = ({ children, setToast }) => {
   const [accounts, setAccounts] = useState([])
+  const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(false)
+  const [transactionsLoading, setTransactionsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [user, setUser] = useState(null)
 
@@ -23,6 +25,7 @@ export const FinancialProvider = ({ children, setToast }) => {
       setUser(user)
       if (user) {
         fetchAccounts(user.id)
+        fetchTransactions(user.id)
       }
     }
     getUser()
@@ -32,8 +35,10 @@ export const FinancialProvider = ({ children, setToast }) => {
       setUser(session?.user || null)
       if (session?.user) {
         fetchAccounts(session.user.id)
+        fetchTransactions(session.user.id)
       } else {
         setAccounts([])
+        setTransactions([])
       }
     })
 
@@ -52,7 +57,7 @@ export const FinancialProvider = ({ children, setToast }) => {
       
       // Ensure baseUrl doesn't already have a protocol
       const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
-      const fullUrl = `${protocol}://${cleanBaseUrl}/plaid/user-accounts/${userId}`
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-accounts/${userId}`
       
       const response = await fetch(fullUrl)
       
@@ -77,9 +82,50 @@ export const FinancialProvider = ({ children, setToast }) => {
     }
   }
 
+  const fetchTransactions = async (userId) => {
+    if (!userId) return
+    
+    setTransactionsLoading(true)
+    
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      
+      // Ensure baseUrl doesn't already have a protocol
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?limit=1000`
+      
+      const response = await fetch(fullUrl)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setTransactions(result.transactions || [])
+      } else {
+        throw new Error(result.error || 'Failed to fetch transactions')
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error)
+      setTransactions([])
+    } finally {
+      setTransactionsLoading(false)
+    }
+  }
+
   const refreshAccounts = () => {
     if (user) {
       fetchAccounts(user.id)
+    }
+  }
+
+  const refreshTransactions = () => {
+    if (user) {
+      fetchTransactions(user.id)
     }
   }
 
@@ -89,12 +135,16 @@ export const FinancialProvider = ({ children, setToast }) => {
 
   const value = {
     accounts,
+    transactions,
     loading,
+    transactionsLoading,
     error,
     user,
     refreshAccounts,
+    refreshTransactions,
     addAccounts,
     fetchAccounts,
+    fetchTransactions,
     setToast
   }
 

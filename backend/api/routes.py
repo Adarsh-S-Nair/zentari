@@ -4,6 +4,7 @@ from services.websocket_simulation import WebSocketSimulationService
 import json
 from services.validation import validate_simulation_params
 from api.plaid_routes import router as plaid_router
+from api.database_routes import router as database_router
 
 router = APIRouter()
 
@@ -36,3 +37,6 @@ async def simulate_websocket(websocket: WebSocket):
 
 # Include Plaid routes
 router.include_router(plaid_router)
+
+# Include Database routes
+router.include_router(database_router)

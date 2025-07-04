@@ -293,6 +293,75 @@ class SupabaseService:
         except Exception as e:
             print(f"Error getting user Plaid accounts: {e}")
             return {"success": False, "error": str(e)}
+    
+    def store_transactions(self, transactions: list):
+        """
+        Store transactions in the database
+        """
+        try:
+            if not transactions:
+                return {"success": True, "message": "No transactions to store"}
+            
+            # Prepare transactions for insertion
+            transaction_data = []
+            for transaction in transactions:
+                # Get the account UUID from the plaid account_id
+                account_response = self.client.table('accounts').select('id').eq('account_id', transaction['account_id']).execute()
+                
+                if account_response.data:
+                    account_uuid = account_response.data[0]['id']
+                    
+                    transaction_data.append({
+                        'account_id': account_uuid,
+                        'plaid_transaction_id': transaction['plaid_transaction_id'],
+                        'date': transaction['date'],
+                        'description': transaction['description'],
+                        'category': transaction['category'],
+                        'category_id': transaction.get('category_id'),
+                        'merchant_name': transaction.get('merchant_name'),
+                        'icon_url': transaction.get('icon_url'),
+                        'personal_finance_category': transaction.get('personal_finance_category'),
+                        'amount': transaction['amount'],
+                        'currency_code': transaction['currency_code'],
+                        'pending': transaction['pending']
+                    })
+            
+            if transaction_data:
+                # Use upsert to avoid duplicates
+                response = self.client.table('transactions').upsert(
+                    transaction_data,
+                    on_conflict='plaid_transaction_id'
+                ).execute()
+                
+                return {
+                    "success": True,
+                    "message": f"Stored {len(transaction_data)} transactions",
+                    "stored_count": len(transaction_data)
+                }
+            else:
+                return {"success": True, "message": "No valid transactions to store"}
+                
+        except Exception as e:
+            print(f"Error storing transactions: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def get_user_transactions(self, user_id: str, limit: int = 100, offset: int = 0):
+        """
+        Get transactions for a user
+        """
+        try:
+            # Join with accounts table to get user's transactions
+            response = self.client.table('transactions').select(
+                'id, plaid_transaction_id, date, description, category, category_id, merchant_name, icon_url, personal_finance_category, amount, currency_code, pending, created_at, updated_at, accounts:account_id(account_id, name, mask, type, subtype)'
+            ).eq('accounts.user_id', user_id).order('date', desc=True).range(offset, offset + limit - 1).execute()
+            
+            if response.data:
+                return {"success": True, "transactions": response.data}
+            else:
+                return {"success": True, "transactions": []}
+        except Exception as e:
+            print(f"Error getting user transactions: {e}")
+            return {"success": False, "error": str(e)}
 
 # Global instance
 _supabase_service = None

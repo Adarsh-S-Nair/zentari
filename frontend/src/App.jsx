@@ -7,6 +7,7 @@ import {
   Topbar,
   SimulationPanel,
   AccountsPanel,
+  TransactionsPanel,
   MobileBottomBar,
   LoginModal,
   LogoutModal,
@@ -15,6 +16,7 @@ import {
 import { useMediaQuery } from 'react-responsive';
 import { FaChartArea } from "react-icons/fa";
 import { IoFolderOpen } from "react-icons/io5";
+import { FaReceipt } from "react-icons/fa";
 
 function App() {
   const [loading, setLoading] = useState(false)
@@ -29,6 +31,7 @@ function App() {
   const isMobile = useMediaQuery({ maxWidth: 670 })
   const allTabs = [
     { label: 'Accounts', icon: <IoFolderOpen size={18} />, route: '/accounts', hasContent: false, requiresAuth: true },
+    { label: 'Transactions', icon: <FaReceipt size={18} />, route: '/transactions', hasContent: false, requiresAuth: true },
     { label: 'Simulation', icon: <FaChartArea size={18} />, route: '/simulate', hasContent: true, requiresAuth: false },
   ]
   const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user)
@@ -190,6 +193,8 @@ function AppContent({
     switch (location.pathname) {
       case '/accounts':
         return 'Accounts'
+      case '/transactions':
+        return 'Transactions'
       case '/simulate':
         return 'Simulation'
       default:
@@ -247,6 +252,12 @@ function AppContent({
             path="/accounts" 
             element={
               user ? <AccountsPanel isMobile={isMobile} /> : <Navigate to="/simulate" replace />
+            } 
+          />
+          <Route 
+            path="/transactions" 
+            element={
+              user ? <TransactionsPanel isMobile={isMobile} /> : <Navigate to="/simulate" replace />
             } 
           />
           <Route path="*" element={

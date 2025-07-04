@@ -78,38 +78,36 @@ function AccountsPanel({ isMobile }) {
             <Spinner size={28} />
           </div>
         ) : allAccountsEmpty ? (
-          accounts === null ? (
-            <div className="flex flex-col items-center justify-center text-center px-[20px]">
-              <img
-                src={noAccountsImage}
-                alt="No Accounts"
-                className="w-[240px] object-contain mb-[4px]"
+          <div className="flex flex-col items-center justify-center text-center px-[20px]">
+            <img
+              src={noAccountsImage}
+              alt="No Accounts"
+              className="w-[240px] object-contain mb-[4px]"
+            />
+            <h2 style={{ fontSize: '15px', fontWeight: 500, color: '#1f2937' }}>
+              No Accounts Added
+            </h2>
+            <p
+              style={{
+                fontSize: '13px',
+                color: '#6b7280',
+                marginTop: '-4px',
+                maxWidth: '260px',
+              }}
+            >
+              Add your financial accounts to see your cash, credit, loans, and investments.
+            </p>
+            <div>
+              <Button
+                label="Add Accounts"
+                onClick={handleAddAccounts}
+                width="auto"
+                loading={plaidLoading}
+                disabled={plaidLoading}
+                color="var(--color-primary)"
               />
-              <h2 style={{ fontSize: '15px', fontWeight: 500, color: '#1f2937' }}>
-                No Accounts Added
-              </h2>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: '#6b7280',
-                  marginTop: '-4px',
-                  maxWidth: '260px',
-                }}
-              >
-                Add your financial accounts to see your cash, credit, loans, and investments.
-              </p>
-              <div>
-                <Button
-                  label="Add Accounts"
-                  onClick={handleAddAccounts}
-                  width="auto"
-                  loading={plaidLoading}
-                  disabled={plaidLoading}
-                  color="var(--color-primary)"
-                />
-              </div>
             </div>
-          ) : null
+          </div>
         ) : (
           <>
             {/* Summary Card */}
