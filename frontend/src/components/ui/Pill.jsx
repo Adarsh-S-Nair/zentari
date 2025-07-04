@@ -1,4 +1,4 @@
-function Pill({ value, isPositive, isZero = false, type = 'percentage', customText, customBgColor, customTextColor }) {
+function Pill({ value, isPositive, isZero = false, type = 'percentage', customText, customBgColor, customTextColor, width }) {
   let bgColor, textColor, displayValue
 
   // Ensure value is a string for comparison
@@ -47,6 +47,7 @@ function Pill({ value, isPositive, isZero = false, type = 'percentage', customTe
     textTransform: type === 'position' || type === 'action' ? 'uppercase' : 'none',
     display: 'inline-block',
     minWidth: 'fit-content',
+    width: width || 'auto',
     // Ensure background color is properly applied
     background: bgColor
   }

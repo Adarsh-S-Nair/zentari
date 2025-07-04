@@ -40,4 +40,23 @@ async def get_user_transactions(user_id: str, limit: int = 100, offset: int = 0,
         return {"success": True, "transactions": result["transactions"]}
     except Exception as e:
         print(f"Exception in get_user_transactions for user {user_id}: {str(e)}")
-        return {"success": True, "transactions": []}  # Return empty instead of error 
+        return {"success": True, "transactions": []}  # Return empty instead of error
+
+@router.get("/categories")
+async def get_categories(authorization: Optional[str] = Header(None)):
+    """
+    Get all categories from the database
+    """
+    try:
+        # Get categories from database
+        supabase_service = get_supabase_service()
+        result = supabase_service.get_categories()
+        
+        if not result["success"]:
+            print(f"Error getting categories: {result.get('error')}")
+            return {"success": True, "categories": []}  # Return empty instead of error
+        
+        return {"success": True, "categories": result["categories"]}
+    except Exception as e:
+        print(f"Exception in get_categories: {str(e)}")
+        return {"success": True, "categories": []}  # Return empty instead of error 

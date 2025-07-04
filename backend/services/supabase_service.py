@@ -311,13 +311,17 @@ class SupabaseService:
                 if account_response.data:
                     account_uuid = account_response.data[0]['id']
                     
+                    # Get or create category
+                    category_uuid = None
+                    if transaction.get('category'):
+                        category_uuid = self.get_or_create_category(transaction['category'])
+                    
                     transaction_data.append({
                         'account_id': account_uuid,
                         'plaid_transaction_id': transaction['plaid_transaction_id'],
                         'date': transaction['date'],
                         'description': transaction['description'],
-                        'category': transaction['category'],
-                        'category_id': transaction.get('category_id'),
+                        'category_id': category_uuid,
                         'merchant_name': transaction.get('merchant_name'),
                         'icon_url': transaction.get('icon_url'),
                         'personal_finance_category': transaction.get('personal_finance_category'),
@@ -350,17 +354,125 @@ class SupabaseService:
         Get transactions for a user
         """
         try:
-            # Join with accounts table to get user's transactions
+            # Join with accounts and categories tables to get user's transactions
             response = self.client.table('transactions').select(
-                'id, plaid_transaction_id, date, description, category, category_id, merchant_name, icon_url, personal_finance_category, amount, currency_code, pending, created_at, updated_at, accounts:account_id(account_id, name, mask, type, subtype)'
+                'id, plaid_transaction_id, date, description, category_id, merchant_name, icon_url, personal_finance_category, amount, currency_code, pending, created_at, updated_at, accounts:account_id(account_id, name, mask, type, subtype), categories:category_id(id, name, color)'
             ).eq('accounts.user_id', user_id).order('date', desc=True).range(offset, offset + limit - 1).execute()
             
             if response.data:
-                return {"success": True, "transactions": response.data}
+                # Transform the response to flatten category data
+                transactions = []
+                for transaction in response.data:
+                    transaction_data = transaction.copy()
+                    if transaction.get('categories'):
+                        category = transaction['categories']
+                        transaction_data['category_name'] = category.get('name')
+                        transaction_data['category_color'] = category.get('color')
+                    # Remove the nested categories object
+                    transaction_data.pop('categories', None)
+                    transactions.append(transaction_data)
+                
+                return {"success": True, "transactions": transactions}
             else:
                 return {"success": True, "transactions": []}
         except Exception as e:
             print(f"Error getting user transactions: {e}")
+            return {"success": False, "error": str(e)}
+
+    def _format_category_name(self, category_name: str) -> str:
+        """
+        Format category name from Plaid format to display format
+        Examples: 
+        - FOOD_AND_DRINK -> Food and Drink
+        - TRAVEL_FLIGHTS -> Travel Flights
+        - GENERAL_SERVICES -> General Services
+        """
+        if not category_name:
+            return category_name
+        
+        # Replace underscores with spaces
+        formatted = category_name.replace('_', ' ')
+        
+        # Split into words
+        words = formatted.split()
+        
+        # Define words that should remain lowercase
+        lowercase_words = {'and', 'or', 'the', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by'}
+        
+        # Capitalize each word except for lowercase words
+        formatted_words = []
+        for i, word in enumerate(words):
+            if word.lower() in lowercase_words and i > 0:  # Keep lowercase except for first word
+                formatted_words.append(word.lower())
+            else:
+                formatted_words.append(word.capitalize())
+        
+        return ' '.join(formatted_words)
+
+    def get_or_create_category(self, category_name: str, color: str = None):
+        """
+        Get existing category or create new one, returns category UUID
+        """
+        try:
+            if not category_name:
+                return None
+            
+            # Format the category name for display
+            formatted_name = self._format_category_name(category_name)
+            
+            # Check if category already exists (check both original and formatted names)
+            existing = self.client.table('categories').select('id, color').eq('name', formatted_name).execute()
+            
+            if existing.data:
+                # Category exists, return its UUID
+                category_uuid = existing.data[0]['id']
+                return category_uuid
+            else:
+                # Create new category with default color if not provided
+                if not color:
+                    color = '#6B7280'  # Default gray color
+                
+                new_category = {
+                    'name': formatted_name,
+                    'color': color
+                }
+                
+                response = self.client.table('categories').insert(new_category).execute()
+                
+                if response.data:
+                    category_uuid = response.data[0]['id']
+                    print(f"Created new category: {formatted_name} (from {category_name}) with color: {color}")
+                    return category_uuid
+            
+            return None
+        except Exception as e:
+            print(f"Error getting or creating category: {e}")
+            return None
+
+    def get_category_color_mapping(self):
+        """
+        Get a mapping of category names to colors for consistent coloring
+        """
+        try:
+            response = self.client.table('categories').select('name, color').execute()
+            return {cat['name']: cat['color'] for cat in response.data}
+        except Exception as e:
+            print(f"Error getting category color mapping: {e}")
+            return {}
+
+    def get_categories(self):
+        """
+        Get all categories from the database
+        """
+        try:
+            response = self.client.table('categories').select('id, name, color, created_at, updated_at').order('name').execute()
+            
+            if response.data:
+                return {"success": True, "categories": response.data}
+            else:
+                return {"success": True, "categories": []}
+        except Exception as e:
+            print(f"Error getting categories: {e}")
             return {"success": False, "error": str(e)}
 
 # Global instance

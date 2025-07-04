@@ -14,6 +14,7 @@ export const useFinancial = () => {
 export const FinancialProvider = ({ children, setToast }) => {
   const [accounts, setAccounts] = useState([])
   const [transactions, setTransactions] = useState([])
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(false)
   const [transactionsLoading, setTransactionsLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -26,6 +27,7 @@ export const FinancialProvider = ({ children, setToast }) => {
       if (user) {
         fetchAccounts(user.id)
         fetchTransactions(user.id)
+        fetchCategories()
       }
     }
     getUser()
@@ -36,9 +38,11 @@ export const FinancialProvider = ({ children, setToast }) => {
       if (session?.user) {
         fetchAccounts(session.user.id)
         fetchTransactions(session.user.id)
+        fetchCategories()
       } else {
         setAccounts([])
         setTransactions([])
+        setCategories([])
       }
     })
 
@@ -117,6 +121,35 @@ export const FinancialProvider = ({ children, setToast }) => {
     }
   }
 
+  const fetchCategories = async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      
+      // Ensure baseUrl doesn't already have a protocol
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/categories`
+      
+      const response = await fetch(fullUrl)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setCategories(result.categories || [])
+      } else {
+        throw new Error(result.error || 'Failed to fetch categories')
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      setCategories([])
+    }
+  }
+
   const refreshAccounts = () => {
     if (user) {
       fetchAccounts(user.id)
@@ -136,6 +169,7 @@ export const FinancialProvider = ({ children, setToast }) => {
   const value = {
     accounts,
     transactions,
+    categories,
     loading,
     transactionsLoading,
     error,
@@ -145,6 +179,7 @@ export const FinancialProvider = ({ children, setToast }) => {
     addAccounts,
     fetchAccounts,
     fetchTransactions,
+    fetchCategories,
     setToast
   }
 

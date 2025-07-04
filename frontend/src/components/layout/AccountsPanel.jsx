@@ -18,7 +18,7 @@ function AccountsPanel({ isMobile }) {
   const [plaidModalOpen, setPlaidModalOpen] = useState(false);
   const [plaidLoading, setPlaidLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('cash');
-  const { accounts, loading, error, refreshAccounts, setToast } = useFinancial();
+  const { accounts, loading, error, refreshAccounts, fetchTransactions, user, setToast } = useFinancial();
   const hasSetInitialTab = useRef(false);
 
   const grouped = groupAccountsByType(accounts || []) || {
@@ -45,6 +45,10 @@ function AccountsPanel({ isMobile }) {
 
   const handlePlaidSuccess = () => {
     refreshAccounts();
+    // Also refresh transactions since new accounts will have new transactions
+    if (user) {
+      fetchTransactions(user.id);
+    }
     setPlaidModalOpen(false);
     setPlaidLoading(false);
     setToast({ message: 'Accounts added successfully!', type: 'success' });

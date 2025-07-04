@@ -4,10 +4,10 @@ import { FaSearch, FaChevronRight } from 'react-icons/fa';
 import LightDropdown from '../ui/LightDropdown';
 import { formatCurrency } from '../../utils/formatters';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { Spinner } from '../ui';
+import { Spinner, Card } from '../ui';
 
 const TransactionsPanel = ({ isMobile }) => {
-  const { transactions, transactionsLoading, accounts } = useFinancial();
+  const { transactions, transactionsLoading, accounts, categories } = useFinancial();
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const listRef = useRef(null);
@@ -120,53 +120,15 @@ const TransactionsPanel = ({ isMobile }) => {
         </button>
       </div>
 
-      {/* Card */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 700,
-          margin: '0 auto',
-          backgroundColor: '#fff',
-          border: '1px solid #e5e7eb',
-          borderRadius: 12,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          height: 'calc(100vh - 150px)',
-        }}
-      >
-        <div
-          ref={listRef}
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '0px',
-          }}
-        >
+      {/* Transactions Table */}
+      <Card className="w-full max-w-[700px] mx-auto p-0 overflow-hidden shadow-sm rounded-xl border border-gray-100" style={{ height: 'calc(100vh - 150px)', display: 'flex', flexDirection: 'column' }}>
+        <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: 0 }}>
           {transactionsLoading ? (
-            <div
-              style={{
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
+            <div className="h-full flex items-center justify-center">
               <Spinner size={24} />
             </div>
           ) : filteredTransactions.length === 0 ? (
-            <div
-              style={{
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                color: '#6b7280',
-                fontSize: 14,
-                textAlign: 'center',
-                padding: 24,
-              }}
-            >
+            <div className="h-full flex items-center justify-center text-gray-500 text-sm text-center px-6">
               {transactions.length === 0
                 ? 'No transactions found. Add accounts to see your transaction history.'
                 : 'No transactions match your filters.'}
@@ -177,9 +139,9 @@ const TransactionsPanel = ({ isMobile }) => {
                 key={i}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '28px 1fr 120px 80px 16px',
+                  gridTemplateColumns: '42px 1fr 80px 16px',
                   alignItems: 'center',
-                  padding: '10px 16px',
+                  padding: '12px 16px',
                   borderBottom: '1px solid #f3f4f6',
                   fontSize: 12,
                   gap: 12,
@@ -199,9 +161,9 @@ const TransactionsPanel = ({ isMobile }) => {
                     src={txn.icon_url}
                     alt=""
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 6,
+                      width: 42,
+                      height: 42,
+                      borderRadius: 8,
                       objectFit: 'contain',
                       backgroundColor: '#f3f4f6',
                     }}
@@ -209,31 +171,37 @@ const TransactionsPanel = ({ isMobile }) => {
                 ) : (
                   <div
                     style={{
-                      width: 28,
-                      height: 28,
+                      width: 42,
+                      height: 42,
                       backgroundColor: '#e5e7eb',
-                      borderRadius: 6,
+                      borderRadius: 8,
                     }}
                   />
                 )}
 
                 {/* Description + Metadata */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   <div style={{ color: '#111827', fontWeight: 500 }}>{txn.description}</div>
-                  <div style={{ fontSize: 11, color: '#6b7280' }}>
-                    {formatDate(txn.date)} · {txn.accounts?.name || 'Unknown Account'}
-                  </div>
-                </div>
 
-                {/* Category (left aligned) */}
-                <div
-                  style={{
-                    color: '#6b7280',
-                    fontSize: 12,
-                    textAlign: 'left',
-                  }}
-                >
-                  {txn.category || 'Uncategorized'}
+                  <div style={{ fontSize: 11, color: '#6b7280', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    <span>{formatDate(txn.date)}</span>
+                    <span>· {txn.accounts?.name || 'Unknown Account'}</span>
+                  </div>
+
+                  {txn.category_name && (
+                    <div style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 2 }}>
+                      <div
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          backgroundColor: txn.category_color || '#6b7280',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span>{txn.category_name}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Amount */}
@@ -242,6 +210,7 @@ const TransactionsPanel = ({ isMobile }) => {
                     textAlign: 'right',
                     fontWeight: 500,
                     color: txn.amount > 0 ? '#16a34a' : '#1f2937',
+                    fontSize: 12,
                   }}
                 >
                   {txn.amount > 0
@@ -251,19 +220,13 @@ const TransactionsPanel = ({ isMobile }) => {
 
                 {/* Chevron */}
                 <div style={{ paddingLeft: 6 }}>
-                  <FaChevronRight
-                    size={12}
-                    color="#9ca3af"
-                    style={{
-                      cursor: 'pointer',
-                    }}
-                  />
+                  <FaChevronRight size={12} color="#9ca3af" style={{ cursor: 'pointer' }} />
                 </div>
               </div>
             ))
           )}
         </div>
-      </div>
+      </Card>
     </main>
   );
 };
