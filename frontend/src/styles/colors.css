@@ -113,7 +113,7 @@
   --color-sidebar-active: var(--color-gray-700);
   --color-sidebar-text: var(--color-gray-100);
   --color-sidebar-text-muted: var(--color-gray-400);
-  --color-sidebar-inactive: var(--color-gray-500);
+  --color-sidebar-inactive: var(--color-gray-400);
 
   /* Form Colors */
   --color-input-bg: var(--color-gray-50);

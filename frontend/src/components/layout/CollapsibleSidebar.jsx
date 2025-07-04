@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { FiChevronDown, FiChevronUp, FiBarChart2, FiFolder } from 'react-icons/fi'
+import { FiChevronDown, FiBarChart2 } from 'react-icons/fi'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { SimulationControls } from '../index'
 import logoCollapsed from '../../assets/logo-light.png'
 import logoFull from '../../assets/full-logo-light.png'
-
 
 export default function CollapsibleSidebar({
   form, handleChange, handleSubmit, error, loading,
@@ -14,18 +13,10 @@ export default function CollapsibleSidebar({
   const navigate = useNavigate(), location = useLocation()
   const contentRef = useRef(null)
   const isSim = location.pathname === '/simulate'
-  const [isOpen, setIsOpen] = useState(false) // Always start collapsed
+  const [isOpen, setIsOpen] = useState(false)
   const [isHovering, setIsHovering] = useState(false)
 
-  const [contentHeight, setContentHeight] = useState(0)
-  const [shouldAnimate, setShouldAnimate] = useState(false)
-
   const fullyOpen = isOpen || isHovering
-
-  // Remove the useEffect that sets isOpen based on isTablet
-  // useEffect(() => setIsOpen(!isTablet), [isTablet])
-
-
 
   return (
     <>
@@ -45,47 +36,44 @@ export default function CollapsibleSidebar({
         style={{
           backgroundColor: '#1f2937',
           width: fullyOpen ? '220px' : '40px',
-          paddingTop: '12px',
+          paddingTop: '20px',
           paddingBottom: '12px',
           boxShadow: `0 0 ${fullyOpen ? '40px 6px' : '30px'} rgba(0,0,0,0.7)`,
           fontFamily: '"Inter", system-ui, sans-serif',
           color: '#f3f4f6',
           overflowY: 'auto',
-          position: isMobile ? 'relative' : 'absolute', // Always absolute for desktop/tablet
+          position: isMobile ? 'relative' : 'absolute',
           top: 0,
           left: 0,
-          zIndex: isMobile ? 10 : 40, // Higher z-index for desktop/tablet to overlay content
+          zIndex: isMobile ? 10 : 40,
         }}
       >
-        {/* 🧱 Top: Logo + Tabs */}
-        <div>
-          <div className={`w-full mb-[24px] mt-[12px] ${fullyOpen ? 'ml-[6px]' : 'flex justify-center'}`}>
-            <img
-              src={fullyOpen ? logoFull : logoCollapsed}
-              alt="Logo"
-              className="h-[14px] object-contain"
-              style={{ width: fullyOpen ? 'auto' : '14px' }}
-            />
-          </div>
-
-          <div className="w-full flex flex-col gap-[6px] mb-[16px]">
-            {visibleTabs.map((tab, i) => (
-              <SidebarTab
-                key={i}
-                tab={tab}
-                isActive={location.pathname === tab.route}
-                fullyOpen={fullyOpen}
-                contentRef={contentRef}
-                contentHeight={contentHeight}
-                shouldAnimate={shouldAnimate}
-                formProps={{ form, handleChange, handleSubmit, error, loading }}
-                navigate={navigate}
-              />
-            ))}
-          </div>
+        {/* 🔷 Logo */}
+        <div className={`w-full ${fullyOpen ? 'ml-[6px] mb-[14px]' : 'mb-[24px] flex justify-center'}`}>
+          <img
+            src={fullyOpen ? logoFull : logoCollapsed}
+            alt="Logo"
+            className="h-[14px] object-contain"
+            style={{ width: fullyOpen ? 'auto' : '14px' }}
+          />
         </div>
 
-        {/* 📌 Bottom: Spacer to push content up */}
+        {/* 🔹 Tabs */}
+        <div className="w-full flex flex-col gap-[6px] mb-[16px]">
+          {visibleTabs.map((tab, i) => (
+            <SidebarTab
+              key={i}
+              tab={tab}
+              isActive={location.pathname === tab.route}
+              fullyOpen={fullyOpen}
+              contentRef={contentRef}
+              formProps={{ form, handleChange, handleSubmit, error, loading }}
+              navigate={navigate}
+            />
+          ))}
+        </div>
+
+        {/* Spacer */}
         <div className="flex-1" />
       </div>
     </>
@@ -115,27 +103,26 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
   useEffect(() => {
     if (isActive) {
       setLocalExpanded(true)
-      setReadyToShow(false) // hide initially to prevent flash
+      setReadyToShow(false)
     } else if (localExpanded) {
       const timeout = setTimeout(() => {
         setLocalExpanded(false)
         setReadyToShow(false)
-      }, 200) // Reduced timeout for faster animation
+      }, 200)
       return () => clearTimeout(timeout)
     }
   }, [isActive])
 
-  // 🧠 Run height animation logic *when localExpanded opens*
   useEffect(() => {
     if (localExpanded && fullyOpen && isActive && contentRef.current) {
       setShouldAnimate(false)
       setContentHeight(0)
-      void contentRef.current.offsetHeight // force reflow
+      void contentRef.current.offsetHeight
       const t = setTimeout(() => {
         setContentHeight(contentRef.current.scrollHeight)
         setShouldAnimate(true)
-        setReadyToShow(true) // ✅ now it's ready to render
-      }, 10) // Reduced timeout for faster animation
+        setReadyToShow(true)
+      }, 10)
       return () => clearTimeout(t)
     }
   }, [localExpanded, fullyOpen, isActive])
@@ -146,10 +133,7 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
         className={`flex items-center gap-[8px] transition-colors duration-200 ${baseClass} ${hoverClass} ${rounded}`}
         onClick={() => !isActive && navigate(tab.route)}
       >
-        <div style={{ 
-          fontSize: '14px',
-          color: textColor
-        }}>
+        <div style={{ fontSize: '14px', color: textColor }}>
           {React.cloneElement(tab.icon, { size: 14, color: textColor })}
         </div>
         {fullyOpen && (
@@ -174,7 +158,7 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
         <div
           style={{
             maxHeight: isActive ? `${contentHeight}px` : '0px',
-            transition: shouldAnimate ? 'max-height 0.2s ease-out' : 'none', // Faster animation
+            transition: shouldAnimate ? 'max-height 0.2s ease-out' : 'none',
             overflow: 'hidden',
             backgroundColor: '#1c232f',
             borderBottomLeftRadius: 6,
@@ -188,15 +172,13 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
             style={{
               visibility: readyToShow ? 'visible' : 'hidden',
               opacity: readyToShow ? 1 : 0,
-              transition: 'opacity 0.15s ease-out', // Faster opacity transition
+              transition: 'opacity 0.15s ease-out',
             }}
           >
             <SimulationControls {...formProps} />
           </div>
         </div>
       )}
-
     </div>
   )
 }
-
