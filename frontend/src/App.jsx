@@ -143,7 +143,6 @@ function App() {
   useEffect(() => {
     const fetchUser = async () => {
       const { data, error } = await supabase.auth.getUser();
-      console.log('[Auth Check] got user:', data?.user);
       if (!error && data?.user) {
         setUser(data.user);
       }
@@ -153,7 +152,6 @@ function App() {
     fetchUser();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('[Auth Change]', session?.user);
       setUser(session?.user || null);
     });
 

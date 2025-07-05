@@ -83,10 +83,6 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
     try {
       if (isSignup) {
-        console.log('Starting signup process...')
-        console.log('Email:', email)
-        console.log('Name:', name)
-        
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -96,10 +92,6 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
             }
           }
         })
-
-        console.log('Signup response:', signUpData)
-        console.log('Signup error:', signUpError)
-
         if (signUpError) throw signUpError
 
         // Check if email confirmation is required

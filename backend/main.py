@@ -16,30 +16,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router
 import requests
 
-# Log environment variables (with masked secrets for security)
-def log_environment_variables():
-    print("\n" + "="*50)
-    print("ENVIRONMENT VARIABLES LOADED:")
-    print("="*50)
-    
-    # Supabase variables
-    supabase_url = os.getenv('SUPABASE_URL')
-    supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
-    print(f"SUPABASE_URL: {supabase_url}")
-    print(f"SUPABASE_SERVICE_ROLE_KEY: {'***' + supabase_key[-10:] if supabase_key else 'NOT SET'}")
-    
-    # Plaid variables
-    plaid_client_id = os.getenv('PLAID_CLIENT_ID')
-    plaid_secret = os.getenv('PLAID_SECRET')
-    print(f"PLAID_CLIENT_ID: {plaid_client_id}")
-    print(f"PLAID_SECRET: {'***' + plaid_secret[-10:] if plaid_secret else 'NOT SET'}")
-    print(f"ENVIRONMENT: {env_mode}")
-    
-    print("="*50 + "\n")
-
-# Log environment variables on startup
-log_environment_variables()
-
 def download_sp500_csv_if_missing():
     csv_path = "data/sp500_snapshot_history.csv"
     csv_url = "https://github.com/Adarsh-S-Nair/zentari/releases/download/v1.0.0/sp500_snapshot_history.csv"
@@ -67,9 +43,10 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",  # dev
-        "http://localhost:4173",  # dev
-        "https://zentari-seven.vercel.app",  # production
+        "http://localhost:5173",  # local development
+        "http://localhost:4173",  # local production
+        "https://zentari-dev.vercel.app",  # development
+        "https://zentari-prod.vercel.app",  # production
     ],
     allow_credentials=True,
     allow_methods=["*"],

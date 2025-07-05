@@ -103,13 +103,9 @@ export default function PlaidLinkModal({ isOpen, onClose, onSuccess, onError }) 
     token: linkToken,
     onSuccess: onPlaidSuccess,
     onExit: () => {
-      // User closed Plaid Link
-      console.log('Plaid Link closed')
       onClose()
     },
-    onEvent: (eventName, metadata) => {
-      console.log('Plaid Link event:', eventName, metadata)
-    }
+    onEvent: (eventName, metadata) => { }
   })
 
   useEffect(() => {
