@@ -219,11 +219,11 @@ class SupabaseService:
     def _initialize_sync_state(self, user_id: str, item_id: str, access_token: str):
         """Initialize or update sync state for a Plaid Item"""
         try:
-            existing = self.client.table('account_sync_states').select('id').eq('user_id', user_id).eq('item_id', item_id).execute()
+            existing = self.client.table('plaid_items').select('id').eq('user_id', user_id).eq('item_id', item_id).execute()
             
             if existing.data:
                 # Update existing sync state
-                self.client.table('account_sync_states').update({
+                self.client.table('plaid_items').update({
                     'access_token': access_token,
                     'updated_at': 'now()'
                 }).eq('user_id', user_id).eq('item_id', item_id).execute()
@@ -235,7 +235,7 @@ class SupabaseService:
                     'access_token': access_token,
                     'sync_status': 'idle'
                 }
-                self.client.table('account_sync_states').insert(sync_state_data).execute()
+                self.client.table('plaid_items').insert(sync_state_data).execute()
                 
         except Exception as e:
             print(f"Error initializing sync state: {e}")
@@ -309,7 +309,7 @@ class SupabaseService:
     def get_sync_state(self, user_id: str, item_id: str):
         """Get sync state for a user-item combination"""
         try:
-            response = self.client.table('account_sync_states').select('*').eq('user_id', user_id).eq('item_id', item_id).execute()
+            response = self.client.table('plaid_items').select('*').eq('user_id', user_id).eq('item_id', item_id).execute()
             if response.data:
                 return {"success": True, "sync_state": response.data[0]}
             return {"success": False, "error": "Sync state not found"}
@@ -319,7 +319,7 @@ class SupabaseService:
     def update_sync_cursor(self, user_id: str, item_id: str, cursor: str):
         """Update transaction cursor for sync state"""
         try:
-            self.client.table('account_sync_states').update({
+            self.client.table('plaid_items').update({
                 'transaction_cursor': cursor,
                 'last_transaction_sync': 'now()',
                 'sync_status': 'idle',
@@ -336,7 +336,7 @@ class SupabaseService:
             if error:
                 update_data['last_error'] = error
             
-            self.client.table('account_sync_states').update(update_data).eq('user_id', user_id).eq('item_id', item_id).execute()
+            self.client.table('plaid_items').update(update_data).eq('user_id', user_id).eq('item_id', item_id).execute()
             return {"success": True}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -344,7 +344,7 @@ class SupabaseService:
     def get_user_sync_states(self, user_id: str):
         """Get all sync states for a user"""
         try:
-            response = self.client.table('account_sync_states').select('*').eq('user_id', user_id).execute()
+            response = self.client.table('plaid_items').select('*').eq('user_id', user_id).execute()
             return {"success": True, "sync_states": response.data}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -534,57 +534,48 @@ class SupabaseService:
         if not category_name:
             return "Uncategorized"
         
-        # Clean up the name
-        name = category_name.strip()
+        # Replace underscores and extra spaces
+        name = category_name.strip().replace("_", " ")
         
-        # Words that should not be capitalized (unless they're the first or last word)
-        minor_words = {
-            'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'if', 'in', 'nor', 'of', 'on', 'or', 'so', 'the', 'to', 'up', 'yet'
-        }
-        
-        # Split into words and apply proper title case
-        words = name.split()
+        # Lowercase everything first to normalize
+        words = name.lower().split()
         if not words:
             return "Uncategorized"
         
+        minor_words = {
+            'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'if', 'in', 'nor',
+            'of', 'on', 'or', 'so', 'the', 'to', 'up', 'yet'
+        }
+
         formatted_words = []
         for i, word in enumerate(words):
-            # Always capitalize first and last word
-            if i == 0 or i == len(words) - 1:
-                formatted_words.append(word.capitalize())
-            # For middle words, only capitalize if not a minor word
-            elif word.lower() not in minor_words:
+            if i == 0 or i == len(words) - 1 or word not in minor_words:
                 formatted_words.append(word.capitalize())
             else:
                 formatted_words.append(word.lower())
-        
+
         return ' '.join(formatted_words)
 
     def _generate_category_color(self, category_name: str) -> str:
-        """Generate a light, less saturated color based on category name"""
+        """Generate a clean, muted rainbow color for category names"""
         import hashlib
-        
-        # Create a hash of the category name for consistent color generation
-        hash_object = hashlib.md5(category_name.lower().encode())
-        hash_hex = hash_object.hexdigest()
-        
-        # Use the first 6 characters of the hash to generate RGB values
-        r = int(hash_hex[0:2], 16)
-        g = int(hash_hex[2:4], 16)
-        b = int(hash_hex[4:6], 16)
-        
-        # Make the color lighter and less saturated by:
-        # 1. Increasing lightness by mixing with white (70% original, 30% white)
-        # 2. Reducing saturation by mixing with gray
-        r = int(r * 0.7 + 255 * 0.3)
-        g = int(g * 0.7 + 255 * 0.3)
-        b = int(b * 0.7 + 255 * 0.3)
-        
-        # Ensure values are within valid range
-        r = min(255, max(0, r))
-        g = min(255, max(0, g))
-        b = min(255, max(0, b))
-        
+        import colorsys
+
+        # Hash the name to get a consistent seed
+        hash_digest = hashlib.md5(category_name.lower().encode()).hexdigest()
+        hue_seed = int(hash_digest[:6], 16)
+
+        # Convert to hue (0–360°) and normalize
+        hue = (hue_seed % 300) / 360.0  # Avoid brownish/yellow hues (skip 300–360°)
+
+        # Set pleasant, muted values
+        saturation = 0.6    # Moderate saturation
+        lightness = 0.55    # Clean and not too light on white background
+
+        # Convert HLS → RGB
+        r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
+        r, g, b = [int(x * 255) for x in (r, g, b)]
+
         return f"#{r:02x}{g:02x}{b:02x}"
 
     def get_categories(self):
