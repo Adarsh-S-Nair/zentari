@@ -223,7 +223,7 @@ function AppContent({
       case '/simulate':
         return 'Simulation';
       default:
-        return 'Trading API';
+        return 'Zentari';
     }
   };
 

@@ -62,7 +62,7 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
           alignItems: 'center'
         }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#1f2937' }}>
-            {currentPage || 'Trading API'}
+            {currentPage || 'Zentari'}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

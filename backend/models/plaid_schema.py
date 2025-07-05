@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any
 
 class LinkTokenRequest(BaseModel):
     user_id: str
-    client_name: Optional[str] = "Trading API"
+    client_name: Optional[str] = "Zentari"
 
 class LinkTokenResponse(BaseModel):
     success: bool

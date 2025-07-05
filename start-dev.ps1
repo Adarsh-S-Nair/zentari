@@ -1,4 +1,4 @@
-Write-Host "Starting Trading API Development Environment..." -ForegroundColor Green
+Write-Host "Starting Zentari Development Environment..." -ForegroundColor Green
 Write-Host ""
 
 # Frontend

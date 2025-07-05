@@ -20,7 +20,7 @@ class PlaidService:
         self.environment = environment
         self.client = get_plaid_client(environment)
     
-    def create_link_token(self, user_id: str, client_name: str = "Trading API"):
+    def create_link_token(self, user_id: str, client_name: str = "Zentari"):
         """
         Create a link token for the Plaid Link flow
         """

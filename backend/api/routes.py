@@ -17,6 +17,10 @@ def root():
 def health_check():
     return {"status": "OK"}
 
+@router.head("/ping")
+def ping():
+    return {"status": "OK"}
+
 @router.websocket("/simulate/ws")
 async def simulate_websocket(websocket: WebSocket):
     await websocket.accept()

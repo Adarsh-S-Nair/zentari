@@ -29,7 +29,7 @@ export default function PlaidLinkModal({ isOpen, onClose, onSuccess, onError }) 
         },
         body: JSON.stringify({
           user_id: user.id,
-          client_name: 'Trading API'
+          client_name: 'Zentari'
         })
       })
 
