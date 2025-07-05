@@ -83,24 +83,31 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
     try {
       if (isSignup) {
+        console.log('Starting signup process...')
+        console.log('Email:', email)
+        console.log('Name:', name)
+        
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
-          password
+          password,
+          options: {
+            data: {
+              display_name: name
+            }
+          }
         })
+
+        console.log('Signup response:', signUpData)
+        console.log('Signup error:', signUpError)
 
         if (signUpError) throw signUpError
 
-        // 🔁 Wait until Supabase returns the session
-        const { data: sessionData } = await supabase.auth.getSession()
-        const userId = sessionData.session?.user?.id
-
-        if (!userId) throw new Error('No user session found.')
-
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert({ id: userId, name, environment: 'development' })
-
-        if (profileError) throw profileError
+        // Check if email confirmation is required
+        if (!signUpData.session) {
+          setError('Please check your email to confirm your account before signing in.')
+          setLoading(false)
+          return
+        }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -114,6 +121,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
         onLoginSuccess()
       }
     } catch (err) {
+      console.error('Signup/login error:', err)
       setError(err.message)
     } finally {
       setLoading(false)

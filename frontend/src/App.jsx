@@ -210,10 +210,8 @@ function AppContent({
     if (!userChecked) return; // ⏳ wait until auth check is done
 
     const routeRequiresAuth = authenticatedRoutes.includes(location.pathname);
-    console.log('[Routing Check] path:', location.pathname, 'requiresAuth:', routeRequiresAuth, 'user:', user);
 
     if (routeRequiresAuth && !user) {
-      console.log('[Redirect] Not authenticated, redirecting to /simulate');
       navigate('/simulate', { replace: true });
     }
   }, [user, userChecked, location.pathname]);

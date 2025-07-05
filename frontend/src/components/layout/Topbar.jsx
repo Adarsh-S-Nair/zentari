@@ -12,19 +12,11 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
   const [showMenu, setShowMenu] = useState(false);
   const triggerRef = useRef(null);
 
-  // Fetch user's name
+  // Fetch user's name from user metadata
   useEffect(() => {
     if (user) {
-      supabase
-        .from('user_profiles')
-        .select('name')
-        .eq('id', user.id)
-        .single()
-        .then(({ data, error }) => {
-          if (!error && data?.name) {
-            setUserName(data.name);
-          }
-        });
+      const userName = user.user_metadata?.display_name || user.email || 'User'
+      setUserName(userName);
     } else {
       setUserName('');
     }

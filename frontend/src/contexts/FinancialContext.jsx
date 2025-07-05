@@ -89,6 +89,7 @@ export const FinancialProvider = ({ children, setToast }) => {
   const fetchTransactions = async (userId) => {
     if (!userId) return
     
+    console.log('Fetching transactions for user:', userId)
     setTransactionsLoading(true)
     
     try {
@@ -99,6 +100,7 @@ export const FinancialProvider = ({ children, setToast }) => {
       const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
       const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?limit=1000`
       
+      console.log('Fetching from URL:', fullUrl)
       const response = await fetch(fullUrl)
       
       if (!response.ok) {
@@ -109,6 +111,7 @@ export const FinancialProvider = ({ children, setToast }) => {
       const result = await response.json()
       
       if (result.success) {
+        console.log('Received transactions:', result.transactions?.length || 0)
         setTransactions(result.transactions || [])
       } else {
         throw new Error(result.error || 'Failed to fetch transactions')

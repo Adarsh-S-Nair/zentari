@@ -1,13 +1,16 @@
-Write-Host "Starting Trading API Development Environment..." -ForegroundColor Green
+Write-Host "Starting Trading API Production Environment..." -ForegroundColor Green
 Write-Host ""
 
 # Frontend
 Write-Host "Preparing frontend environment variables..." -ForegroundColor Cyan
-Copy-Item -Path "frontend\.env.development" -Destination "frontend\.env" -Force
+Copy-Item -Path "frontend\.env.production" -Destination "frontend\.env" -Force
 
-Write-Host "Starting Frontend..." -ForegroundColor Yellow
+Write-Host "Building frontend..." -ForegroundColor Yellow
 Set-Location frontend
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "npm run dev" -WindowStyle Normal
+npm run build
+
+Write-Host "Previewing frontend in new PowerShell window..." -ForegroundColor Yellow
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "npm run preview" -WindowStyle Normal
 Set-Location ..
 
 # Backend
@@ -16,7 +19,7 @@ Write-Host "Starting Backend..." -ForegroundColor Yellow
 Set-Location backend
 
 Write-Host "Preparing backend environment variables..." -ForegroundColor Cyan
-Copy-Item -Path ".env.development" -Destination ".env" -Force
+Copy-Item -Path ".env.production" -Destination ".env" -Force
 
 Write-Host "Freeing port 8000 if in use..." -ForegroundColor Cyan
 try {
@@ -47,4 +50,4 @@ if (-not (Test-Path "venv")) {
 }
 
 Write-Host "Starting backend server..." -ForegroundColor Yellow
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --host 0.0.0.0 --port 8000

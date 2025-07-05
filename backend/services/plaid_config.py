@@ -15,10 +15,10 @@ class PlaidConfig:
         
         # Get environment-specific secrets
         if environment == 'sandbox':
-            self.secret = os.getenv('PLAID_SANDBOX_SECRET')
+            self.secret = os.getenv('PLAID_SECRET')  # Use the environment-specific secret
             self.host = 'https://sandbox.plaid.com'
         elif environment == 'production':
-            self.secret = os.getenv('PLAID_PRODUCTION_SECRET')
+            self.secret = os.getenv('PLAID_SECRET')  # Use the environment-specific secret
             self.host = 'https://production.plaid.com'
         else:
             raise ValueError(f"Invalid environment: {environment}. Must be 'sandbox' or 'production'")
@@ -27,7 +27,7 @@ class PlaidConfig:
             raise ValueError("PLAID_CLIENT_ID must be set in environment variables")
         
         if not self.secret:
-            raise ValueError(f"PLAID_{environment.upper()}_SECRET must be set in environment variables")
+            raise ValueError(f"PLAID_SECRET must be set in environment variables")
         
         # Configure Plaid client
         configuration = Configuration(

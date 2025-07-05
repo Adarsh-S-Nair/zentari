@@ -13,9 +13,9 @@ export default function UserProfileTab({ isOpen, user, userName: externalUserNam
 
   useEffect(() => {
     if (!externalUserName && user) {
-      supabase.from('user_profiles').select('name').eq('id', user.id).single().then(({ data, error }) => {
-        if (!error && data?.name) setUserName(data.name)
-      })
+      // Get name from user metadata
+      const userName = user.user_metadata?.name || user.email || 'User'
+      setUserName(userName)
     }
   }, [user])
 

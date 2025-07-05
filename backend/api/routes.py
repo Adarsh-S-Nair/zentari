@@ -5,12 +5,17 @@ import json
 from services.validation import validate_simulation_params
 from api.plaid_routes import router as plaid_router
 from api.database_routes import router as database_router
+from api.sync_routes import router as sync_router
 
 router = APIRouter()
 
 @router.get("/")
 def root():
     return {"message": "Momentum Backtest API"}
+
+@router.get("/health")
+def health_check():
+    return {"status": "OK"}
 
 @router.websocket("/simulate/ws")
 async def simulate_websocket(websocket: WebSocket):
@@ -40,3 +45,6 @@ router.include_router(plaid_router)
 
 # Include Database routes
 router.include_router(database_router)
+
+# Include Sync routes
+router.include_router(sync_router)

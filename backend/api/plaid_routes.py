@@ -16,15 +16,8 @@ async def create_link_token(request: LinkTokenRequest, authorization: Optional[s
     """
     Create a link token for the Plaid Link flow
     """
-    # Get user environment from Supabase
-    supabase_service = get_supabase_service()
-    user_environment = supabase_service.get_user_environment(request.user_id)
-    
-    if not user_environment:
-        raise HTTPException(status_code=400, detail="User environment not found")
-    
-    # Create Plaid service with user's environment
-    plaid_service = PlaidService(environment=user_environment)
+    # Use sandbox environment for development
+    plaid_service = PlaidService(environment='sandbox')
     
     result = plaid_service.create_link_token(
         user_id=request.user_id,
@@ -57,12 +50,9 @@ async def get_accounts(request: PublicTokenRequest, user_id: str, authorization:
     """
     Get accounts for a given public token and store them in the database
     """
-    # Get user environment from Supabase
+    # Use sandbox environment for development
     supabase_service = get_supabase_service()
-    user_environment = supabase_service.get_user_environment(user_id)
-    
-    if not user_environment:
-        raise HTTPException(status_code=400, detail="User environment not found")
+    user_environment = 'sandbox'  # Default to sandbox for development
     
     # Create Plaid service with user's environment
     plaid_service = PlaidService(environment=user_environment)
