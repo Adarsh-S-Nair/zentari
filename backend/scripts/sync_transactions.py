@@ -4,7 +4,7 @@ from supabase import create_client, Client
 
 API_URL = os.environ.get("API_URL")
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 if not API_URL or not SUPABASE_URL or not SUPABASE_KEY:
     raise RuntimeError("API_URL, SUPABASE_URL, and SUPABASE_KEY must be set in environment variables.")
@@ -13,10 +13,10 @@ if not API_URL or not SUPABASE_URL or not SUPABASE_KEY:
 db: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_all_user_ids():
-    # Query accounts table for all distinct user_ids
-    resp = db.table('accounts').select('user_id', count='exact').execute()
+    # Query accounts table for all distinct user_ids where auto_sync is True
+    resp = db.table('accounts').select('user_id', count='exact').eq('auto_sync', True).execute()
     if not resp.data:
-        print("No users found in accounts table.")
+        print("No users with auto_sync accounts found in accounts table.")
         return []
     # Use set to ensure uniqueness
     user_ids = set()
