@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiLogOut, FiBell, FiHelpCircle} from 'react-icons/fi';
+import { FiLogOut, FiBell, FiHelpCircle, FiChevronLeft } from 'react-icons/fi';
 import { MdLogin } from "react-icons/md";
 import { FaUser } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
 import { LogoutModal } from '../modals';
 import ContextMenu from '../ui/ContextMenu';
 
-const Topbar = ({ user, onLoginClick, currentPage }) => {
+const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack, institutionLogo }) => {
   const [userName, setUserName] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -50,8 +50,11 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
         width: '100%',
         display: 'flex',
         justifyContent: 'center',
-        borderBottom: '1px solid #e5e7eb',
-        backgroundColor: '#fff'
+        background: '#fff',
+        // borderRadius removed for flat look
+        boxShadow: '0 2px 8px 0 rgba(59,130,246,0.04)',
+        border: '1.5px solid #f3f4f6',
+        boxSizing: 'border-box',
       }}>
         <div style={{
           width: '100%',
@@ -59,17 +62,46 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
           padding: '16px 20px',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          boxSizing: 'border-box',
         }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#1f2937' }}>
-            {currentPage || 'Zentari'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {showBackArrow && (
+              <button
+                onClick={onBack}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#2563eb',
+                  fontSize: 22,
+                  padding: 0,
+                  height: 36,
+                  width: 36,
+                  borderRadius: 10,
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                aria-label="Back"
+              >
+                <FiChevronLeft size={22} />
+              </button>
+            )}
+            {institutionLogo && (
+              <img src={institutionLogo} alt="Institution Logo" style={{ height: 24, width: 24, objectFit: 'contain', marginRight: 8, borderRadius: 6, background: '#f3f4f6' }} />
+            )}
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#1f2937' }}>{currentPage || 'Zentari'}</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {user && (
               <>
-                <IconButton icon={<FiBell size={16} />} />
-                <IconButton icon={<FiHelpCircle size={16} />} />
+                <IconButton icon={<FiBell size={16} color="#374151" />} />
+                <IconButton icon={<FiHelpCircle size={16} color="#374151" />} />
               </>
             )}
 
@@ -79,11 +111,19 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
                   ref={triggerRef}
                   role="button"
                   onClick={() => setShowMenu(prev => !prev)}
-                  style={iconButtonStyle}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  style={{
+                    ...iconButtonStyle,
+                    backgroundColor: showMenu ? '#3b82f6' : '#f3f4f6',
+                    color: showMenu ? '#fff' : '#374151',
+                    border: showMenu ? '1.5px solid #3b82f6' : '1.5px solid #f3f4f6',
+                    transition: 'background 0.18s, color 0.18s, border 0.18s, transform 0.16s cubic-bezier(.4,1.5,.5,1)',
+                  }}
+                  onMouseEnter={e => { if (!showMenu) e.currentTarget.style.backgroundColor = '#e5e7eb'; }}
+                  onMouseLeave={e => { if (!showMenu) e.currentTarget.style.backgroundColor = '#f3f4f6'; }}
+                  onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.97) translateY(1.5px)'; }}
+                  onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
                 >
-                  <FaUser size={16} color="#4b5563" />
+                  <FaUser size={16} color={showMenu ? '#fff' : '#374151'} />
                 </div>
 
                 <ContextMenu
@@ -104,17 +144,17 @@ const Topbar = ({ user, onLoginClick, currentPage }) => {
                   gap: 8,
                   padding: '6px 12px',
                   backgroundColor: 'transparent',
-                  color: '#374151',
+                  color: '#3b82f6',
                   fontSize: 13,
                   fontWeight: 500,
-                  borderRadius: 6,
+                  borderRadius: 10,
                   cursor: 'pointer',
                   transition: 'background-color 0.2s ease',
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
-                <MdLogin size={16} />
+                <MdLogin size={16} color="#3b82f6" />
                 Log in / Sign up
               </div>
             )}
@@ -139,17 +179,20 @@ const iconButtonStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+  boxShadow: 'none',
+  border: '1.5px solid #f3f4f6',
   cursor: 'pointer',
-  transition: 'background-color 0.2s ease',
+  transition: 'background 0.18s, color 0.18s, border 0.18s, transform 0.16s cubic-bezier(.4,1.5,.5,1)',
 };
 
 const IconButton = ({ icon }) => (
   <div
     role="button"
     style={iconButtonStyle}
-    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
-    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+    onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#e5e7eb'; }}
+    onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#f3f4f6'; }}
+    onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.97) translateY(1.5px)'; }}
+    onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
   >
     {icon}
   </div>

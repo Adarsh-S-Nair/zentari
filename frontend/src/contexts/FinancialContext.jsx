@@ -189,4 +189,6 @@ export const FinancialProvider = ({ children, setToast }) => {
       {children}
     </FinancialContext.Provider>
   )
-} 
+}
+
+export { FinancialContext }; 

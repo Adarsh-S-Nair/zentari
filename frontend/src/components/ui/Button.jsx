@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 
 // Blend a hex color with gray to make it duller and darker
 function mixWithGray(hex, gray = '#6b7280', ratio = 0.7) {
@@ -71,7 +71,7 @@ function Button({
   type = 'button'
 }) {
   const [isHovering, setIsHovering] = useState(false)
-
+  const btnRef = useRef(null)
   const isInactive = disabled || loading
 
   // Convert CSS variable to hex for color blending
@@ -122,36 +122,60 @@ function Button({
 
   const buttonStyle = {
     width,
-    backgroundColor: isInactive ? inactiveBg : isHovering ? hoverBg : darkerBg,
-    color: isInactive ? text.inactive : isHovering ? text.hover : text.base,
-    padding: '6px 12px',
-    border: `1px solid ${baseColor}`,
-    borderRadius: '4px',
-    fontSize: '11px',
+    backgroundColor: isInactive ? inactiveBg : isHovering ? hoverBg : '#3b82f6',
+    color: '#fff',
+    padding: '7px 18px',
+    border: 'none',
+    borderRadius: 10,
+    fontSize: '13px',
     fontWeight: 600,
     cursor: isInactive ? 'not-allowed' : 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '4px',
-    boxShadow: '0 1px 3px var(--color-shadow-medium)',
-    transition: 'background-color 0.2s, color 0.2s',
-    fontFamily: '"Inter", system-ui, sans-serif',
-    WebkitFontSmoothing: 'antialiased',
-    MozOsxFontSmoothing: 'grayscale',
-    textRendering: 'optimizeLegibility',
+    gap: '8px',
+    boxShadow: 'none',
+    transition: 'background 0.18s, color 0.18s, box-shadow 0.18s, border 0.18s, transform 0.16s cubic-bezier(.4,1.5,.5,1)',
+    fontFamily: 'Inter, system-ui, sans-serif',
+    WebkitFontSmoothing: 'auto',
+    MozOsxFontSmoothing: 'auto',
+    textRendering: 'geometricPrecision',
+    outline: 'none',
+    transform: 'scale(1)',
     ...style
+  }
+
+  // Hop animation on click
+  const handleClick = (e) => {
+    if (isInactive) return
+    const btn = btnRef.current
+    if (btn) {
+      btn.style.transform = 'scale(0.97) translateY(1.5px)'
+      setTimeout(() => {
+        btn.style.transform = 'scale(1.06) translateY(-2.5px)'
+        setTimeout(() => {
+          btn.style.transform = 'scale(1)'
+        }, 80)
+      }, 80)
+    }
+    if (onClick) onClick(e)
   }
 
   return (
     <>
       <button
+        ref={btnRef}
         type={type}
-        onClick={isInactive ? null : onClick}
+        onClick={handleClick}
         disabled={isInactive}
         style={buttonStyle}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
+        onFocus={() => setIsHovering(true)}
+        onBlur={() => setIsHovering(false)}
+        aria-busy={loading}
+        onMouseDown={e => { if (!isInactive) e.currentTarget.style.transform = 'scale(0.97)'; }}
+        onMouseUp={e => { if (!isInactive) e.currentTarget.style.transform = 'scale(1.06)'; }}
       >
         {loading && <MiniSpinner />}
         {label || children}

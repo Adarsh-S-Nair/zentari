@@ -4,7 +4,7 @@ import { TradeTable, OrdersTable } from '../tables'
 import { SummaryStat, LoadingBar, Spinner, Tabs } from '../ui'
 import noSimulationImg from '../../assets/no-simulation.png'
 
-function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobile, form }) {
+function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobile, form, maxWidth = 700 }) {
   const [activeTab, setActiveTab] = useState('trades')
   const [tableLoading, setTableLoading] = useState({ orders: false, trades: false })
 
@@ -75,7 +75,7 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
             )}
           </div>
         ) : result ? (
-          <div className="flex flex-col w-full max-w-[700px] items-center gap-[20px]">
+          <div className="flex flex-col w-full" style={{ maxWidth: maxWidth }}>
             {/* SUMMARY STATS */}
             <div style={{ width: '100%', padding: '0 20px' }}>
               <div className="flex justify-around w-full">

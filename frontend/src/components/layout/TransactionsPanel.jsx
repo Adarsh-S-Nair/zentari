@@ -6,7 +6,7 @@ import { formatCurrency } from '../../utils/formatters';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Spinner, Card } from '../ui';
 
-const TransactionsPanel = ({ isMobile }) => {
+const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
   const { transactions, transactionsLoading, accounts, categories } = useFinancial();
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,7 +43,7 @@ const TransactionsPanel = ({ isMobile }) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          maxWidth: 700,
+          maxWidth: maxWidth,
           margin: '0 auto 12px auto',
           gap: 10,
         }}
@@ -121,7 +121,7 @@ const TransactionsPanel = ({ isMobile }) => {
       </div>
 
       {/* Transactions Table */}
-      <Card className="w-full max-w-[700px] mx-auto p-0 overflow-hidden shadow-sm rounded-xl border border-gray-100" style={{ height: 'calc(100vh - 150px)', display: 'flex', flexDirection: 'column' }}>
+      <Card className={`w-full mx-auto p-0 overflow-hidden shadow-sm rounded-xl border border-gray-100`} style={{ maxWidth: maxWidth, height: 'calc(100vh - 150px)', display: 'flex', flexDirection: 'column' }}>
         <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: 0 }}>
           {transactionsLoading ? (
             <div className="h-full flex items-center justify-center">

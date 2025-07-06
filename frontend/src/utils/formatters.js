@@ -144,4 +144,10 @@ export const formatLastUpdated = (dateString) => {
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     })
   }
+}
+
+// Capitalize the first letter of each word
+export function capitalizeWords(str) {
+  if (!str) return '';
+  return str.replace(/\b\w/g, c => c.toUpperCase());
 } 

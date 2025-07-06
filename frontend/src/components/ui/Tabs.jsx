@@ -64,22 +64,27 @@ const Tabs = ({ tabs = [], activeId, onChange, showCount = false }) => {
         onScroll={updateScrollButtons}
         style={{
           overflowX: 'auto',
+          width: '100%',
           whiteSpace: 'nowrap',
-          display: 'flex',
-          flexGrow: 1,
-          position: 'relative',
+          WebkitOverflowScrolling: 'touch',
+          msOverflowStyle: 'auto',
+          scrollbarWidth: 'thin',
         }}
       >
         <div
           ref={containerRef}
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             gap: 8,
             position: 'relative',
-            borderBottom: '1px solid #e5e7eb',
+            background: '#f3f4f6',
+            borderRadius: 10,
+            padding: 0,
+            overflow: 'hidden',
+            minWidth: 'fit-content',
           }}
         >
-          {tabs.map((tab) => (
+          {tabs.map((tab, idx) => (
             <div
               key={tab.id}
               data-tab-id={tab.id}
@@ -87,27 +92,40 @@ const Tabs = ({ tabs = [], activeId, onChange, showCount = false }) => {
               role="tab"
               aria-selected={activeId === tab.id}
               style={{
-                padding: '10px 16px',
-                fontSize: 13,
-                fontWeight: 500,
-                color: activeId === tab.id ? 'var(--color-primary)' : '#6b7280',
+                padding: '7px 18px',
+                fontSize: 14,
+                fontWeight: 600,
+                color: activeId === tab.id ? '#2563eb' : '#6b7280',
+                background: activeId === tab.id ? '#e5e7fa' : 'transparent',
+                borderTopLeftRadius: idx === 0 ? 10 : 0,
+                borderBottomLeftRadius: idx === 0 ? 10 : 0,
+                borderTopRightRadius: idx === tabs.length - 1 ? 10 : 0,
+                borderBottomRightRadius: idx === tabs.length - 1 ? 10 : 0,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
                 whiteSpace: 'nowrap',
+                boxShadow: 'none',
+                transition: 'transform 0.16s cubic-bezier(.4,1.5,.5,1), background 0.18s, color 0.18s',
+                transform: 'scale(1)',
+                position: 'relative',
               }}
+              onMouseEnter={e => { if (!activeId === tab.id) e.currentTarget.style.transform = 'scale(1.04)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+              onMouseDown={e => { e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)'; }}
+              onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
             >
               <span>{tab.label}</span>
               {showCount && typeof tab.count === 'number' && (
                 <div
                   style={{
-                    backgroundColor: activeId === tab.id ? 'var(--color-primary)' : '#e5e7eb',
-                    color: activeId === tab.id ? '#ffffff' : '#6b7280',
+                    background: activeId === tab.id ? '#2563eb' : '#e5e7eb',
+                    color: activeId === tab.id ? '#fff' : '#6b7280',
                     fontSize: 11,
                     fontWeight: 600,
                     padding: '2px 6px',
-                    borderRadius: 10,
+                    borderRadius: 8,
                     minWidth: 16,
                     textAlign: 'center',
                   }}
@@ -117,17 +135,6 @@ const Tabs = ({ tabs = [], activeId, onChange, showCount = false }) => {
               )}
             </div>
           ))}
-
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              height: 2,
-              backgroundColor: 'var(--color-primary)',
-              borderRadius: 999,
-              ...indicatorStyle,
-            }}
-          />
         </div>
       </div>
 

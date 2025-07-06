@@ -36,7 +36,7 @@ const Toggle = ({
       aria-checked={isChecked}
       disabled={disabled}
       onClick={handleToggle}
-      className={`relative inline-flex items-center transition-colors duration-300 ease-in-out ${className}`}
+      className={`relative inline-flex items-center transition-colors duration-120 ease-in-out ${className}`}
       style={{
         width,
         height,
@@ -51,7 +51,7 @@ const Toggle = ({
       }}
     >
       <span
-        className="absolute transition-transform duration-300 ease-in-out"
+        className="absolute transition-transform duration-120 ease-in-out"
         style={{
           width: thumb,
           height: thumb,

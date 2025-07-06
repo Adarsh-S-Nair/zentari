@@ -2,13 +2,13 @@ import React, { useEffect, useRef, useState } from 'react'
 import { FiChevronDown, FiBarChart2 } from 'react-icons/fi'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { SimulationControls } from '../index'
-import logoCollapsed from '../../assets/logo-light.png'
-import logoFull from '../../assets/full-logo-light.png'
+import logoCollapsed from '../../assets/logo-blue.png'
+import logoFull from '../../assets/full-logo-blue.png'
 
 export default function CollapsibleSidebar({
   form, handleChange, handleSubmit, error, loading,
   onLoginClick, user, isTablet, isMobile,
-  visibleTabs
+  visibleTabs, currentTab
 }) {
   const navigate = useNavigate(), location = useLocation()
   const contentRef = useRef(null)
@@ -34,18 +34,20 @@ export default function CollapsibleSidebar({
         onMouseLeave={() => !isMobile && setIsHovering(false)}
         className="transition-all duration-200 ease-out h-[100vh] px-[8px] flex flex-col"
         style={{
-          backgroundColor: '#1f2937',
+          background: '#fff',
+          // borderRadius removed for flat look
           width: fullyOpen ? '220px' : '40px',
           paddingTop: '20px',
           paddingBottom: '12px',
-          boxShadow: `0 0 ${fullyOpen ? '40px 6px' : '30px'} rgba(0,0,0,0.7)`,
+          boxShadow: fullyOpen ? '0 4px 24px 0 rgba(59,130,246,0.06)' : '0 1.5px 4px 0 rgba(59,130,246,0.03)',
           fontFamily: '"Inter", system-ui, sans-serif',
-          color: '#f3f4f6',
+          color: '#222',
           overflowY: 'auto',
           position: isMobile ? 'relative' : 'absolute',
           top: 0,
           left: 0,
           zIndex: isMobile ? 10 : 40,
+          border: '1.5px solid #f3f4f6',
         }}
       >
         {/* 🔷 Logo */}
@@ -64,7 +66,7 @@ export default function CollapsibleSidebar({
             <SidebarTab
               key={i}
               tab={tab}
-              isActive={location.pathname === tab.route}
+              isActive={currentTab === tab.route}
               fullyOpen={fullyOpen}
               contentRef={contentRef}
               formProps={{ form, handleChange, handleSubmit, error, loading }}
@@ -83,22 +85,22 @@ export default function CollapsibleSidebar({
 function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate }) {
   const isExpandable = tab.hasContent
   const baseClass = fullyOpen ? 'px-[12px] py-[4px]' : 'justify-center h-[40px]'
-  const hoverClass = isActive ? 'bg-[#374151] cursor-default' : 'hover:bg-[#2d384a] cursor-pointer'
+  const hoverClass = isActive ? '' : 'hover:bg-[#e5e7fa] cursor-pointer'
 
   const [localExpanded, setLocalExpanded] = useState(isActive)
   const [contentHeight, setContentHeight] = useState(0)
   const [shouldAnimate, setShouldAnimate] = useState(false)
   const [readyToShow, setReadyToShow] = useState(isActive)
 
-  const textColor = isActive ? 'var(--color-sidebar-text)' : 'var(--color-sidebar-inactive)'
+  const textColor = isActive ? '#fff' : '#6b7280'
 
   const isExpanded = isActive && localExpanded
   const rounded =
     !fullyOpen || !isExpandable
-      ? 'rounded-[6px]'
+      ? 'rounded-[10px]'
       : isExpanded
-      ? 'rounded-t-[6px]'
-      : 'rounded-[6px]'
+      ? 'rounded-t-[10px]'
+      : 'rounded-[10px]'
 
   useEffect(() => {
     if (isActive) {
@@ -132,6 +134,20 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
       <div
         className={`flex items-center gap-[8px] transition-colors duration-200 ${baseClass} ${hoverClass} ${rounded}`}
         onClick={() => !isActive && navigate(tab.route)}
+        style={{
+          background: isActive ? 'linear-gradient(90deg, #6366f1 0%, #3b82f6 100%)' : 'transparent',
+          color: isActive ? '#fff' : textColor,
+          fontWeight: isActive ? 700 : 500,
+          fontSize: 13,
+          letterSpacing: 0.2,
+          marginBottom: 2,
+          transition: 'transform 0.16s cubic-bezier(.4,1.5,.5,1), background 0.18s, color 0.18s',
+          transform: 'scale(1)',
+        }}
+        onMouseEnter={e => { if (!isActive) e.currentTarget.style.transform = 'scale(1.04)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+        onMouseDown={e => { if (!isActive) e.currentTarget.style.transform = 'scale(0.97) translateY(1.5px)'; }}
+        onMouseUp={e => { if (!isActive) e.currentTarget.style.transform = 'scale(1.04)'; }}
       >
         <div style={{ fontSize: '14px', color: textColor }}>
           {React.cloneElement(tab.icon, { size: 14, color: textColor })}

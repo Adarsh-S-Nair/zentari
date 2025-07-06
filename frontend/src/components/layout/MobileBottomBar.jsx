@@ -16,17 +16,18 @@ export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen, vis
         left: 0,
         width: '100%',
         height: '50px',
-        backgroundColor: '#1f2937',
+        background: '#fff',
         display: 'flex',
         justifyContent: 'space-around',
         alignItems: 'center',
         zIndex: 1000,
-        borderTop: '1px solid rgb(39, 46, 56)',
+        borderTop: '1.5px solid #f3f4f6',
+        boxShadow: '0 -2px 8px 0 rgba(59,130,246,0.04)',
         fontFamily: '"Inter", system-ui, sans-serif',
       }}
     >
       {visibleTabs.map((tab, idx) => {
-        const isActive = location.pathname === tab.route
+        const isActive = location.pathname === tab.route || location.pathname.startsWith(tab.route + '/')
 
         return (
           <button
@@ -50,16 +51,16 @@ export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen, vis
                 flexDirection: 'column',
                 alignItems: 'center',
                 padding: '6px 10px',
-                borderRadius: '8px',
-                backgroundColor: isActive ? '#374151' : 'transparent',
-                color: isActive ? '#ffffff' : '#9ca3af',
-                transition: 'all 0.2s ease',
+                borderRadius: isActive ? 10 : 0,
+                background: isActive ? 'linear-gradient(90deg, #6366f1 0%, #3b82f6 100%)' : 'transparent',
+                color: isActive ? '#fff' : '#6b7280',
+                transition: 'background 0.18s, color 0.18s, border-radius 0.18s',
               }}
               onMouseEnter={(e) => {
-                if (!isActive) e.currentTarget.style.color = '#d1d5db'
+                if (!isActive) e.currentTarget.style.color = '#2563eb'
               }}
               onMouseLeave={(e) => {
-                if (!isActive) e.currentTarget.style.color = '#9ca3af'
+                if (!isActive) e.currentTarget.style.color = '#6b7280'
               }}
             >
               {tab.icon}

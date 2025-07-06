@@ -1,79 +1,73 @@
-import React, { useState, useRef, useEffect } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useRef, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
-const InfoBubble = ({ children, text }) => {
-  const [hovered, setHovered] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const anchorRef = useRef(null);
+const InfoBubble = ({ children, visible, position = 'top', style = {}, center = false, anchorRef }) => {
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+  const bubbleRef = useRef(null);
 
   useEffect(() => {
-    if (hovered && anchorRef.current) {
+    if (visible && anchorRef && anchorRef.current) {
       const rect = anchorRef.current.getBoundingClientRect();
-      const bubbleHeight = 40; // approximate
-      const bubbleWidth = 180;
-
-      let top = rect.top + window.scrollY - bubbleHeight - 8;
-      let left = rect.left + window.scrollX + rect.width / 2 - bubbleWidth / 2;
-
-      // prevent overflow
-      const maxLeft = window.innerWidth - bubbleWidth - 8;
-      if (left < 8) left = 8;
-      if (left > maxLeft) left = maxLeft;
-
-      setPosition({ top, left });
+      setCoords({
+        top: rect.top + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
     }
-  }, [hovered]);
+  }, [visible, anchorRef]);
 
-  return (
+  if (!visible) return null;
+
+  // Calculate bubble position
+  let bubbleStyle = { position: 'absolute', zIndex: 9999 };
+  let arrowStyle = {};
+  if (position === 'top') {
+    bubbleStyle = {
+      ...bubbleStyle,
+      top: coords.top - 44, // 36px button + 8px gap
+      left: coords.left + coords.width / 2,
+      transform: 'translateX(-50%)',
+    };
+    arrowStyle = {
+      position: 'absolute',
+      top: '100%',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      width: 0,
+      height: 0,
+      borderLeft: '8px solid transparent',
+      borderRight: '8px solid transparent',
+      borderTop: '8px solid #fff',
+    };
+  }
+  // Add more positions if needed
+
+  return createPortal(
     <div
-      ref={anchorRef}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{ display: 'inline-flex', alignItems: 'center', position: 'relative' }}
+      ref={bubbleRef}
+      style={{
+        minWidth: 90,
+        maxWidth: 220,
+        padding: '8px 14px',
+        background: '#fff',
+        color: '#222',
+        borderRadius: 10,
+        fontSize: 13,
+        fontWeight: 500,
+        boxShadow: '0 8px 32px 0 rgba(59,130,246,0.18), 0 2px 8px 0 rgba(31,41,55,0.10)',
+        opacity: visible ? 1 : 0,
+        pointerEvents: visible ? 'auto' : 'none',
+        transition: 'opacity 0.18s, transform 0.18s',
+        transform: visible ? 'scale(1)' : 'scale(0.95)',
+        textAlign: center ? 'center' : 'left',
+        ...bubbleStyle,
+        ...style,
+      }}
     >
       {children}
-
-      {hovered &&
-        ReactDOM.createPortal(
-          <div
-            style={{
-              position: 'absolute',
-              top: position.top,
-              left: position.left,
-              zIndex: 1000,
-              backgroundColor: '#fff',
-              color: '#374151',
-              borderRadius: '8px',
-              padding: '8px 12px',
-              fontSize: '11px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              border: '1px solid #e5e7eb',
-              minWidth: '160px',
-              maxWidth: '200px',
-              textAlign: 'center',
-              opacity: 1,
-              pointerEvents: 'none',
-            }}
-          >
-            {text}
-            <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: '50%',
-                marginLeft: -4,
-                width: 8,
-                height: 8,
-                backgroundColor: '#fff',
-                borderLeft: '1px solid #e5e7eb',
-                borderTop: '1px solid #e5e7eb',
-                transform: 'rotate(45deg)',
-              }}
-            />
-          </div>,
-          document.body
-        )}
-    </div>
+      <div style={arrowStyle} />
+    </div>,
+    document.body
   );
 };
 

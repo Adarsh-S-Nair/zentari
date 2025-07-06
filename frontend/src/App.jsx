@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -6,6 +6,8 @@ import {
   useLocation,
   Navigate,
   useNavigate,
+  useParams,
+  matchPath,
 } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { FinancialProvider } from './contexts/FinancialContext';
@@ -24,6 +26,9 @@ import { useMediaQuery } from 'react-responsive';
 import { FaChartArea } from 'react-icons/fa';
 import { IoFolderOpen } from 'react-icons/io5';
 import { FaReceipt } from 'react-icons/fa';
+import { FiArrowLeft } from 'react-icons/fi';
+import { FinancialContext } from './contexts/FinancialContext';
+import AccountDetail from './components/layout/AccountDetail';
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -201,6 +206,17 @@ function AppContent({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { accountId } = useParams();
+  const { accounts } = useContext(FinancialContext) || {};
+  const maxWidth = 700;
+
+  // Memoize the account for detail page
+  const accountDetailAccount = useMemo(() => {
+    if (accountId && accounts) {
+      return accounts.find(acc => String(acc.id) === String(accountId));
+    }
+    return null;
+  }, [accountId, accounts]);
 
   const authenticatedRoutes = ['/accounts', '/transactions'];
 
@@ -214,18 +230,32 @@ function AppContent({
     }
   }, [user, userChecked, location.pathname]);
 
-  const getCurrentPageName = () => {
-    switch (location.pathname) {
-      case '/accounts':
-        return 'Accounts';
-      case '/transactions':
-        return 'Transactions';
-      case '/simulate':
-        return 'Simulation';
-      default:
-        return 'Zentari';
+  let currentPage = 'Zentari';
+  let currentTab = null;
+  if (location.pathname === '/accounts') {
+    currentPage = 'Accounts';
+    currentTab = '/accounts';
+  } else if (location.pathname === '/transactions') {
+    currentPage = 'Transactions';
+    currentTab = '/transactions';
+  } else if (location.pathname === '/simulate') {
+    currentPage = 'Simulation';
+    currentTab = '/simulate';
+  } else if (matchPath('/accounts/:accountId', location.pathname)) {
+    if (accountDetailAccount) {
+      const lastFour = accountDetailAccount.mask ? String(accountDetailAccount.mask).slice(-4) : '';
+      currentPage = `${accountDetailAccount.name}${lastFour ? ' ••••' + lastFour : ''}`;
+    } else {
+      currentPage = 'Account';
     }
-  };
+    currentTab = '/accounts';
+  }
+
+  // Debug logging for account detail header
+  console.log('[AppContent] accountId:', accountId);
+  console.log('[AppContent] accounts:', accounts);
+  console.log('[AppContent] accountDetailAccount:', accountDetailAccount);
+  console.log('[AppContent] currentPage:', currentPage);
 
   const handleLoginSuccess = () => {
     navigate('/accounts');
@@ -236,29 +266,27 @@ function AppContent({
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
-      {!isMobile && (
-        <CollapsibleSidebar
-          visibleTabs={visibleTabs}
-          form={form}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          loading={loading}
-          onLoginClick={() => setLoginOpen(true)}
-          user={user}
-          isTablet={isTablet}
-          isMobile={isMobile}
-        />
-      )}
-
-      <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-        <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={getCurrentPageName()} />
-
-        <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
-          <Routes>
-            <Route
-              path="/simulate"
-              element={
+    <Routes>
+      <Route
+        path="/simulate"
+        element={
+          <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
+            {!isMobile && (
+              <CollapsibleSidebar
+                visibleTabs={visibleTabs}
+                form={form}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                onLoginClick={() => setLoginOpen(true)}
+                user={user}
+                isTablet={isTablet}
+                isMobile={isMobile}
+                currentTab={'/simulate'}
+              />
+            )}
+            <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Simulation'} maxWidth={maxWidth} />
+              <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
                 <SimulationPanel
                   loading={loading}
                   loadingPhase={loadingPhase}
@@ -266,50 +294,159 @@ function AppContent({
                   currentSimDate={currentSimDate}
                   isMobile={isMobile}
                   form={form}
+                  maxWidth={maxWidth}
                 />
-              }
-            />
-            <Route
-              path="/accounts"
-              element={user ? <AccountsPanel isMobile={isMobile} /> : null}
-            />
-            <Route
-              path="/transactions"
-              element={user ? <TransactionsPanel isMobile={isMobile} /> : null}
-            />
-            <Route
-              path="*"
-              element={user ? <Navigate to="/accounts" replace /> : <Navigate to="/simulate" replace />}
-            />
-          </Routes>
-        </div>
-      </div>
+              </div>
+              {isMobile && (
+                <MobileBottomBar
+                  user={user}
+                  onLoginClick={() => setLoginOpen(true)}
+                  setLogoutOpen={() => {}}
+                  visibleTabs={visibleTabs}
+                  currentTab={'/accounts'}
+                />
+              )}
+            </div>
+          </div>
+        }
+      />
+      <Route
+        path="/accounts"
+        element={user ? (
+          <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
+            {!isMobile && (
+              <CollapsibleSidebar
+                visibleTabs={visibleTabs}
+                form={form}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                onLoginClick={() => setLoginOpen(true)}
+                user={user}
+                isTablet={isTablet}
+                isMobile={isMobile}
+                currentTab={'/accounts'}
+              />
+            )}
+            <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} />
+              <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
+                <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} />
+              </div>
+              {isMobile && (
+                <MobileBottomBar
+                  user={user}
+                  onLoginClick={() => setLoginOpen(true)}
+                  setLogoutOpen={() => {}}
+                  visibleTabs={visibleTabs}
+                  currentTab={'/accounts'}
+                />
+              )}
+            </div>
+          </div>
+        ) : null}
+      />
+      <Route
+        path="/transactions"
+        element={user ? (
+          <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
+            {!isMobile && (
+              <CollapsibleSidebar
+                visibleTabs={visibleTabs}
+                form={form}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                onLoginClick={() => setLoginOpen(true)}
+                user={user}
+                isTablet={isTablet}
+                isMobile={isMobile}
+                currentTab={'/transactions'}
+              />
+            )}
+            <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} />
+              <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
+                <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} />
+              </div>
+              {isMobile && (
+                <MobileBottomBar
+                  user={user}
+                  onLoginClick={() => setLoginOpen(true)}
+                  setLogoutOpen={() => {}}
+                  visibleTabs={visibleTabs}
+                  currentTab={'/accounts'}
+                />
+              )}
+            </div>
+          </div>
+        ) : null}
+      />
+      <Route
+        path="/accounts/:accountId"
+        element={user ? (
+          <AccountDetailLayout
+            user={user}
+            isMobile={isMobile}
+            isTablet={isTablet}
+            visibleTabs={visibleTabs}
+            form={form}
+            handleChange={handleChange}
+            handleSubmit={handleSubmit}
+            setLoginOpen={setLoginOpen}
+            maxWidth={maxWidth}
+          />
+        ) : null}
+      />
+      <Route
+        path="*"
+        element={user ? <Navigate to="/accounts" replace /> : <Navigate to="/simulate" replace />}
+      />
+    </Routes>
+  );
+}
 
-      {isMobile && (
-        <MobileBottomBar
-          user={user}
-          onLoginClick={() => setLoginOpen(true)}
-          setLogoutOpen={setLogoutOpen}
+// Layout for account detail page
+function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth }) {
+  const { accountId } = useParams();
+  const navigate = useNavigate();
+  const { accounts } = useContext(FinancialContext) || {};
+  const account = accounts?.find(acc => String(acc.id) === String(accountId));
+  return (
+    <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
+      {!isMobile && (
+        <CollapsibleSidebar
           visibleTabs={visibleTabs}
+          form={form}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
+          onLoginClick={() => setLoginOpen(true)}
+          user={user}
+          isTablet={isTablet}
+          isMobile={isMobile}
+          currentTab={'/accounts'}
         />
       )}
-
-      <Toast
-        key={toast.message}
-        message={toast.message}
-        type={toast.type}
-        isMobile={isMobile}
-        onClose={() => setToast({ message: '', type: 'default' })}
-      />
-
-      <LoginModal
-        isOpen={loginOpen}
-        onClose={() => setLoginOpen(false)}
-        setToast={setToast}
-        onLoginSuccess={handleLoginSuccess}
-      />
-
-      <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onLogout={handleLogoutSuccess} />
+      <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}> 
+        <Topbar
+          user={user}
+          onLoginClick={() => setLoginOpen(true)}
+          currentPage={'Accounts'}
+          maxWidth={maxWidth}
+          showBackArrow={true}
+          onBack={() => navigate('/accounts')}
+        />
+        <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}> 
+          <AccountDetail maxWidth={maxWidth} account={account} />
+        </div>
+        {isMobile && (
+          <MobileBottomBar
+            user={user}
+            onLoginClick={() => setLoginOpen(true)}
+            setLogoutOpen={() => {}}
+            visibleTabs={visibleTabs}
+            currentTab={'/accounts'}
+          />
+        )}
+      </div>
     </div>
   );
 }
