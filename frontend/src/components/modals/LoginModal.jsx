@@ -126,7 +126,12 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen) {
+    console.log('[LoginModal] Not rendering (isOpen is false)');
+    return null;
+  }
+
+  console.log('[LoginModal] Rendering! isOpen:', isOpen, 'visible:', visible);
 
   return (
     <div style={{
@@ -142,6 +147,12 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
           position: 'relative', transform: visible ? 'translateY(0)' : 'translateY(-40px)',
           opacity: visible ? 1 : 0, transition: 'all 0.2s ease-in-out',
         }}
+        data-debug-visible={visible}
+        data-debug-isopen={isOpen}
+        {...(() => { console.log('[LoginModal] Modal style:', {
+          transform: visible ? 'translateY(0)' : 'translateY(-40px)',
+          opacity: visible ? 1 : 0
+        }); return {}; })()}
       >
         <button onClick={handleClose} style={{
           position: 'absolute', top: '12px', right: '12px',

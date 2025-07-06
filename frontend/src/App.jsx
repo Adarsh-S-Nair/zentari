@@ -165,8 +165,21 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    console.log('[App] loginOpen state changed:', loginOpen);
+  }, [loginOpen]);
+
+  const handleLoginSuccess = () => {
+    setLoginOpen(false);
+  };
+
   return (
     <FinancialProvider setToast={setToast}>
+      <LoginModal
+        isOpen={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
       <Router>
         <AppContent
           loading={loading}
@@ -230,6 +243,10 @@ function AppContent({
     }
   }, [user, userChecked, location.pathname]);
 
+  useEffect(() => {
+    console.log('[AppContent] loginOpen:', loginOpen);
+  }, [loginOpen]);
+
   let currentPage = 'Zentari';
   let currentTab = null;
   if (location.pathname === '/accounts') {
@@ -265,49 +282,59 @@ function AppContent({
     navigate('/simulate');
   };
 
+  useEffect(() => {
+    if (loginOpen) {
+      console.log('[AppContent] LoginModal should be open now');
+    }
+  }, [loginOpen]);
+
   return (
     <Routes>
       <Route
         path="/simulate"
         element={
-          <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
-            {!isMobile && (
-              <CollapsibleSidebar
-                visibleTabs={visibleTabs}
-                form={form}
-                handleChange={handleChange}
-                handleSubmit={handleSubmit}
-                onLoginClick={() => setLoginOpen(true)}
-                user={user}
-                isTablet={isTablet}
-                isMobile={isMobile}
-                currentTab={'/simulate'}
-              />
-            )}
-            <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Simulation'} maxWidth={maxWidth} />
-              <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
-                <SimulationPanel
-                  loading={loading}
-                  loadingPhase={loadingPhase}
-                  result={result}
-                  currentSimDate={currentSimDate}
-                  isMobile={isMobile}
-                  form={form}
-                  maxWidth={maxWidth}
-                />
-              </div>
-              {isMobile && (
-                <MobileBottomBar
-                  user={user}
-                  onLoginClick={() => setLoginOpen(true)}
-                  setLogoutOpen={() => {}}
+          <>
+            {console.log('[AppContent] Rendering /simulate route, loginOpen:', loginOpen)}
+            <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
+              {!isMobile && (
+                <CollapsibleSidebar
                   visibleTabs={visibleTabs}
-                  currentTab={'/accounts'}
+                  form={form}
+                  handleChange={handleChange}
+                  handleSubmit={handleSubmit}
+                  onLoginClick={() => setLoginOpen(true)}
+                  user={user}
+                  isTablet={isTablet}
+                  isMobile={isMobile}
+                  currentTab={'/simulate'}
                 />
               )}
+              <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+                <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Simulation'} maxWidth={maxWidth} />
+                <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
+                  <SimulationPanel
+                    loading={loading}
+                    loadingPhase={loadingPhase}
+                    result={result}
+                    currentSimDate={currentSimDate}
+                    isMobile={isMobile}
+                    form={form}
+                    maxWidth={maxWidth}
+                  />
+                </div>
+                {isMobile && (
+                  <MobileBottomBar
+                    user={user}
+                    onLoginClick={() => setLoginOpen(true)}
+                    setLogoutOpen={() => {}}
+                    visibleTabs={visibleTabs}
+                    currentTab={'/accounts'}
+                  />
+                )}
+              </div>
             </div>
-          </div>
+            {loginOpen && console.log('[AppContent] Rendering LoginModal (loginOpen is true)')}
+          </>
         }
       />
       <Route
