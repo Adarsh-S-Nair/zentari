@@ -24,16 +24,6 @@ class SupabaseService:
             for var, value in original_proxy_vars.items():
                 os.environ[var] = value
     
-    def get_user_environment(self, user_id: str) -> Optional[str]:
-        """Get the environment for a specific user"""
-        try:
-            # Since user_profiles table was dropped, we'll use a default environment
-            # You can modify this logic based on your needs
-            return 'sandbox'  # Default to sandbox environment
-        except Exception as e:
-            print(f"Error getting user environment: {e}")
-            return None
-    
     def store_plaid_accounts(self, user_id: str, item_id: str, accounts: list, environment: str, access_token: str = None):
         """Store Plaid accounts in the database with sync state and balance snapshots"""
         try:
@@ -61,7 +51,7 @@ class SupabaseService:
             # Initialize sync state
             token = access_token or (accounts[0].get('access_token') if accounts else None)
             if token:
-                self._initialize_sync_state(user_id, item_id, token)
+                self.create_or_update_plaid_item(user_id, item_id, token)
             
             return {
                 "success": True, 
@@ -160,7 +150,9 @@ class SupabaseService:
             'subtype': account.get('subtype'),
             'balances': balances,
             'access_token': account.get('access_token'),
-            'account_key': account_key
+            'account_key': account_key,
+            'auto_sync': True,
+            'update_success': True
         }
         
         if institution_uuid:
@@ -216,29 +208,35 @@ class SupabaseService:
             print(f"Error inserting account: {e}")
             return None
     
-    def _initialize_sync_state(self, user_id: str, item_id: str, access_token: str):
-        """Initialize or update sync state for a Plaid Item"""
+    def create_or_update_plaid_item(self, user_id: str, item_id: str, access_token: str, transaction_cursor: str = None, last_transaction_sync: str = None):
+        # Check if a sync state already exists for this user and item
         try:
             existing = self.client.table('plaid_items').select('id').eq('user_id', user_id).eq('item_id', item_id).execute()
-            
+
+            # Prepare the sync state data to update or insert
+            sync_state_data = {
+                'access_token': access_token,
+                'updated_at': 'now()'
+            }
+            if transaction_cursor is not None:
+                sync_state_data['transaction_cursor'] = transaction_cursor
+            if last_transaction_sync is not None:
+                sync_state_data['last_transaction_sync'] = last_transaction_sync
+
             if existing.data:
-                # Update existing sync state
-                self.client.table('plaid_items').update({
-                    'access_token': access_token,
-                    'updated_at': 'now()'
-                }).eq('user_id', user_id).eq('item_id', item_id).execute()
+                # Update the existing sync state
+                self.client.table('plaid_items').update(sync_state_data).eq('user_id', user_id).eq('item_id', item_id).execute()
             else:
-                # Create new sync state
-                sync_state_data = {
+                # Insert a new sync state for this user and item
+                sync_state_data.update({
                     'user_id': user_id,
                     'item_id': item_id,
-                    'access_token': access_token,
                     'sync_status': 'idle'
-                }
+                })
                 self.client.table('plaid_items').insert(sync_state_data).execute()
-                
         except Exception as e:
-            print(f"Error initializing sync state: {e}")
+            # Log any errors that occur during the sync state update/insert
+            print(f"Error creating or updating plaid item: {e}")
     
     def _store_initial_balance_snapshot(self, account_uuid: str, balances: dict):
         """Store initial balance snapshot for new account"""
@@ -268,7 +266,7 @@ class SupabaseService:
                 'current_balance': snapshot_balances['current'],
                 'limit_balance': snapshot_balances['limit'],
                 'currency_code': snapshot_balances['iso_currency_code'],
-                'snapshot_date': date.today().isoformat()
+                'recorded_at': date.today().isoformat()
             }
             
             self.client.table('account_snapshots').insert(snapshot_data).execute()
@@ -350,80 +348,56 @@ class SupabaseService:
             return {"success": False, "error": str(e)}
     
     # Account Snapshot Methods
-    def store_account_snapshot(self, account_id: str, balances: dict, snapshot_date: str = None):
-        """Store balance snapshot for an account"""
-        try:
-            from datetime import date
-            
-            balance_date = date.fromisoformat(snapshot_date) if snapshot_date else date.today()
-            
-            # Check if snapshot exists
-            existing = self.client.table('account_snapshots').select('id').eq('account_id', account_id).eq('snapshot_date', balance_date.isoformat()).execute()
-            
-            snapshot_data = {
-                'account_id': account_id,
-                'available_balance': balances.get('available'),
-                'current_balance': balances.get('current'),
-                'limit_balance': balances.get('limit'),
-                'currency_code': balances.get('iso_currency_code', 'USD'),
-                'snapshot_date': balance_date.isoformat()
-            }
-            
-            if existing.data:
-                # Update existing
-                self.client.table('account_snapshots').update({
-                    'available_balance': snapshot_data['available_balance'],
-                    'current_balance': snapshot_data['current_balance'],
-                    'limit_balance': snapshot_data['limit_balance'],
-                    'currency_code': snapshot_data['currency_code'],
-                    'recorded_at': 'now()'
-                }).eq('account_id', account_id).eq('snapshot_date', balance_date.isoformat()).execute()
-            else:
-                # Create new
-                self.client.table('account_snapshots').insert(snapshot_data).execute()
-            
-            return {"success": True}
-        except Exception as e:
-            print(f"Error storing account snapshot: {e}")
-            return {"success": False, "error": str(e)}
-    
+    def store_account_snapshot(self, account_id: str, balances: dict):
+        """Store a balance snapshot for an account (no snapshot_date, just recorded_at)"""
+        from datetime import datetime
+        now = datetime.utcnow().isoformat()
+        snapshot_data = {
+            'account_id': account_id,
+            'available_balance': balances.get('available'),
+            'current_balance': balances.get('current'),
+            'limit_balance': balances.get('limit'),
+            'currency_code': balances.get('iso_currency_code', 'USD'),
+            'recorded_at': now
+        }
+        self.client.table('account_snapshots').insert(snapshot_data).execute()
+
     def get_account_snapshots(self, account_id: str, start_date: str = None, end_date: str = None, limit: int = 100):
-        """Get balance snapshots for an account within date range"""
-        try:
-            query = self.client.table('account_snapshots').select('*').eq('account_id', account_id)
-            
-            if start_date:
-                query = query.gte('snapshot_date', start_date)
-            if end_date:
-                query = query.lte('snapshot_date', end_date)
-            
-            response = query.order('snapshot_date', desc=True).limit(limit).execute()
-            return {"success": True, "snapshots": response.data}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+        """Get account snapshots for an account, optionally filtered by recorded_at date range"""
+        query = self.client.table('account_snapshots').select('*').eq('account_id', account_id)
+        if start_date:
+            query = query.gte('recorded_at', start_date)
+        if end_date:
+            query = query.lte('recorded_at', end_date)
+        response = query.order('recorded_at', desc=True).limit(limit).execute()
+        return response.data if response.data else []
     
     # Account Retrieval Methods
-    def get_user_plaid_accounts(self, user_id: str, environment: str):
-        """Get all Plaid accounts for a user with institution data"""
+    def get_user_accounts(self, user_id: str):
+        """Get all accounts for a user (no institution join)"""
         try:
-            response = self.client.table('accounts').select('*, institutions(id, name, logo, primary_color, url)').eq('user_id', user_id).execute()
-            
-            accounts = []
-            for account in response.data:
-                account_data = account.copy()
-                if account.get('institutions'):
-                    institution = account['institutions']
-                    account_data['institution_name'] = institution.get('name')
-                    account_data['institution_logo'] = institution.get('logo')
-                    account_data['institution_primary_color'] = institution.get('primary_color')
-                    account_data['institution_url'] = institution.get('url')
-                account_data.pop('institutions', None)
-                accounts.append(account_data)
-            
-            return {"success": True, "accounts": accounts}
+            response = self.client.table('accounts').select('*').eq('user_id', user_id).execute()
+            return {"success": True, "accounts": response.data}
         except Exception as e:
-            print(f"Error getting user Plaid accounts: {e}")
+            print(f"Error getting user accounts: {e}")
             return {"success": False, "error": str(e)}
+
+    def get_institution_data(self, institution_ids):
+        """Fetch institution info for a list of institution_ids. Returns a dict mapping id to info."""
+        if not institution_ids:
+            return {}
+        try:
+            # Remove duplicates and nulls
+            ids = [iid for iid in set(institution_ids) if iid]
+            if not ids:
+                return {}
+            response = self.client.table('institutions').select('id, name, logo, primary_color, url').in_('id', ids).execute()
+            if not response.data:
+                return {}
+            return {inst['id']: inst for inst in response.data}
+        except Exception as e:
+            print(f"Error getting institution data for ids {institution_ids}: {e}")
+            return {}
     
     # Transaction Methods (simplified)
     def store_transactions(self, transactions: list):
@@ -586,6 +560,95 @@ class SupabaseService:
         except Exception as e:
             print(f"Error getting categories: {e}")
             return {"success": False, "error": str(e)}
+
+    def update_balances_and_snapshots(self, user_id: str, balances: list):
+        """
+        For each account in balances (dict with account_id, balances, item_id, etc.):
+        - Update accounts.balances and accounts.updated_at
+        - Update plaid_items.last_balance_sync
+        - Insert into account_snapshots
+        """
+        from datetime import datetime, date
+        now = datetime.utcnow().isoformat()
+        today = date.today().isoformat()
+        updated_items = set()
+        for acct in balances:
+            plaid_account_id = acct.get('account_id')
+            item_id = acct.get('item_id')
+            bal = acct.get('balances', {})
+            # Look up internal UUID for this account
+            response = self.client.table('accounts').select('id').eq('account_id', plaid_account_id).eq('user_id', user_id).single().execute()
+            if not response.data or 'id' not in response.data:
+                print(f"[update_balances_and_snapshots] No internal account found for Plaid account_id {plaid_account_id} and user_id {user_id}")
+                continue
+            account_uuid = response.data['id']
+            # Update accounts table using internal UUID
+            self.client.table('accounts').update({
+                'balances': bal,
+                'updated_at': now
+            }).eq('id', account_uuid).execute()
+            # Insert into account_snapshots (no snapshot_date)
+            snapshot_data = {
+                'account_id': account_uuid,
+                'available_balance': bal.get('available'),
+                'current_balance': bal.get('current'),
+                'limit_balance': bal.get('limit'),
+                'currency_code': bal.get('iso_currency_code', 'USD'),
+                'recorded_at': now
+            }
+            self.client.table('account_snapshots').insert(snapshot_data).execute()
+            # Track which items to update
+            if item_id:
+                updated_items.add(item_id)
+        # Update last_balance_sync for each item
+        for item_id in updated_items:
+            self.client.table('plaid_items').update({
+                'last_balance_sync': now
+            }).eq('user_id', user_id).eq('item_id', item_id).execute()
+
+    def get_account_by_id(self, id: str):
+        # Fetch a single account by its internal UUID
+        try:
+            response = self.client.table('accounts').select('*').eq('id', id).single().execute()
+            if response.data:
+                return {'success': True, 'account': response.data}
+            return {'success': False, 'error': 'Account not found'}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def delete_account(self, id: str):
+        # Delete a single account by its internal UUID
+        try:
+            self.client.table('accounts').delete().eq('id', id).execute()
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def count_accounts_for_item(self, item_id: str):
+        # Return the number of accounts associated with a given item_id
+        try:
+            response = self.client.table('accounts').select('account_id', count='exact').eq('item_id', item_id).execute()
+            return response.count if hasattr(response, 'count') else 0
+        except Exception as e:
+            print(f"Error counting accounts for item: {e}")
+            return 0
+
+    def delete_plaid_item(self, user_id: str, item_id: str):
+        # Delete a plaid_item row
+        try:
+            self.client.table('plaid_items').delete().eq('user_id', user_id).eq('item_id', item_id).execute()
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def get_accounts_for_item_with_auto_sync(self, user_id: str, item_id: str):
+        """Return all accounts for a plaid item with auto_sync = True"""
+        try:
+            response = self.client.table('accounts').select('*').eq('user_id', user_id).eq('item_id', item_id).eq('auto_sync', True).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting accounts for item {item_id} with auto_sync: {e}")
+            return []
 
 # Global instance
 _supabase_service = None

@@ -11,6 +11,7 @@ from plaid.model.transactions_get_request import TransactionsGetRequest
 from plaid.model.transactions_get_request_options import TransactionsGetRequestOptions
 from plaid.model.transactions_sync_request import TransactionsSyncRequest
 from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
+from plaid.model.accounts_balance_get_request_options import AccountsBalanceGetRequestOptions
 from services.plaid_config import get_plaid_client
 from datetime import datetime, timedelta
 import json
@@ -163,22 +164,6 @@ class PlaidService:
                 "error": str(e)
             }
     
-    def get_sandbox_test_credentials(self):
-        """
-        Get test credentials for sandbox mode
-        """
-        if self.environment != 'sandbox':
-            return {
-                "success": False,
-                "error": "Sandbox credentials are only available in sandbox environment"
-            }
-        
-        return {
-            "success": True,
-            "username": "user_good",
-            "password": "pass_good"
-        }
-    
     def get_transactions(self, access_token: str, account_ids: list = None, days_back: int = 730):
         """
         Get transactions for given account IDs over the specified period
@@ -261,13 +246,16 @@ class PlaidService:
         This is more efficient than get_transactions for regular updates
         """
         try:
-            request = TransactionsSyncRequest(
-                access_token=access_token,
-                cursor=cursor
-            )
-            
+            if cursor is not None:
+                request = TransactionsSyncRequest(
+                    access_token=access_token,
+                    cursor=cursor
+                )
+            else:
+                request = TransactionsSyncRequest(
+                    access_token=access_token
+                )
             response = self.client.transactions_sync(request)
-            
             transactions = []
             for transaction in response.added:
                 # Convert PersonalFinanceCategory object to dict if it exists
@@ -282,17 +270,12 @@ class PlaidService:
                     except Exception as e:
                         print(f"Error converting personal_finance_category: {e}")
                         personal_finance_category = None
-
-                # Determine the best icon URL
                 merchant_logo = getattr(transaction, 'logo_url', None)
                 category_icon = getattr(transaction, 'personal_finance_category_icon_url', None)
                 icon_url = merchant_logo if merchant_logo else category_icon
-
-                # Get the primary category
                 primary_category = None
                 if personal_finance_category and isinstance(personal_finance_category, dict):
                     primary_category = personal_finance_category.get('primary')
-
                 transaction_data = {
                     "plaid_transaction_id": transaction.transaction_id,
                     "date": transaction.date.isoformat() if transaction.date else None,
@@ -308,7 +291,6 @@ class PlaidService:
                     "account_id": transaction.account_id
                 }
                 transactions.append(transaction_data)
-            
             return {
                 "success": True,
                 "added": transactions,
@@ -332,7 +314,7 @@ class PlaidService:
         try:
             request = AccountsBalanceGetRequest(
                 access_token=access_token,
-                options=AccountsGetRequestOptions(
+                options=AccountsBalanceGetRequestOptions(
                     account_ids=account_ids
                 ) if account_ids else None
             )
@@ -363,3 +345,18 @@ class PlaidService:
                 "success": False,
                 "error": str(e)
             }
+    
+    def remove_item(self, access_token: str):
+        print("Calling Plaid /item/remove for access_token:", access_token)
+        # Call Plaid's /item/remove endpoint to deauthorize the item
+        try:
+            response = self.client.item_remove({'access_token': access_token})
+            print("Plaid /item/remove response:", response)
+            return {'success': True}
+        except Exception as e:
+            print("Plaid /item/remove error:", e)
+            return {'success': False, 'error': str(e)}
+
+def get_plaid_service(environment: str = 'sandbox'):
+    """Factory function to get a PlaidService instance for the given environment."""
+    return PlaidService(environment)

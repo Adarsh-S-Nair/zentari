@@ -8,6 +8,7 @@ from models.plaid_schema import (
 )
 import os
 from typing import Optional
+from datetime import datetime
 
 router = APIRouter(prefix="/plaid", tags=["plaid"])
 
@@ -45,92 +46,83 @@ async def exchange_public_token(request: PublicTokenRequest, authorization: Opti
     
     return TokenExchangeResponse(**result)
 
-@router.post("/accounts", response_model=AccountsResponse)
-async def get_accounts(request: PublicTokenRequest, user_id: str, authorization: Optional[str] = Header(None)):
-    """
-    Get accounts for a given public token and store them in the database
-    """
-    # Use sandbox environment for development
-    supabase_service = get_supabase_service()
-    user_environment = 'sandbox'  # Default to sandbox for development
-    
-    # Create Plaid service with user's environment
-    plaid_service = PlaidService(environment=user_environment)
-    
-    # First exchange the public token for an access token
-    exchange_result = plaid_service.exchange_public_token(request.public_token)
-    
-    if not exchange_result["success"]:
-        raise HTTPException(status_code=400, detail=exchange_result["error"])
-    
-    # Then get the accounts using the access token
-    accounts_result = plaid_service.get_accounts(exchange_result["access_token"])
-    
+def fetch_and_store_accounts(supabase_service, plaid_service, user_id, item_id, access_token, environment):
+    # Fetch accounts from Plaid using the access token
+    accounts_result = plaid_service.get_accounts(access_token)
     if not accounts_result["success"]:
         raise HTTPException(status_code=400, detail=accounts_result["error"])
-    
-    # Add access token to each account for storage
-    access_token = exchange_result["access_token"]
+
+    # Attach access token to each account for storage
     accounts_with_token = []
     for account in accounts_result["accounts"]:
         account_with_token = account.copy()
         account_with_token["access_token"] = access_token
         accounts_with_token.append(account_with_token)
-    
-    # Store the accounts in the database (access token is now included with each account)
+
+    # Store the accounts in the database
     accounts_store_result = supabase_service.store_plaid_accounts(
         user_id=user_id,
-        item_id=exchange_result["item_id"],
+        item_id=item_id,
         accounts=accounts_with_token,
-        environment=user_environment,
+        environment=environment,
         access_token=access_token
     )
-    
     if not accounts_store_result["success"]:
         print(f"Warning: Failed to store accounts: {accounts_store_result.get('error')}")
-    
-    # Fetch and store transactions for the new accounts
-    try:
-        # Get account IDs for transaction fetching
-        account_ids = [account["account_id"] for account in accounts_result["accounts"]]
-        
-        # Fetch transactions (last 2 years by default)
-        transactions_result = plaid_service.get_transactions(
-            access_token=access_token,
-            account_ids=account_ids,
-            days_back=730  # 2 years
-        )
-        
-        if transactions_result["success"] and transactions_result["transactions"]:
-            # Store transactions in database
-            transactions_store_result = supabase_service.store_transactions(
-                transactions_result["transactions"]
-            )
-            
-            if transactions_store_result["success"]:
-                print(f"Successfully stored {transactions_store_result.get('stored_count', 0)} transactions")
-            else:
-                print(f"Warning: Failed to store transactions: {transactions_store_result.get('error')}")
+
+    # Return the Plaid accounts result and access token for further use
+    return accounts_result, access_token
+
+def fetch_and_store_transactions(supabase_service, plaid_service, user_id, item_id, access_token):
+    # Perform initial full sync using /transactions/sync (cursor=None)
+    sync_result = plaid_service.sync_transactions(access_token=access_token, cursor=None)
+
+    if sync_result["success"]:
+        # Store new transactions in the database
+        transactions_store_result = supabase_service.store_transactions(sync_result["added"])
+        if transactions_store_result["success"]:
+            print(f"Successfully stored {transactions_store_result.get('stored_count', 0)} transactions")
         else:
-            print(f"No transactions found or error fetching transactions: {transactions_result.get('error', 'No transactions')}")
-            
+            print(f"Warning: Failed to store transactions: {transactions_store_result.get('error')}")
+
+        # Prepare sync state info for plaid_items
+        cursor = sync_result.get("next_cursor")
+        last_sync = datetime.utcnow().isoformat()
+
+        # Update or create the plaid_items sync state with cursor and sync time
+        supabase_service.create_or_update_plaid_item(
+            user_id=user_id,
+            item_id=item_id,
+            access_token=access_token,
+            transaction_cursor=cursor,
+            last_transaction_sync=last_sync
+        )
+    else:
+        # Log if there was an error or no transactions found
+        print(f"No transactions found or error fetching transactions: {sync_result.get('error', 'No transactions')}")
+
+@router.post("/accounts", response_model=AccountsResponse)
+async def get_accounts(request: PublicTokenRequest, user_id: str, authorization: Optional[str] = Header(None)):
+    """
+    Get accounts for a given public token and store them in the database
+    """
+    supabase_service = get_supabase_service()
+    user_environment = 'sandbox'  # Default to sandbox for development
+    plaid_service = PlaidService(environment=user_environment)
+    # Exchange public token for access token
+    exchange_result = plaid_service.exchange_public_token(request.public_token)
+    if not exchange_result["success"]:
+        raise HTTPException(status_code=400, detail=exchange_result["error"])
+    
+    # Fetch and store accounts
+    accounts_result, access_token = fetch_and_store_accounts(
+        supabase_service, plaid_service, user_id, exchange_result["item_id"], exchange_result["access_token"], user_environment
+    )
+    # Fetch and store transactions and update plaid item sync state
+    try:
+        fetch_and_store_transactions(
+            supabase_service, plaid_service, user_id, exchange_result["item_id"], access_token
+        )
     except Exception as e:
         print(f"Error fetching transactions: {e}")
-        # Don't fail the entire request if transaction fetching fails
-    
-    return AccountsResponse(**accounts_result)
-
-
-
-@router.get("/sandbox-credentials", response_model=SandboxCredentialsResponse)
-async def get_sandbox_credentials():
-    """
-    Get test credentials for sandbox mode
-    """
-    plaid_service = PlaidService(environment='sandbox')
-    credentials = plaid_service.get_sandbox_test_credentials()
-    
-    if not credentials["success"]:
-        raise HTTPException(status_code=400, detail=credentials["error"])
-    
-    return SandboxCredentialsResponse(**credentials) 
+    return AccountsResponse(**accounts_result) 
