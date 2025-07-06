@@ -127,11 +127,8 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   }
 
   if (!isOpen) {
-    console.log('[LoginModal] Not rendering (isOpen is false)');
     return null;
   }
-
-  console.log('[LoginModal] Rendering! isOpen:', isOpen, 'visible:', visible);
 
   return (
     <div style={{

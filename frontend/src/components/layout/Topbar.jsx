@@ -22,10 +22,6 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
     }
   }, [user]);
 
-  useEffect(() => {
-    console.log('[Topbar] user:', user);
-  }, [user]);
-
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -142,9 +138,7 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
               <div
                 role="button"
                 onClick={() => {
-                  console.log('[Topbar] Log in / Sign up button clicked');
                   if (onLoginClick) {
-                    console.log('[Topbar] Calling onLoginClick');
                     onLoginClick();
                   } else {
                     console.warn('[Topbar] onLoginClick is not defined');

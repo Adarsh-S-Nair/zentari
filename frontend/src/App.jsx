@@ -165,10 +165,6 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    console.log('[App] loginOpen state changed:', loginOpen);
-  }, [loginOpen]);
-
   const handleLoginSuccess = () => {
     setLoginOpen(false);
   };
@@ -243,10 +239,6 @@ function AppContent({
     }
   }, [user, userChecked, location.pathname]);
 
-  useEffect(() => {
-    console.log('[AppContent] loginOpen:', loginOpen);
-  }, [loginOpen]);
-
   let currentPage = 'Zentari';
   let currentTab = null;
   if (location.pathname === '/accounts') {
@@ -268,12 +260,6 @@ function AppContent({
     currentTab = '/accounts';
   }
 
-  // Debug logging for account detail header
-  console.log('[AppContent] accountId:', accountId);
-  console.log('[AppContent] accounts:', accounts);
-  console.log('[AppContent] accountDetailAccount:', accountDetailAccount);
-  console.log('[AppContent] currentPage:', currentPage);
-
   const handleLoginSuccess = () => {
     navigate('/accounts');
   };
@@ -284,7 +270,6 @@ function AppContent({
 
   useEffect(() => {
     if (loginOpen) {
-      console.log('[AppContent] LoginModal should be open now');
     }
   }, [loginOpen]);
 
@@ -294,7 +279,6 @@ function AppContent({
         path="/simulate"
         element={
           <>
-            {console.log('[AppContent] Rendering /simulate route, loginOpen:', loginOpen)}
             <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
               {!isMobile && (
                 <CollapsibleSidebar
@@ -333,7 +317,6 @@ function AppContent({
                 )}
               </div>
             </div>
-            {loginOpen && console.log('[AppContent] Rendering LoginModal (loginOpen is true)')}
           </>
         }
       />

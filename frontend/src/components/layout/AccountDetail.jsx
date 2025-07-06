@@ -9,19 +9,27 @@ import Toggle from '../ui/Toggle';
 const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   const { accountId } = useParams();
   const navigate = useNavigate();
-  const { accounts } = useContext(FinancialContext) || {};
+  const { accounts, transactions = [] } = useContext(FinancialContext) || {};
   // Use propAccount if provided, otherwise fallback to context lookup
   const account = propAccount || accounts?.find(acc => String(acc.id) === String(accountId));
 
   if (!accounts && !account) {
-    return <div style={{ padding: 32, fontSize: 18, color: '#222' }}>Loading...</div>;
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div className="flex items-center justify-center">
+            <div className="animate-spin" style={{ width: 36, height: 36, border: '4px solid #e5e7eb', borderTop: '4px solid #3b82f6', borderRadius: '50%' }} />
+          </div>
+          <div style={{ fontSize: 18, color: '#222', marginTop: 12 }}>Loading...</div>
+        </div>
+      </div>
+    );
   }
   if (!account) {
     return <div style={{ padding: 32, fontSize: 18, color: '#dc2626' }}>Account not found.</div>;
   }
   const lastFour = account.mask ? String(account.mask).slice(-4) : '';
   const balances = account.balances || {};
-  const { transactions = [] } = useContext(FinancialContext) || {};
   // Filter transactions for this account
   const accountTransactions = transactions.filter(
     t => t.accounts?.account_id === account.account_id
