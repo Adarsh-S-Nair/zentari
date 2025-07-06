@@ -38,4 +38,5 @@ if __name__ == "__main__":
     user_ids = get_all_user_ids()
     print(f"Found {len(user_ids)} users.")
     for user_id in user_ids:
-        sync_transactions_for_user(user_id) 
+        sync_transactions_for_user(user_id)
+    print(f"Sync job complete. Processed {len(user_ids)} users.") 
