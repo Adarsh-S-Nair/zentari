@@ -204,38 +204,36 @@ function App() {
   };
 
   return (
-    <div className="full-viewport">
-      <Router>
-        <FinancialProvider>
-          <AppContent
-            loading={loading}
-            loadingPhase={loadingPhase}
-            loginOpen={loginOpen}
-            setLoginOpen={setLoginOpen}
-            user={user}
-            userChecked={userChecked}
-            setUser={setUser}
-            result={result}
-            setResult={setResult}
-            toast={toast}
-            setToast={setToast}
-            currentSimDate={currentSimDate}
-            setCurrentSimDate={setCurrentSimDate}
-            logoutOpen={logoutOpen}
-            setLogoutOpen={setLogoutOpen}
-            isTablet={isTablet}
-            isMobile={isMobile}
-            allTabs={allTabs}
-            visibleTabs={visibleTabs}
-            form={form}
-            setForm={setForm}
-            handleChange={handleChange}
-            handleSubmit={handleSubmit}
-            circleUsers={circleUsers}
-          />
-        </FinancialProvider>
-      </Router>
-    </div>
+    <Router>
+      <FinancialProvider>
+        <AppContent
+          loading={loading}
+          loadingPhase={loadingPhase}
+          loginOpen={loginOpen}
+          setLoginOpen={setLoginOpen}
+          user={user}
+          userChecked={userChecked}
+          setUser={setUser}
+          result={result}
+          setResult={setResult}
+          toast={toast}
+          setToast={setToast}
+          currentSimDate={currentSimDate}
+          setCurrentSimDate={setCurrentSimDate}
+          logoutOpen={logoutOpen}
+          setLogoutOpen={setLogoutOpen}
+          isTablet={isTablet}
+          isMobile={isMobile}
+          allTabs={allTabs}
+          visibleTabs={visibleTabs}
+          form={form}
+          setForm={setForm}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
+          circleUsers={circleUsers}
+        />
+      </FinancialProvider>
+    </Router>
   );
 }
 
