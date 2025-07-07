@@ -1,8 +1,5 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { FiBarChart2, FiFolder, FiLogIn } from 'react-icons/fi'
-import { FaUserCircle } from 'react-icons/fa'
-import UserProfileTab from './UserProfileTab'
 
 export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen, visibleTabs }) {
   const navigate = useNavigate()

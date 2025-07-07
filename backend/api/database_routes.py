@@ -158,4 +158,41 @@ async def get_account_plaid_item(account_id: str, authorization: Optional[str] =
     plaid_item = dict(response.data)
     # Remove sensitive fields if present
     plaid_item.pop('access_token', None)
-    return {"success": True, "plaid_item": plaid_item} 
+    return {"success": True, "plaid_item": plaid_item}
+
+@router.get("/user-plaid-items/{user_id}")
+async def get_user_plaid_items(user_id: str, authorization: Optional[str] = Header(None)):
+    """
+    Get all plaid_items for a user.
+    """
+    try:
+        supabase_service = get_supabase_service()
+        result = supabase_service.get_user_sync_states(user_id)
+        if not result["success"]:
+            return {"success": True, "plaid_items": []}
+        plaid_items = result["sync_states"]
+        # Remove sensitive fields
+        for item in plaid_items:
+            item.pop('access_token', None)
+        return {"success": True, "plaid_items": plaid_items}
+    except Exception as e:
+        print(f"Exception in get_user_plaid_items for user {user_id}: {str(e)}")
+        return {"success": True, "plaid_items": []}
+
+@router.delete("/user/{user_id}")
+async def delete_user_completely(user_id: str, authorization: Optional[str] = Header(None)):
+    """
+    Delete all user data (accounts, plaid_items, transactions, etc.) and remove the user from Supabase Auth.
+    """
+    supabase_service = get_supabase_service()
+    # Step 1: Delete all accounts and related data
+    accounts_result = await delete_all_accounts_for_user(user_id, authorization)
+    if not accounts_result.get("success"):
+        raise HTTPException(status_code=400, detail="Failed to delete user accounts: " + str(accounts_result.get("error")))
+    # Step 2: Delete user from Supabase Auth
+    try:
+        # This uses the service_role key, so it's safe to call admin methods
+        supabase_service.client.auth.admin.delete_user(user_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete user from Supabase Auth: {e}")
+    return {"success": True, "message": f"User {user_id} and all associated data deleted."} 

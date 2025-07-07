@@ -19,6 +19,7 @@ export const FinancialProvider = ({ children, setToast }) => {
   const [transactionsLoading, setTransactionsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [user, setUser] = useState(null)
+  const [plaidItems, setPlaidItems] = useState({})
 
   useEffect(() => {
     const getUser = async () => {
@@ -28,6 +29,7 @@ export const FinancialProvider = ({ children, setToast }) => {
         fetchAccounts(user.id)
         fetchTransactions(user.id)
         fetchCategories()
+        fetchPlaidItems(user.id)
       }
     }
     getUser()
@@ -39,10 +41,12 @@ export const FinancialProvider = ({ children, setToast }) => {
         fetchAccounts(session.user.id)
         fetchTransactions(session.user.id)
         fetchCategories()
+        fetchPlaidItems(session.user.id)
       } else {
         setAccounts([])
         setTransactions([])
         setCategories([])
+        setPlaidItems({})
       }
     })
 
@@ -151,6 +155,31 @@ export const FinancialProvider = ({ children, setToast }) => {
     }
   }
 
+  const fetchPlaidItems = async (userId) => {
+    if (!userId) return;
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '');
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-plaid-items/${userId}`;
+      const response = await fetch(fullUrl);
+      if (!response.ok) return setPlaidItems({});
+      const result = await response.json();
+      if (result.success && Array.isArray(result.plaid_items)) {
+        // Map by item_id for fast lookup
+        const map = {};
+        for (const item of result.plaid_items) {
+          if (item.item_id) map[item.item_id] = item;
+        }
+        setPlaidItems(map);
+      } else {
+        setPlaidItems({});
+      }
+    } catch (e) {
+      setPlaidItems({});
+    }
+  };
+
   const refreshAccounts = () => {
     if (user) {
       fetchAccounts(user.id)
@@ -181,7 +210,8 @@ export const FinancialProvider = ({ children, setToast }) => {
     fetchAccounts,
     fetchTransactions,
     fetchCategories,
-    setToast
+    setToast,
+    plaidItems,
   }
 
   return (

@@ -42,6 +42,7 @@ function App() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const isTablet = useMediaQuery({ maxWidth: 1024 });
   const isMobile = useMediaQuery({ maxWidth: 670 });
+  const [circleUsers, setCircleUsers] = useState([]);
 
   const allTabs = [
     { label: 'Accounts', icon: <IoFolderOpen size={18} />, route: '/accounts', hasContent: false, requiresAuth: true },
@@ -164,6 +165,40 @@ function App() {
     };
   }, []);
 
+  // Fetch avatar_url for authenticated user and build circleUsers array
+  useEffect(() => {
+    const buildCircleUsers = async () => {
+      let avatarUrl = null;
+      if (user) {
+        // Try user_metadata first
+        avatarUrl = user.user_metadata?.avatar_url;
+        // If not present, fetch from profiles
+        if (!avatarUrl) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('avatar_url')
+            .eq('id', user.id)
+            .single();
+          if (data && data.avatar_url) {
+            avatarUrl = data.avatar_url;
+          }
+        }
+      }
+      setCircleUsers([
+        { id: 'combined', name: 'Combined' },
+        user ? {
+          id: user.id,
+          name: user.user_metadata?.display_name || user.email || 'User',
+          avatar_url: avatarUrl,
+        } : null,
+        { id: 'user1', name: 'Alice' },
+        { id: 'user2', name: 'Bob' },
+        { id: 'user3', name: 'Charlie' },
+      ].filter(Boolean));
+    };
+    buildCircleUsers();
+  }, [user]);
+
   const handleLoginSuccess = () => {
     setLoginOpen(false);
   };
@@ -200,6 +235,7 @@ function App() {
           setForm={setForm}
           handleChange={handleChange}
           handleSubmit={handleSubmit}
+          circleUsers={circleUsers}
         />
       </Router>
     </FinancialProvider>
@@ -210,7 +246,7 @@ function AppContent({
   loading, loadingPhase, loginOpen, setLoginOpen, user, userChecked, setUser,
   result, setResult, toast, setToast, currentSimDate, setCurrentSimDate,
   logoutOpen, setLogoutOpen, isTablet, isMobile, allTabs, visibleTabs,
-  form, setForm, handleChange, handleSubmit
+  form, setForm, handleChange, handleSubmit, circleUsers
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -291,7 +327,7 @@ function AppContent({
             <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
               <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} />
               <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
-                <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} />
+                <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
               </div>
               {isMobile && (
                 <MobileBottomBar
@@ -326,7 +362,7 @@ function AppContent({
             <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
               <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} />
               <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
-                <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} />
+                <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
               </div>
               {isMobile && (
                 <MobileBottomBar

@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
 import { FaCircleCheck, FaCircleXmark, FaWallet, FaCreditCard } from 'react-icons/fa6';
@@ -10,7 +10,7 @@ import Spinner from '../ui/Spinner';
 const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   const { accountId } = useParams();
   const navigate = useNavigate();
-  const { accounts, transactions = [], loading } = useContext(FinancialContext) || {};
+  const { accounts, transactions = [], loading, plaidItems } = useContext(FinancialContext) || {};
   // Use propAccount if provided, otherwise fallback to context lookup
   const account = propAccount || accounts?.find(acc => String(acc.id) === String(accountId));
 
@@ -19,29 +19,8 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   const [autoSyncError, setAutoSyncError] = useState(null);
   const [localAutoSync, setLocalAutoSync] = useState(account?.auto_sync);
 
-  // State for plaid_item sync info
-  const [plaidItem, setPlaidItem] = useState(null);
-  const [plaidItemLoading, setPlaidItemLoading] = useState(true);
-  const [plaidItemError, setPlaidItemError] = useState(null);
-
-  useEffect(() => {
-    if (!account) return;
-    setPlaidItemLoading(true);
-    setPlaidItemError(null);
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
-    const url = `${baseUrl.replace(/\/$/, '')}/database/account/${account.id}/plaid-item`;
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setPlaidItem(data.plaid_item);
-        } else {
-          setPlaidItemError(data.error || 'Failed to fetch sync info');
-        }
-      })
-      .catch(err => setPlaidItemError(err.message))
-      .finally(() => setPlaidItemLoading(false));
-  }, [account]);
+  // Get plaid item from context
+  const plaidItem = account?.item_id ? plaidItems?.[account.item_id] : null;
 
   if (loading || (!accounts && !account)) {
     return (
@@ -220,66 +199,56 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
             </div>
           )}
           {/* Last Transaction Sync Row (Plaid) */}
-          {plaidItemLoading ? (
-            <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', fontSize: 11, color: '#64748b', fontWeight: 400, margin: '-2px 0 10px 0', padding: '0 18px 0 0', minHeight: 20 }}>
-              <span>Loading sync info...</span>
-            </div>
-          ) : plaidItemError ? (
-            <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', fontSize: 11, color: '#dc2626', fontWeight: 400, margin: '-2px 0 10px 0', padding: '0 18px 0 0', minHeight: 20 }}>
-              <span>Error loading sync info</span>
-            </div>
-          ) : plaidItem && (
-            <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, fontSize: 11, color: '#64748b', fontWeight: 400, margin: '-2px 0 10px 0', padding: '0 18px 0 0', minHeight: 20 }}>
-              <span style={{ display: 'flex', alignItems: 'center' }}>
-                {account.update_success ? (
-                  <FaCircleCheck size={12} style={{ color: 'var(--color-success)', marginRight: 3 }} />
-                ) : (
-                  <FaCircleXmark size={12} style={{ color: 'var(--color-danger)', marginRight: 3 }} />
-                )}
-                <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>
-                  {plaidItem.last_transaction_sync ? formatLastUpdated(plaidItem.last_transaction_sync) : 'Never synced'}
-                </span>
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, fontSize: 11, color: '#64748b', fontWeight: 400, margin: '-2px 0 10px 0', padding: '0 18px 0 0', minHeight: 20 }}>
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              {account.update_success ? (
+                <FaCircleCheck size={12} style={{ color: 'var(--color-success)', marginRight: 3 }} />
+              ) : (
+                <FaCircleXmark size={12} style={{ color: 'var(--color-danger)', marginRight: 3 }} />
+              )}
+              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>
+                {plaidItem && plaidItem.last_transaction_sync ? formatLastUpdated(plaidItem.last_transaction_sync) : 'Never synced'}
               </span>
-              {/* Auto Sync Toggle with label */}
-              {'auto_sync' in account && (
-                <span style={{ display: 'flex', alignItems: 'center', marginLeft: 10 }}>
-                  <span style={{ fontSize: 11, color: '#64748b', fontWeight: 500, marginRight: 5 }}>Auto-Sync</span>
-                  <Toggle
-                    checked={localAutoSync ?? !!account.auto_sync}
-                    onChange={async (checked) => {
-                      setAutoSyncLoading(true);
-                      setAutoSyncError(null);
-                      setLocalAutoSync(checked);
-                      try {
-                        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
-                        const url = `${baseUrl.replace(/\/$/, '')}/database/account/${account.account_id}/auto-sync`;
-                        const res = await fetch(url, {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ auto_sync: checked })
-                        });
-                        const data = await res.json();
-                        if (!data.success) {
-                          setLocalAutoSync(!checked); // revert
-                          setAutoSyncError('Failed to update auto-sync');
-                          alert('Failed to update auto-sync: ' + (data.error || 'Unknown error'));
-                        }
-                      } catch (err) {
+            </span>
+            {/* Auto Sync Toggle with label */}
+            {'auto_sync' in account && (
+              <span style={{ display: 'flex', alignItems: 'center', marginLeft: 10 }}>
+                <span style={{ fontSize: 11, color: '#64748b', fontWeight: 500, marginRight: 5 }}>Auto-Sync</span>
+                <Toggle
+                  checked={localAutoSync ?? !!account.auto_sync}
+                  onChange={async (checked) => {
+                    setAutoSyncLoading(true);
+                    setAutoSyncError(null);
+                    setLocalAutoSync(checked);
+                    try {
+                      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
+                      const url = `${baseUrl.replace(/\/$/, '')}/database/account/${account.account_id}/auto-sync`;
+                      const res = await fetch(url, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ auto_sync: checked })
+                      });
+                      const data = await res.json();
+                      if (!data.success) {
                         setLocalAutoSync(!checked); // revert
                         setAutoSyncError('Failed to update auto-sync');
-                        alert('Failed to update auto-sync: ' + err.message);
-                      } finally {
-                        setAutoSyncLoading(false);
+                        alert('Failed to update auto-sync: ' + (data.error || 'Unknown error'));
                       }
-                    }}
-                    size={isMobileScreen ? 'small' : 'medium'}
-                    color="#6366f1"
-                    disabled={autoSyncLoading}
-                  />
-                </span>
-              )}
-            </div>
-          )}
+                    } catch (err) {
+                      setLocalAutoSync(!checked); // revert
+                      setAutoSyncError('Failed to update auto-sync');
+                      alert('Failed to update auto-sync: ' + err.message);
+                    } finally {
+                      setAutoSyncLoading(false);
+                    }
+                  }}
+                  size={isMobileScreen ? 'small' : 'medium'}
+                  color="#6366f1"
+                  disabled={autoSyncLoading}
+                />
+              </span>
+            )}
+          </div>
 
           {/* Recent Transactions Widget - Card rows, mobile friendly */}
           <div

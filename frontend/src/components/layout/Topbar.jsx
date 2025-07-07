@@ -10,15 +10,30 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
   const [userName, setUserName] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const triggerRef = useRef(null);
 
-  // Fetch user's name from user metadata
+  // Fetch user's name and avatar from user metadata and profiles table
   useEffect(() => {
     if (user) {
-      const userName = user.user_metadata?.display_name || user.email || 'User'
+      const userName = user.user_metadata?.display_name || user.email || 'User';
       setUserName(userName);
+      // Fetch avatar_url from profiles table
+      supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (data && data.avatar_url) {
+            setAvatarUrl(data.avatar_url);
+          } else {
+            setAvatarUrl(null);
+          }
+        });
     } else {
       setUserName('');
+      setAvatarUrl(null);
     }
   }, [user]);
 
@@ -117,7 +132,7 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
                     ...iconButtonStyle,
                     backgroundColor: showMenu ? '#3b82f6' : '#f3f4f6',
                     color: showMenu ? '#fff' : '#374151',
-                    border: showMenu ? '1.5px solid #3b82f6' : '1.5px solid #f3f4f6',
+                    border: showMenu ? '1px solid #3b82f6' : '1px solid #f3f4f6',
                     transition: 'background 0.18s, color 0.18s, border 0.18s, transform 0.16s cubic-bezier(.4,1.5,.5,1)',
                   }}
                   onMouseEnter={e => { if (!showMenu) e.currentTarget.style.backgroundColor = '#e5e7eb'; }}
@@ -125,7 +140,15 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
                   onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.97) translateY(1.5px)'; }}
                   onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
                 >
-                  <FaUser size={16} color={showMenu ? '#fff' : '#374151'} />
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="Profile"
+                      style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', display: 'block', background: '#e5e7eb', padding: 0 }}
+                    />
+                  ) : (
+                    <FaUser size={18} color={showMenu ? '#fff' : '#374151'} />
+                  )}
                 </div>
 
                 <ContextMenu
@@ -180,15 +203,15 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
 };
 
 const iconButtonStyle = {
-  width: 32,
-  height: 32,
+  width: 34,
+  height: 34,
   borderRadius: 9999,
   backgroundColor: '#f3f4f6',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   boxShadow: 'none',
-  border: '1.5px solid #f3f4f6',
+  border: '1px solid #f3f4f6',
   cursor: 'pointer',
   transition: 'background 0.18s, color 0.18s, border 0.18s, transform 0.16s cubic-bezier(.4,1.5,.5,1)',
 };

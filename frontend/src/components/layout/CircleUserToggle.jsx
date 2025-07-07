@@ -68,6 +68,8 @@ export default function CircleUserToggle({ users, selectedUser, onSelectUser, ma
                 boxShadow: selectedUser === user.id ? '0 2px 8px rgba(59,130,246,0.08)' : 'none',
                 transition: 'transform 0.16s cubic-bezier(.4,1.5,.5,1), box-shadow 0.18s, background 0.18s, border 0.18s',
                 transform: 'scale(1)',
+                padding: 0,
+                overflow: 'hidden',
               }}
               aria-label={user.name}
               onMouseEnter={() => setHoveredUser(user.id)}
@@ -76,9 +78,15 @@ export default function CircleUserToggle({ users, selectedUser, onSelectUser, ma
               onMouseLeave={() => setHoveredUser(null)}
             >
               {user.id === 'combined' ? (
-                <FaUsers size={15} />
+                <FaUsers size={14} />
+              ) : user.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.name}
+                  style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', display: 'block', background: 'none', border: 'none', padding: 0, margin: 0 }}
+                />
               ) : (
-                <FaUser size={15} />
+                <FaUser size={14} />
               )}
             </button>
             <InfoBubble

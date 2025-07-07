@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FiFilter } from 'react-icons/fi';
 import { FaSearch, FaChevronRight } from 'react-icons/fa';
 import LightDropdown from '../ui/LightDropdown';
@@ -6,12 +6,20 @@ import { formatCurrency } from '../../utils/formatters';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Spinner, Card, Button } from '../ui';
 import CircleUserToggle from './CircleUserToggle';
+import { supabase } from '../../supabaseClient';
 
-const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
-  const { transactions, transactionsLoading, accounts, categories } = useFinancial();
+const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
+  const { transactions, transactionsLoading, accounts, categories, user } = useFinancial();
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUser, setSelectedUser] = useState(user?.id || 'combined');
   const listRef = useRef(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      setSelectedUser(user.id);
+    }
+  }, [user]);
 
   const accountOptions = [
     { label: 'All Accounts', value: 'all' },
@@ -48,14 +56,9 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
       {/* CircleUserToggle and Filters Row */}
       <div style={{ width: '100%', maxWidth: maxWidth, margin: '0 auto 18px auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, boxSizing: 'border-box' }}>
         <CircleUserToggle
-          users={[
-            { id: 'combined', name: 'Combined' },
-            { id: 'user1', name: 'Alice' },
-            { id: 'user2', name: 'Bob' },
-            { id: 'user3', name: 'Charlie' },
-          ]}
-          selectedUser={'combined'}
-          onSelectUser={() => {}}
+          users={circleUsers}
+          selectedUser={selectedUser}
+          onSelectUser={setSelectedUser}
           onAddAccounts={() => {}}
           addLoading={false}
           maxWidth={maxWidth - 120}
@@ -197,13 +200,13 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
                         </div>
                         {/* Main info */}
                         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, overflow: 'hidden', justifyContent: 'center' }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 140 }}>{txn.description}</div>
+                          <div style={{ fontSize: 12, fontWeight: 500, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 140 }}>{txn.description}</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', minHeight: 12 }}>
-                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>{formatDate(txn.date)}</span>
-                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>
+                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 400 }}>{formatDate(txn.date)}</span>
+                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: 400 }}>
                               · {txn.accounts?.name || 'Unknown Account'}
                               {txn.accounts?.mask && (
-                                <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: 11, marginLeft: 4 }}>
+                                <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: 10, marginLeft: 4 }}>
                                   {getMaskDisplay(txn.accounts.mask, isMobile)}
                                 </span>
                               )}
@@ -250,13 +253,13 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
                       </div>
                       {/* Description/metadata */}
                       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 2, overflow: 'hidden' }}>
-                        <div style={{ fontSize: 15, fontWeight: 500, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 200 }}>{txn.description}</div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 200 }}>{txn.description}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minHeight: 16 }}>
-                          <span style={{ fontSize: 12, color: '#64748b', fontWeight: 400 }}>{formatDate(txn.date)}</span>
-                          <span style={{ fontSize: 12, color: '#64748b', fontWeight: 400 }}>
+                          <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>{formatDate(txn.date)}</span>
+                          <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>
                             · {txn.accounts?.name || 'Unknown Account'} · 
                             {txn.accounts?.mask && (
-                              <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: 12, marginLeft: 4 }}>
+                              <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: 11, marginLeft: 4 }}>
                                 {getMaskDisplay(txn.accounts.mask, false)}
                               </span>
                             )}

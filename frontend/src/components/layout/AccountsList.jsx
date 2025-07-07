@@ -7,12 +7,14 @@ import { Card } from '../ui';
 import ContextMenu from '../ui/ContextMenu';
 import { formatCurrency, formatLastUpdated } from '../../utils/formatters';
 import { useNavigate } from 'react-router-dom';
+import { useFinancial } from '../../contexts/FinancialContext';
 
-const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal, lastSyncMap = {} }) => {
+const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => {
   const [menuOpenId, setMenuOpenId] = useState(null);
   const menuRef = useRef(null);
   const triggerRefs = useRef({});
   const navigate = useNavigate();
+  const { plaidItems } = useFinancial();
 
   const capitalizeWords = (str) =>
     str
@@ -60,6 +62,7 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal, lastS
         {sortedAccounts.map((acc) => {
           const balance = acc.balances?.current || 0;
           const isZero = balance === 0;
+          const lastSync = acc.item_id && plaidItems[acc.item_id]?.last_transaction_sync;
           if (!triggerRefs.current[acc.account_id]) {
             triggerRefs.current[acc.account_id] = React.createRef();
           }
@@ -171,7 +174,7 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal, lastS
                   <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.92 }}>Balance</div>
                   <div style={{ fontSize: 10, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <>
-                      Last sync: {lastSyncMap[acc.id] ? formatLastUpdated(lastSyncMap[acc.id]) : 'Never synced'}
+                      Last sync: {lastSync ? formatLastUpdated(lastSync) : 'Never synced'}
                       {acc.update_success ? (
                         <FaCircleCheck size={10} style={{ color: 'var(--color-success)' }} />
                       ) : (

@@ -1,8 +1,6 @@
 export { default as CollapsibleSidebar } from './CollapsibleSidebar'
 export { default as MobileBottomBar } from './MobileBottomBar'
-export { default as RightDrawer } from './RightDrawer'
 export { default as SimulationPanel } from './SimulationPanel'
 export { default as AccountsPanel } from './AccountsPanel'
 export { default as TransactionsPanel } from './TransactionsPanel'
-export { default as UserProfileTab } from './UserProfileTab'
 export { default as Topbar } from './Topbar' 

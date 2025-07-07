@@ -16,21 +16,13 @@ import noAccountsImage from '../../assets/no-accounts.png';
 import CircleUserToggle from './CircleUserToggle';
 import { formatCurrency } from '../../utils/formatters';
 
-function AccountsPanel({ isMobile, maxWidth = 700 }) {
+function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
   const [plaidModalOpen, setPlaidModalOpen] = useState(false);
   const [plaidLoading, setPlaidLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('cash');
   const { accounts, loading, error, refreshAccounts, fetchTransactions, user, setToast } = useFinancial();
   const hasSetInitialTab = useRef(false);
-  const [selectedCircleUser, setSelectedCircleUser] = useState('combined');
-  const [lastSyncMap, setLastSyncMap] = useState({});
-  // Mock circle users data
-  const circleUsers = [
-    { id: 'combined', name: 'Combined' },
-    { id: 'user1', name: 'Alice' },
-    { id: 'user2', name: 'Bob' },
-    { id: 'user3', name: 'Charlie' },
-  ];
+  const [selectedCircleUser, setSelectedCircleUser] = useState(user?.id || 'combined');
 
   const grouped = groupAccountsByType(accounts || []) || {
     cash: [],
@@ -54,31 +46,11 @@ function AccountsPanel({ isMobile, maxWidth = 700 }) {
     }
   }, [accounts, grouped]);
 
-  // Fetch last_transaction_sync for all accounts
   useEffect(() => {
-    if (!accounts || accounts.length === 0) return;
-    let cancelled = false;
-    const fetchSyncs = async () => {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
-      const fetches = accounts.map(async acc => {
-        const url = `${baseUrl.replace(/\/$/, '')}/database/account/${acc.id}/plaid-item`;
-        try {
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data.success && data.plaid_item) {
-            return [acc.id, data.plaid_item.last_transaction_sync];
-          }
-        } catch {}
-        return [acc.id, null];
-      });
-      const results = await Promise.all(fetches);
-      if (!cancelled) {
-        setLastSyncMap(Object.fromEntries(results));
-      }
-    };
-    fetchSyncs();
-    return () => { cancelled = true; };
-  }, [accounts]);
+    if (user?.id) {
+      setSelectedCircleUser(user.id);
+    }
+  }, [user]);
 
   const handlePlaidSuccess = () => {
     refreshAccounts();
@@ -319,7 +291,6 @@ function AccountsPanel({ isMobile, maxWidth = 700 }) {
                   activeTab={activeTab}
                   getAccountTypeIcon={getAccountTypeIcon}
                   getTotal={getTotal}
-                  lastSyncMap={lastSyncMap}
                 />
               </div>
             </div>
