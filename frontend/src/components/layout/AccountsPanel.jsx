@@ -211,7 +211,7 @@ function AccountsPanel({ isMobile, maxWidth = 700 }) {
                     }}
                   >
                     <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.92, letterSpacing: 0.2, marginBottom: 2 }}>Net Worth</span>
-                    <span style={{ fontSize: 28, fontWeight: 700, marginTop: 0, letterSpacing: -0.5, textShadow: '0 1px 4px rgba(59,130,246,0.10)' }}>
+                    <span style={{ fontSize: 22, fontWeight: 700, marginTop: 0, letterSpacing: -0.5, textShadow: '0 1px 4px rgba(59,130,246,0.10)' }}>
                       {formatCurrency(totalBalance)}
                     </span>
                   </div>

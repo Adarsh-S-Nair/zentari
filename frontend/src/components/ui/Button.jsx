@@ -136,30 +136,20 @@ function Button({
     justifyContent: 'center',
     gap: '8px',
     boxShadow: 'none',
-    transition: 'background 0.18s, color 0.18s, box-shadow 0.18s, border 0.18s, transform 0.16s cubic-bezier(.4,1.5,.5,1)',
+    transition: 'background 0.18s, color 0.18s, box-shadow 0.18s, border 0.18s, transform 0.22s cubic-bezier(.4,1.5,.5,1)',
     fontFamily: 'Inter, system-ui, sans-serif',
     WebkitFontSmoothing: 'auto',
     MozOsxFontSmoothing: 'auto',
     textRendering: 'geometricPrecision',
     outline: 'none',
-    transform: 'scale(1)',
+    transform: isHovering && !isInactive ? 'scale(1.06)' : 'scale(1)',
     ...style
   }
 
   // Hop animation on click
   const handleClick = (e) => {
-    if (isInactive) return
-    const btn = btnRef.current
-    if (btn) {
-      btn.style.transform = 'scale(0.97) translateY(1.5px)'
-      setTimeout(() => {
-        btn.style.transform = 'scale(1.06) translateY(-2.5px)'
-        setTimeout(() => {
-          btn.style.transform = 'scale(1)'
-        }, 80)
-      }, 80)
-    }
-    if (onClick) onClick(e)
+    if (isInactive) return;
+    if (onClick) onClick(e);
   }
 
   return (

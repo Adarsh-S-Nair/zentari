@@ -37,6 +37,12 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
     });
   };
 
+  // Helper for mask display
+  const getMaskDisplay = (mask, isMobile) => {
+    if (!mask) return '';
+    return mask
+  };
+
   return (
     <main className="flex-1 px-[24px] py-[12px] overflow-hidden">
       {/* CircleUserToggle and Filters Row */}
@@ -58,7 +64,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
           label="Filters"
           color="#3b82f6"
           width="auto"
-          style={{ height: 40, fontSize: 13, fontWeight: 500, padding: '0 22px', borderRadius: 10 }}
+          style={{ height: 32, fontSize: 13, fontWeight: 500, padding: '0 16px', borderRadius: 10 }}
           icon={<FiFilter size={18} />}
         />
       </div>
@@ -143,74 +149,150 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
               return (
                 <div
                   key={i}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    background: i % 2 === 0 ? '#fff' : '#f8fafc',
-                    borderBottom: i === filteredTransactions.length - 1 ? 'none' : '1px solid #f1f5f9',
-                    padding: isMobile ? '24px 10px' : '28px 32px',
-                    minHeight: isMobile ? 80 : 96,
-                    boxSizing: 'border-box',
-                    transition: 'background 0.18s',
-                    cursor: 'pointer',
-                    gap: 0,
-                  }}
+                  style={
+                    isMobile
+                      ? {
+                          display: 'flex',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: i % 2 === 0 ? '#fff' : '#f8fafc',
+                          borderBottom: i === filteredTransactions.length - 1 ? 'none' : '1px solid #f1f5f9',
+                          padding: '18px 8px 24px 8px',
+                          minHeight: 110,
+                          boxSizing: 'border-box',
+                          transition: 'background 0.18s',
+                          cursor: 'pointer',
+                          gap: 0,
+                        }
+                      : {
+                          display: 'flex',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: i % 2 === 0 ? '#fff' : '#f8fafc',
+                          borderBottom: i === filteredTransactions.length - 1 ? 'none' : '1px solid #f1f5f9',
+                          padding: '28px 32px',
+                          minHeight: 96,
+                          boxSizing: 'border-box',
+                          transition: 'background 0.18s',
+                          cursor: 'pointer',
+                          gap: 0,
+                        }
+                  }
                   onMouseOver={e => e.currentTarget.style.background = '#f1f5ff'}
                   onMouseOut={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
                 >
-                  {/* Icon - circle style */}
-                  <div style={{ flexShrink: 0, marginRight: isMobile ? 16 : 22 }}>
-                    {txn.icon_url ? (
-                      <img src={txn.icon_url} alt="icon" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', background: '#f3f4f6', border: '1.5px solid #e5e7eb' }} />
-                    ) : (
-                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e5e7eb' }} />
-                    )}
-                  </div>
-                  {/* Description/metadata */}
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 2, overflow: 'hidden' }}>
-                    <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 500, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: isMobile ? 140 : 200 }}>{txn.description}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 5 : 8, flexWrap: 'wrap', minHeight: isMobile ? 12 : 16 }}>
-                      <span style={{ fontSize: isMobile ? 11 : 12, color: '#64748b', fontWeight: 400 }}>{formatDate(txn.date)}</span>
-                      <span style={{ fontSize: isMobile ? 11 : 12, color: '#64748b', fontWeight: 400 }}>
-                        · {txn.accounts?.name || 'Unknown Account'}
-                        {txn.accounts?.mask && (
-                          <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: isMobile ? 11 : 12, marginLeft: 4 }}>
-                            {'●'.repeat(4)}{txn.accounts.mask}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    {/* Category pill row */}
-                    {txn.category_name && (
-                      <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{
-                          fontSize: isMobile ? 11 : 12,
-                          fontWeight: 400,
-                          color: txn.category_color || '#6366f1',
-                          background: txn.category_color ? `${txn.category_color}22` : '#eef2ff',
-                          borderRadius: 7,
-                          padding: isMobile ? '2px 7px' : '3px 10px',
-                          letterSpacing: 0.1,
-                          display: 'inline-block',
-                          minWidth: 0,
-                          maxWidth: isMobile ? 80 : 120,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}>{txn.category_name}</span>
+                  {isMobile ? (
+                    <>
+                      {/* Left: Icon and main info */}
+                      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                        {/* Icon */}
+                        <div style={{ flexShrink: 0, marginRight: 12, display: 'flex', alignItems: 'center', height: '100%' }}>
+                          {txn.icon_url ? (
+                            <img src={txn.icon_url} alt="icon" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', background: '#f3f4f6', border: '1.5px solid #e5e7eb', display: 'block' }} />
+                          ) : (
+                            <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e5e7eb', display: 'block' }} />
+                          )}
+                        </div>
+                        {/* Main info */}
+                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, overflow: 'hidden', justifyContent: 'center' }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 140 }}>{txn.description}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', minHeight: 12 }}>
+                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>{formatDate(txn.date)}</span>
+                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>
+                              · {txn.accounts?.name || 'Unknown Account'}
+                              {txn.accounts?.mask && (
+                                <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: 11, marginLeft: 4 }}>
+                                  {getMaskDisplay(txn.accounts.mask, isMobile)}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          {/* Category pill row, always visible and not clipped */}
+                          {txn.category_name && (
+                            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{
+                                fontSize: 11,
+                                fontWeight: 400,
+                                color: txn.category_color || '#6366f1',
+                                background: txn.category_color ? `${txn.category_color}22` : '#eef2ff',
+                                borderRadius: 7,
+                                padding: '4px 12px',
+                                letterSpacing: 0.1,
+                                display: 'inline-block',
+                                minWidth: 0,
+                                maxWidth: 140,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}>{txn.category_name}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  {/* Amount */}
-                  <div style={{ flex: 1, textAlign: 'right', fontWeight: 600, fontSize: isMobile ? 14 : 16, color: amountColor, minWidth: isMobile ? 48 : 70, letterSpacing: -0.5, marginTop: 0, whiteSpace: 'nowrap', overflow: 'hidden', paddingRight: isMobile ? 8 : 12 }}>
-                    {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
-                  </div>
-                  {/* Chevron */}
-                  <div style={{ paddingLeft: 8 }}>
-                    <FaChevronRight size={14} color="#9ca3af" style={{ cursor: 'pointer' }} />
-                  </div>
+                      {/* Right: Amount only, vertically centered */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 70, marginLeft: 8, height: '100%' }}>
+                        <div style={{ fontWeight: 600, fontSize: 15, color: amountColor, letterSpacing: -0.5, whiteSpace: 'nowrap', overflow: 'hidden', paddingRight: 2 }}>
+                          {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Icon - circle style */}
+                      <div style={{ flexShrink: 0, marginRight: 22 }}>
+                        {txn.icon_url ? (
+                          <img src={txn.icon_url} alt="icon" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', background: '#f3f4f6', border: '1.5px solid #e5e7eb' }} />
+                        ) : (
+                          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e5e7eb' }} />
+                        )}
+                      </div>
+                      {/* Description/metadata */}
+                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 2, overflow: 'hidden' }}>
+                        <div style={{ fontSize: 15, fontWeight: 500, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 200 }}>{txn.description}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minHeight: 16 }}>
+                          <span style={{ fontSize: 12, color: '#64748b', fontWeight: 400 }}>{formatDate(txn.date)}</span>
+                          <span style={{ fontSize: 12, color: '#64748b', fontWeight: 400 }}>
+                            · {txn.accounts?.name || 'Unknown Account'} · 
+                            {txn.accounts?.mask && (
+                              <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: 12, marginLeft: 4 }}>
+                                {getMaskDisplay(txn.accounts.mask, false)}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        {/* Category pill row */}
+                        {txn.category_name && (
+                          <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{
+                              fontSize: 12,
+                              fontWeight: 400,
+                              color: txn.category_color || '#6366f1',
+                              background: txn.category_color ? `${txn.category_color}22` : '#eef2ff',
+                              borderRadius: 7,
+                              padding: '3px 10px',
+                              letterSpacing: 0.1,
+                              display: 'inline-block',
+                              minWidth: 0,
+                              maxWidth: 120,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>{txn.category_name}</span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Amount */}
+                      <div style={{ flex: 1, textAlign: 'right', fontWeight: 600, fontSize: 16, color: amountColor, minWidth: 70, letterSpacing: -0.5, marginTop: 0, whiteSpace: 'nowrap', overflow: 'hidden', paddingRight: 12 }}>
+                        {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
+                      </div>
+                      {/* Chevron */}
+                      <div style={{ paddingLeft: 8 }}>
+                        <FaChevronRight size={14} color="#9ca3af" style={{ cursor: 'pointer' }} />
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })

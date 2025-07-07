@@ -14,7 +14,6 @@ import { FinancialProvider } from './contexts/FinancialContext';
 import {
   CollapsibleSidebar,
   Topbar,
-  SimulationPanel,
   AccountsPanel,
   TransactionsPanel,
   MobileBottomBar,
@@ -29,6 +28,7 @@ import { FaReceipt } from 'react-icons/fa';
 import { FiArrowLeft } from 'react-icons/fi';
 import { FinancialContext } from './contexts/FinancialContext';
 import AccountDetail from './components/layout/AccountDetail';
+import LandingPage from './components/layout/LandingPage';
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -46,7 +46,6 @@ function App() {
   const allTabs = [
     { label: 'Accounts', icon: <IoFolderOpen size={18} />, route: '/accounts', hasContent: false, requiresAuth: true },
     { label: 'Transactions', icon: <FaReceipt size={18} />, route: '/transactions', hasContent: false, requiresAuth: true },
-    { label: 'Simulation', icon: <FaChartArea size={18} />, route: '/simulate', hasContent: true, requiresAuth: false },
   ];
 
   const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user);
@@ -235,7 +234,7 @@ function AppContent({
     const routeRequiresAuth = authenticatedRoutes.includes(location.pathname);
 
     if (routeRequiresAuth && !user) {
-      navigate('/simulate', { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [user, userChecked, location.pathname]);
 
@@ -247,9 +246,6 @@ function AppContent({
   } else if (location.pathname === '/transactions') {
     currentPage = 'Transactions';
     currentTab = '/transactions';
-  } else if (location.pathname === '/simulate') {
-    currentPage = 'Simulation';
-    currentTab = '/simulate';
   } else if (matchPath('/accounts/:accountId', location.pathname)) {
     if (accountDetailAccount) {
       const lastFour = accountDetailAccount.mask ? String(accountDetailAccount.mask).slice(-4) : '';
@@ -275,51 +271,6 @@ function AppContent({
 
   return (
     <Routes>
-      <Route
-        path="/simulate"
-        element={
-          <>
-            <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
-              {!isMobile && (
-                <CollapsibleSidebar
-                  visibleTabs={visibleTabs}
-                  form={form}
-                  handleChange={handleChange}
-                  handleSubmit={handleSubmit}
-                  onLoginClick={() => setLoginOpen(true)}
-                  user={user}
-                  isTablet={isTablet}
-                  isMobile={isMobile}
-                  currentTab={'/simulate'}
-                />
-              )}
-              <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-                <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Simulation'} maxWidth={maxWidth} />
-                <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
-                  <SimulationPanel
-                    loading={loading}
-                    loadingPhase={loadingPhase}
-                    result={result}
-                    currentSimDate={currentSimDate}
-                    isMobile={isMobile}
-                    form={form}
-                    maxWidth={maxWidth}
-                  />
-                </div>
-                {isMobile && (
-                  <MobileBottomBar
-                    user={user}
-                    onLoginClick={() => setLoginOpen(true)}
-                    setLogoutOpen={() => {}}
-                    visibleTabs={visibleTabs}
-                    currentTab={'/accounts'}
-                  />
-                )}
-              </div>
-            </div>
-          </>
-        }
-      />
       <Route
         path="/accounts"
         element={user ? (
@@ -406,6 +357,8 @@ function AppContent({
           />
         ) : null}
       />
+      <Route path="/" element={user ? <Navigate to="/accounts" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
+      <Route path="/login" element={user ? <Navigate to="/accounts" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
       <Route
         path="*"
         element={user ? <Navigate to="/accounts" replace /> : <Navigate to="/simulate" replace />}
