@@ -87,24 +87,16 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
   const totalBalance = assetTotal + liabilityTotal;
 
   return (
-    <main className="px-[24px]">
+    <main className="w-full" style={{ padding: '16px 10px', margin: 0 }}>
       <div
         className={`flex flex-col items-center ${
-          allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : 'pt-[24px] pb-[24px]'
+          allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''
         }`}
+        style={{ padding: allAccountsEmpty ? '0 12px' : '0', width: '100%', boxSizing: 'border-box' }}
       >
         {/* Circle User Toggle Row */}
         {!allAccountsEmpty && (
-          <div style={{
-            width: '100%',
-            maxWidth: window.innerWidth < 600 ? '100%' : maxWidth,
-            padding: window.innerWidth < 600 ? '0 8px' : '0 20px',
-            marginBottom: 16,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12
-          }}>
+          <div style={{ width: '100%', maxWidth: maxWidth, padding: '0 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <CircleUserToggle
               users={circleUsers}
               selectedUser={selectedCircleUser}
@@ -163,26 +155,29 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
                 <div
                   style={{
                     width: '100%',
-                    maxWidth: window.innerWidth < 600 ? '100%' : maxWidth,
+                    maxWidth: maxWidth,
+                    margin: '0 auto',
                     display: 'flex',
-                    flexDirection: window.innerWidth < 600 ? 'column' : 'row',
-                    flexWrap: window.innerWidth < 600 ? 'nowrap' : 'wrap',
-                    gap: window.innerWidth < 600 ? 8 : 16,
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: 16,
                     marginBottom: 20,
+                    boxSizing: 'border-box',
+                    padding: '0 4px',
                   }}
                 >
                   {/* Net Worth Card */}
                   <div
                     style={{
                       flex: 1,
-                      minWidth: window.innerWidth < 600 ? 0 : 220,
-                      maxWidth: window.innerWidth < 600 ? '100%' : 400,
+                      minWidth: 220,
+                      maxWidth: 400,
                       background: 'linear-gradient(90deg, #6366f1 0%, #60a5fa 100%)',
                       color: '#fff',
                       borderRadius: 12,
                       boxShadow: '0 2px 12px 0 rgba(59,130,246,0.08)',
                       border: 'none',
-                      padding: window.innerWidth < 600 ? '12px 10px' : '16px 20px',
+                      padding: '16px 20px',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'flex-start',
@@ -200,13 +195,13 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
                   <div
                     style={{
                       flex: 1,
-                      minWidth: window.innerWidth < 600 ? 0 : 220,
-                      maxWidth: window.innerWidth < 600 ? '100%' : 400,
+                      minWidth: 220,
+                      maxWidth: 400,
                       background: 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)',
                       borderRadius: 12,
                       border: '1.5px solid #e5e7eb',
                       boxShadow: '0 1px 6px 0 rgba(59,130,246,0.04)',
-                      padding: window.innerWidth < 600 ? '12px 10px' : '16px 20px',
+                      padding: '16px 20px',
                       color: '#fff',
                       display: 'flex',
                       flexDirection: 'column',
@@ -222,13 +217,13 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
                   <div
                     style={{
                       flex: 1,
-                      minWidth: window.innerWidth < 600 ? 0 : 220,
-                      maxWidth: window.innerWidth < 600 ? '100%' : 400,
+                      minWidth: 220,
+                      maxWidth: 400,
                       background: 'linear-gradient(90deg, #dc2626 0%, #f87171 100%)',
                       borderRadius: 12,
                       border: '1.5px solid #e5e7eb',
                       boxShadow: '0 1px 6px 0 rgba(59,130,246,0.04)',
-                      padding: window.innerWidth < 600 ? '12px 10px' : '16px 20px',
+                      padding: '16px 20px',
                       color: '#fff',
                       display: 'flex',
                       flexDirection: 'column',
@@ -248,9 +243,10 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
             <div
               style={{
                 width: '100%',
-                maxWidth: window.innerWidth < 600 ? '100%' : maxWidth,
-                padding: window.innerWidth < 600 ? '0 8px' : '0 20px',
-                marginBottom: '8px',
+                maxWidth: maxWidth,
+                margin: '0 auto 8px auto',
+                boxSizing: 'border-box',
+                padding: '0 4px',
               }}
             >
               <div

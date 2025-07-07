@@ -95,3 +95,8 @@ html, body, #root {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* GLOBAL BOX-SIZING FIX */
+*, *::before, *::after {
+  box-sizing: border-box;
+}

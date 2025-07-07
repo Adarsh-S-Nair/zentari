@@ -66,12 +66,16 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
         display: 'flex',
         justifyContent: 'center',
         background: '#fff',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
         boxShadow: '0 2px 8px 0 rgba(59,130,246,0.04)',
         border: '1.5px solid #f3f4f6',
         boxSizing: 'border-box',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 100,
+        height: 56,
+        minHeight: 56,
+        maxHeight: 56,
       }}>
         <div
           style={{
@@ -194,6 +198,9 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
           </div>
         </div>
       </div>
+
+      {/* Spacer to prevent content from being hidden under the fixed topbar */}
+      <div style={{ height: 56, minHeight: 56, maxHeight: 56, width: '100%' }} />
 
       <LogoutModal
         isOpen={logoutOpen}

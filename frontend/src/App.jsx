@@ -310,7 +310,7 @@ function AppContent({
       <Route
         path="/accounts"
         element={user ? (
-          <div className="flex h-screen w-screen overflow-x-hidden relative">
+          <div className="flex min-h-screen w-full overflow-x-hidden relative">
             {!isMobile && (
               <CollapsibleSidebar
                 visibleTabs={visibleTabs}
@@ -324,7 +324,7 @@ function AppContent({
                 currentTab={'/accounts'}
               />
             )}
-            <div className={`flex-1 h-full flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+            <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
               <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
                 <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
@@ -345,7 +345,7 @@ function AppContent({
       <Route
         path="/transactions"
         element={user ? (
-          <div className="flex h-screen w-screen overflow-x-hidden relative">
+          <div className="flex min-h-screen w-full overflow-x-hidden relative">
             {!isMobile && (
               <CollapsibleSidebar
                 visibleTabs={visibleTabs}
@@ -359,7 +359,7 @@ function AppContent({
                 currentTab={'/transactions'}
               />
             )}
-            <div className={`flex-1 h-full flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+            <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
               <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
                 <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
@@ -410,7 +410,7 @@ function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, hand
   const { accounts } = useContext(FinancialContext) || {};
   const account = accounts?.find(acc => String(acc.id) === String(accountId));
   return (
-    <div className="flex h-screen w-screen overflow-x-hidden relative">
+    <div className="flex min-h-screen w-full overflow-x-hidden relative">
       {!isMobile && (
         <CollapsibleSidebar
           visibleTabs={visibleTabs}
@@ -424,7 +424,7 @@ function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, hand
           currentTab={'/accounts'}
         />
       )}
-      <div className={`flex-1 h-full flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+      <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}> 
         <Topbar
           user={user}
           onLoginClick={() => setLoginOpen(true)}
@@ -433,7 +433,7 @@ function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, hand
           showBackArrow={true}
           onBack={() => navigate('/accounts')}
         />
-        <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
+        <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}> 
           <AccountDetail maxWidth={maxWidth} account={account} />
         </div>
         {isMobile && (
