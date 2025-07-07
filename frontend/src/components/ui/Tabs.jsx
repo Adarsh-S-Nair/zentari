@@ -75,7 +75,7 @@ const Tabs = ({ tabs = [], activeId, onChange, showCount = false }) => {
           ref={containerRef}
           style={{
             display: 'inline-flex',
-            gap: 8,
+            gap: 0,
             position: 'relative',
             background: '#f3f4f6',
             borderRadius: 10,
@@ -110,13 +110,26 @@ const Tabs = ({ tabs = [], activeId, onChange, showCount = false }) => {
                 transition: 'transform 0.16s cubic-bezier(.4,1.5,.5,1), background 0.18s, color 0.18s',
                 transform: 'scale(1)',
                 position: 'relative',
+                userSelect: 'none',
               }}
-              onMouseEnter={e => { if (!activeId === tab.id) e.currentTarget.style.transform = 'scale(1.04)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+              onMouseEnter={e => {
+                if (activeId !== tab.id) {
+                  e.currentTarget.style.transform = 'scale(1.06)';
+                  e.currentTarget.style.background = '#e0e7ef';
+                  e.currentTarget.style.color = '#1d4ed8';
+                  e.currentTarget.style.boxShadow = '0 2px 8px 0 rgba(37,99,235,0.08)';
+                }
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.background = activeId === tab.id ? '#e5e7fa' : 'transparent';
+                e.currentTarget.style.color = activeId === tab.id ? '#2563eb' : '#6b7280';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
               onMouseDown={e => { e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)'; }}
               onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
             >
-              <span>{tab.label}</span>
+              <span style={{ userSelect: 'none' }}>{tab.label}</span>
               {showCount && typeof tab.count === 'number' && (
                 <div
                   style={{
@@ -128,6 +141,7 @@ const Tabs = ({ tabs = [], activeId, onChange, showCount = false }) => {
                     borderRadius: 8,
                     minWidth: 16,
                     textAlign: 'center',
+                    userSelect: 'none',
                   }}
                 >
                   {tab.count}
