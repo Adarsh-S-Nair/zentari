@@ -203,37 +203,54 @@ function App() {
     setLoginOpen(false);
   };
 
+  // Mobile viewport height fix
+  useEffect(() => {
+    const setVh = () => {
+      document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+    };
+    setVh();
+    window.addEventListener('resize', setVh);
+    return () => window.removeEventListener('resize', setVh);
+  }, []);
+
   return (
-    <Router>
-      <FinancialProvider>
-        <AppContent
-          loading={loading}
-          loadingPhase={loadingPhase}
-          loginOpen={loginOpen}
-          setLoginOpen={setLoginOpen}
-          user={user}
-          userChecked={userChecked}
-          setUser={setUser}
-          result={result}
-          setResult={setResult}
-          toast={toast}
-          setToast={setToast}
-          currentSimDate={currentSimDate}
-          setCurrentSimDate={setCurrentSimDate}
-          logoutOpen={logoutOpen}
-          setLogoutOpen={setLogoutOpen}
-          isTablet={isTablet}
-          isMobile={isMobile}
-          allTabs={allTabs}
-          visibleTabs={visibleTabs}
-          form={form}
-          setForm={setForm}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          circleUsers={circleUsers}
+    <div className="app-main-container">
+      <FinancialProvider setToast={setToast}>
+        <LoginModal
+          isOpen={loginOpen}
+          onClose={() => setLoginOpen(false)}
+          onLoginSuccess={handleLoginSuccess}
         />
+        <Router>
+          <AppContent
+            loading={loading}
+            loadingPhase={loadingPhase}
+            loginOpen={loginOpen}
+            setLoginOpen={setLoginOpen}
+            user={user}
+            userChecked={userChecked}
+            setUser={setUser}
+            result={result}
+            setResult={setResult}
+            toast={toast}
+            setToast={setToast}
+            currentSimDate={currentSimDate}
+            setCurrentSimDate={setCurrentSimDate}
+            logoutOpen={logoutOpen}
+            setLogoutOpen={setLogoutOpen}
+            isTablet={isTablet}
+            isMobile={isMobile}
+            allTabs={allTabs}
+            visibleTabs={visibleTabs}
+            form={form}
+            setForm={setForm}
+            handleChange={handleChange}
+            handleSubmit={handleSubmit}
+            circleUsers={circleUsers}
+          />
+        </Router>
       </FinancialProvider>
-    </Router>
+    </div>
   );
 }
 
