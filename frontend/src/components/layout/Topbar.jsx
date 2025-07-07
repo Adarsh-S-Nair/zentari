@@ -6,7 +6,7 @@ import { supabase } from '../../supabaseClient';
 import { LogoutModal } from '../modals';
 import ContextMenu from '../ui/ContextMenu';
 
-const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack, institutionLogo }) => {
+const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack, institutionLogo, isMobile }) => {
   const [userName, setUserName] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -76,12 +76,14 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
         height: 56,
         minHeight: 56,
         maxHeight: 56,
+        marginLeft: isMobile ? 0 : 35,
+        transition: 'margin-left 0.2s',
       }}>
         <div
           style={{
             width: '100%',
             maxWidth: 700,
-            padding: window.innerWidth <= 670 ? '16px 20px' : '16px 0',
+            padding: '0 20px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',

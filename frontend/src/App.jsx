@@ -325,7 +325,7 @@ function AppContent({
               />
             )}
             <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} />
+              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
                 <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
               </div>
@@ -360,7 +360,7 @@ function AppContent({
               />
             )}
             <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} />
+              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} isMobile={isMobile} />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
                 <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
               </div>
@@ -432,6 +432,7 @@ function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, hand
           maxWidth={maxWidth}
           showBackArrow={true}
           onBack={() => navigate('/accounts')}
+          isMobile={isMobile}
         />
         <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}> 
           <AccountDetail maxWidth={maxWidth} account={account} />

@@ -96,7 +96,7 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
       >
         {/* Circle User Toggle Row */}
         {!allAccountsEmpty && (
-          <div style={{ width: '100%', maxWidth: maxWidth, padding: '0 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ width: '100%', maxWidth: maxWidth, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <CircleUserToggle
               users={circleUsers}
               selectedUser={selectedCircleUser}
