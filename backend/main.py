@@ -49,7 +49,7 @@ app.add_middleware(
         "https://zentari-prod.vercel.app",  # production
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
 

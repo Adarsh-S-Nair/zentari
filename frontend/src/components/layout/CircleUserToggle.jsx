@@ -3,8 +3,8 @@ import { FaUser, FaUsers } from 'react-icons/fa';
 import { Button } from '../ui';
 import InfoBubble from '../ui/InfoBubble';
 
-// users: [{ id, name }], selectedUser: id, onSelectUser: fn, onAddAccounts: fn, addLoading: bool
-export default function CircleUserToggle({ users, selectedUser, onSelectUser, onAddAccounts, addLoading, maxWidth = 700 }) {
+// users: [{ id, name }], selectedUser: id, onSelectUser: fn, maxWidth = 700
+export default function CircleUserToggle({ users, selectedUser, onSelectUser, maxWidth = 700 }) {
   // For hop animation
   const btnRefs = useRef({});
   const [hoveredUser, setHoveredUser] = useState(null);
@@ -27,13 +27,10 @@ export default function CircleUserToggle({ users, selectedUser, onSelectUser, on
   return (
     <div
       style={{
-        width: '100%',
-        maxWidth: maxWidth,
-        padding: '0 20px',
-        marginBottom: 20,
+        marginBottom: 0,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        height: 'auto',
       }}
     >
       {/* Toggle pill backdrop */}
@@ -43,9 +40,11 @@ export default function CircleUserToggle({ users, selectedUser, onSelectUser, on
           alignItems: 'center',
           background: '#f3f4f6',
           borderRadius: 999,
-          padding: '4px 8px',
+          padding: '3px 8px',
           gap: 6,
           boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+          minHeight: 34,
+          verticalAlign: 'middle',
         }}
       >
         {users.map((user) => (
@@ -92,17 +91,6 @@ export default function CircleUserToggle({ users, selectedUser, onSelectUser, on
             </InfoBubble>
           </div>
         ))}
-      </div>
-      {/* Add Accounts button */}
-      <div style={{ marginLeft: 12 }}>
-        <Button
-          label="Add Accounts"
-          onClick={onAddAccounts}
-          width="auto"
-          loading={addLoading}
-          disabled={addLoading}
-          color="var(--color-primary)"
-        />
       </div>
     </div>
   );

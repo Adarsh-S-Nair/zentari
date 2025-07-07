@@ -23,6 +23,7 @@ function AccountsPanel({ isMobile, maxWidth = 700 }) {
   const { accounts, loading, error, refreshAccounts, fetchTransactions, user, setToast } = useFinancial();
   const hasSetInitialTab = useRef(false);
   const [selectedCircleUser, setSelectedCircleUser] = useState('combined');
+  const [lastSyncMap, setLastSyncMap] = useState({});
   // Mock circle users data
   const circleUsers = [
     { id: 'combined', name: 'Combined' },
@@ -52,6 +53,32 @@ function AccountsPanel({ isMobile, maxWidth = 700 }) {
       hasSetInitialTab.current = true;
     }
   }, [accounts, grouped]);
+
+  // Fetch last_transaction_sync for all accounts
+  useEffect(() => {
+    if (!accounts || accounts.length === 0) return;
+    let cancelled = false;
+    const fetchSyncs = async () => {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
+      const fetches = accounts.map(async acc => {
+        const url = `${baseUrl.replace(/\/$/, '')}/database/account/${acc.id}/plaid-item`;
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.success && data.plaid_item) {
+            return [acc.id, data.plaid_item.last_transaction_sync];
+          }
+        } catch {}
+        return [acc.id, null];
+      });
+      const results = await Promise.all(fetches);
+      if (!cancelled) {
+        setLastSyncMap(Object.fromEntries(results));
+      }
+    };
+    fetchSyncs();
+    return () => { cancelled = true; };
+  }, [accounts]);
 
   const handlePlaidSuccess = () => {
     refreshAccounts();
@@ -96,13 +123,21 @@ function AccountsPanel({ isMobile, maxWidth = 700 }) {
       >
         {/* Circle User Toggle Row */}
         {!allAccountsEmpty && (
-          <CircleUserToggle
-            users={circleUsers}
-            selectedUser={selectedCircleUser}
-            onSelectUser={setSelectedCircleUser}
-            onAddAccounts={handleAddAccounts}
-            addLoading={plaidLoading}
-          />
+          <div style={{ width: '100%', maxWidth: maxWidth, padding: '0 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <CircleUserToggle
+              users={circleUsers}
+              selectedUser={selectedCircleUser}
+              onSelectUser={setSelectedCircleUser}
+            />
+            <Button
+              label="Add Accounts"
+              onClick={handleAddAccounts}
+              width="auto"
+              loading={plaidLoading}
+              disabled={plaidLoading}
+              color="#3b82f6"
+            />
+          </div>
         )}
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)]">
@@ -135,37 +170,97 @@ function AccountsPanel({ isMobile, maxWidth = 700 }) {
                 width="auto"
                 loading={plaidLoading}
                 disabled={plaidLoading}
-                color="#7c3aed"
+                color="#3b82f6"
               />
             </div>
           </div>
         ) : (
           <>
-            {/* Total Balance Banner */}
+            {/* Net Worth Banner */}
             {!allAccountsEmpty && (
-              <div
-                style={{
-                  width: '100%',
-                  maxWidth: maxWidth,
-                  margin: '0 0 20px 0',
-                  padding: '16px 20px',
-                  borderRadius: 12,
-                  background: 'linear-gradient(90deg, #6366f1 0%, #60a5fa 100%)',
-                  color: '#fff',
-                  boxShadow: '0 2px 12px 0 rgba(59,130,246,0.08)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  justifyContent: 'center',
-                  boxSizing: 'border-box',
-                  overflow: 'hidden',
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.92, letterSpacing: 0.2, marginBottom: 2 }}>Total Balance</span>
-                <span style={{ fontSize: 28, fontWeight: 700, marginTop: 0, letterSpacing: -0.5, textShadow: '0 1px 4px rgba(59,130,246,0.10)' }}>
-                  {formatCurrency(totalBalance)}
-                </span>
-              </div>
+              <>
+                <div
+                  style={{
+                    width: '100%',
+                    maxWidth: maxWidth,
+                    display: 'flex',
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: 16,
+                    marginBottom: 20,
+                  }}
+                >
+                  {/* Net Worth Card */}
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: 220,
+                      maxWidth: 400,
+                      background: 'linear-gradient(90deg, #6366f1 0%, #60a5fa 100%)',
+                      color: '#fff',
+                      borderRadius: 12,
+                      boxShadow: '0 2px 12px 0 rgba(59,130,246,0.08)',
+                      border: 'none',
+                      padding: '16px 20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                      boxSizing: 'border-box',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.92, letterSpacing: 0.2, marginBottom: 2 }}>Net Worth</span>
+                    <span style={{ fontSize: 28, fontWeight: 700, marginTop: 0, letterSpacing: -0.5, textShadow: '0 1px 4px rgba(59,130,246,0.10)' }}>
+                      {formatCurrency(totalBalance)}
+                    </span>
+                  </div>
+                  {/* Total Assets Card */}
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: 220,
+                      maxWidth: 400,
+                      background: 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)',
+                      borderRadius: 12,
+                      border: '1.5px solid #e5e7eb',
+                      boxShadow: '0 1px 6px 0 rgba(59,130,246,0.04)',
+                      padding: '16px 20px',
+                      color: '#fff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.92, letterSpacing: 0.2, marginBottom: 2 }}>Total Assets</span>
+                    <span style={{ fontSize: 22, fontWeight: 700, marginTop: 0, letterSpacing: -0.5 }}>{formatCurrency(assetTotal)}</span>
+                  </div>
+                  {/* Total Liabilities Card */}
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: 220,
+                      maxWidth: 400,
+                      background: 'linear-gradient(90deg, #dc2626 0%, #f87171 100%)',
+                      borderRadius: 12,
+                      border: '1.5px solid #e5e7eb',
+                      boxShadow: '0 1px 6px 0 rgba(59,130,246,0.04)',
+                      padding: '16px 20px',
+                      color: '#fff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.92, letterSpacing: 0.2, marginBottom: 2 }}>Total Liabilities</span>
+                    <span style={{ fontSize: 22, fontWeight: 700, marginTop: 0, letterSpacing: -0.5 }}>{formatCurrency(liabilityTotal)}</span>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Tabs + Add Button */}
@@ -224,6 +319,7 @@ function AccountsPanel({ isMobile, maxWidth = 700 }) {
                   activeTab={activeTab}
                   getAccountTypeIcon={getAccountTypeIcon}
                   getTotal={getTotal}
+                  lastSyncMap={lastSyncMap}
                 />
               </div>
             </div>

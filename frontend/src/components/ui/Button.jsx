@@ -68,7 +68,8 @@ function Button({
   disabled = false,
   darkText = false,
   style = {},
-  type = 'button'
+  type = 'button',
+  icon = null,
 }) {
   const [isHovering, setIsHovering] = useState(false)
   const btnRef = useRef(null)
@@ -122,7 +123,7 @@ function Button({
 
   const buttonStyle = {
     width,
-    backgroundColor: isInactive ? inactiveBg : isHovering ? hoverBg : '#3b82f6',
+    backgroundColor: isInactive ? inactiveBg : isHovering ? hoverBg : baseColor,
     color: '#fff',
     padding: '7px 18px',
     border: 'none',
@@ -178,6 +179,7 @@ function Button({
         onMouseUp={e => { if (!isInactive) e.currentTarget.style.transform = 'scale(1.06)'; }}
       >
         {loading && <MiniSpinner />}
+        {icon && <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: 6 }}>{icon}</span>}
         {label || children}
       </button>
 

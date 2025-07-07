@@ -56,15 +56,17 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
         border: '1.5px solid #f3f4f6',
         boxSizing: 'border-box',
       }}>
-        <div style={{
-          width: '100%',
-          maxWidth: 700,
-          padding: '16px 20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxSizing: 'border-box',
-        }}>
+        <div
+          style={{
+            width: '100%',
+            maxWidth: 700,
+            padding: window.innerWidth <= 670 ? '16px 20px' : '16px 0',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxSizing: 'border-box',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {showBackArrow && (
               <button

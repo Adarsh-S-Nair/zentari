@@ -8,7 +8,7 @@ import ContextMenu from '../ui/ContextMenu';
 import { formatCurrency, formatLastUpdated } from '../../utils/formatters';
 import { useNavigate } from 'react-router-dom';
 
-const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => {
+const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal, lastSyncMap = {} }) => {
   const [menuOpenId, setMenuOpenId] = useState(null);
   const menuRef = useRef(null);
   const triggerRefs = useRef({});
@@ -131,8 +131,22 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                     <FaUniversity size={16} />
                   </div>
                 </div>
-                <div style={{ fontSize: 15, opacity: 0.85, fontWeight: 400, letterSpacing: 2, fontFamily: 'monospace', verticalAlign: 'middle', display: 'flex', alignItems: 'center' }}>
-                   {acc.mask ? `${'●'.repeat(4)}${acc.mask}` : ''}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {acc.mask && (
+                    <span style={{
+                      fontSize: 12,
+                      color: '#64748b',
+                      fontWeight: 600,
+                      background: 'rgba(100,116,139,0.13)',
+                      borderRadius: 999,
+                      padding: '2px 10px',
+                      letterSpacing: 1,
+                      display: 'inline-block',
+                      minWidth: 36,
+                      textAlign: 'center',
+                      fontFamily: 'monospace',
+                    }}>{'●'.repeat(4)}{acc.mask}</span>
+                  )}
                 </div>
               </div>
               {/* Middle: Name + Type */}
@@ -151,21 +165,19 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                   {capitalizeWords(acc.subtype)}
                 </div>
               </div>
-              {/* Bottom: Balance and Last Updated */}
+              {/* Bottom: Balance and Last Sync */}
               <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.92 }}>Balance</div>
                   <div style={{ fontSize: 10, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {acc.updated_at && (
-                      <>
-                        Last updated: {formatLastUpdated(acc.updated_at)}
-                        {acc.update_success ? (
-                          <FaCircleCheck size={10} style={{ color: 'var(--color-success)' }} />
-                        ) : (
-                          <FaCircleXmark size={10} style={{ color: 'var(--color-danger)' }} />
-                        )}
-                      </>
-                    )}
+                    <>
+                      Last sync: {lastSyncMap[acc.id] ? formatLastUpdated(lastSyncMap[acc.id]) : 'Never synced'}
+                      {acc.update_success ? (
+                        <FaCircleCheck size={10} style={{ color: 'var(--color-success)' }} />
+                      ) : (
+                        <FaCircleXmark size={10} style={{ color: 'var(--color-danger)' }} />
+                      )}
+                    </>
                   </div>
                 </div>
                 <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: -0.5, color: '#444', textShadow: 'none' }}>

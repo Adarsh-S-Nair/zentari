@@ -1,27 +1,52 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
 import { FaCircleCheck, FaCircleXmark, FaWallet, FaCreditCard } from 'react-icons/fa6';
 import { FinancialContext } from '../../contexts/FinancialContext';
 import { formatCurrency, capitalizeWords, formatDate, formatLastUpdated } from '../../utils/formatters';
 import Toggle from '../ui/Toggle';
+import Spinner from '../ui/Spinner';
 
 const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   const { accountId } = useParams();
   const navigate = useNavigate();
-  const { accounts, transactions = [] } = useContext(FinancialContext) || {};
+  const { accounts, transactions = [], loading } = useContext(FinancialContext) || {};
   // Use propAccount if provided, otherwise fallback to context lookup
   const account = propAccount || accounts?.find(acc => String(acc.id) === String(accountId));
 
-  if (!accounts && !account) {
+  // Local state for optimistic UI
+  const [autoSyncLoading, setAutoSyncLoading] = useState(false);
+  const [autoSyncError, setAutoSyncError] = useState(null);
+  const [localAutoSync, setLocalAutoSync] = useState(account?.auto_sync);
+
+  // State for plaid_item sync info
+  const [plaidItem, setPlaidItem] = useState(null);
+  const [plaidItemLoading, setPlaidItemLoading] = useState(true);
+  const [plaidItemError, setPlaidItemError] = useState(null);
+
+  useEffect(() => {
+    if (!account) return;
+    setPlaidItemLoading(true);
+    setPlaidItemError(null);
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
+    const url = `${baseUrl.replace(/\/$/, '')}/database/account/${account.id}/plaid-item`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setPlaidItem(data.plaid_item);
+        } else {
+          setPlaidItemError(data.error || 'Failed to fetch sync info');
+        }
+      })
+      .catch(err => setPlaidItemError(err.message))
+      .finally(() => setPlaidItemLoading(false));
+  }, [account]);
+
+  if (loading || (!accounts && !account)) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', width: '100%' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <div className="flex items-center justify-center">
-            <div className="animate-spin" style={{ width: 36, height: 36, border: '4px solid #e5e7eb', borderTop: '4px solid #3b82f6', borderRadius: '50%' }} />
-          </div>
-          <div style={{ fontSize: 18, color: '#222', marginTop: 12 }}>Loading...</div>
-        </div>
+        <Spinner label="Loading account..." />
       </div>
     );
   }
@@ -82,7 +107,48 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                 />
               )}
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                <div style={{ fontSize: isMobileScreen ? 14 : 15, fontWeight: 700, color: '#fff', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: isMobileScreen ? 110 : 120 }}>{account.name}</div>
+                <div style={{
+                  fontSize: isMobileScreen ? 14 : 15,
+                  fontWeight: 700,
+                  color: '#fff',
+                  marginBottom: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  minWidth: 0,
+                  flexWrap: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  maxWidth: isMobileScreen ? 160 : 220,
+                }}>
+                  <span style={{
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    maxWidth: isMobileScreen ? 100 : 140,
+                    display: 'inline-block',
+                  }}>{account.name}</span>
+                  {lastFour && (
+                    <span style={{
+                      fontSize: isMobileScreen ? 11 : 12,
+                      color: '#e0e7ff',
+                      fontWeight: 600,
+                      background: 'rgba(255,255,255,0.18)',
+                      borderRadius: 999,
+                      padding: isMobileScreen ? '2px 7px' : '2.5px 10px',
+                      marginLeft: 6,
+                      letterSpacing: 1,
+                      display: 'inline-block',
+                      minWidth: 28,
+                      maxWidth: 40,
+                      textAlign: 'center',
+                      boxShadow: '0 1px 4px rgba(59,130,246,0.08)',
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
+                    }}>{lastFour}</span>
+                  )}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
                   <span style={{ fontSize: isMobileScreen ? 11 : 12, color: '#e0e7ff', fontWeight: 500, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: isMobileScreen ? 70 : 120 }}>{account.institution_name}</span>
                   {account.subtype && (
@@ -153,21 +219,17 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
               )}
             </div>
           )}
-          {/* Last Updated Inline Status Row */}
-          {account.updated_at && (
-            <div style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: 8,
-              fontSize: 11,
-              color: '#64748b',
-              fontWeight: 400,
-              margin: '-2px 0 10px 0',
-              padding: '0 18px 0 0',
-              minHeight: 20,
-            }}>
+          {/* Last Transaction Sync Row (Plaid) */}
+          {plaidItemLoading ? (
+            <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', fontSize: 11, color: '#64748b', fontWeight: 400, margin: '-2px 0 10px 0', padding: '0 18px 0 0', minHeight: 20 }}>
+              <span>Loading sync info...</span>
+            </div>
+          ) : plaidItemError ? (
+            <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', fontSize: 11, color: '#dc2626', fontWeight: 400, margin: '-2px 0 10px 0', padding: '0 18px 0 0', minHeight: 20 }}>
+              <span>Error loading sync info</span>
+            </div>
+          ) : plaidItem && (
+            <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, fontSize: 11, color: '#64748b', fontWeight: 400, margin: '-2px 0 10px 0', padding: '0 18px 0 0', minHeight: 20 }}>
               <span style={{ display: 'flex', alignItems: 'center' }}>
                 {account.update_success ? (
                   <FaCircleCheck size={12} style={{ color: 'var(--color-success)', marginRight: 3 }} />
@@ -175,7 +237,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                   <FaCircleXmark size={12} style={{ color: 'var(--color-danger)', marginRight: 3 }} />
                 )}
                 <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>
-                  {formatLastUpdated(account.updated_at)}
+                  {plaidItem.last_transaction_sync ? formatLastUpdated(plaidItem.last_transaction_sync) : 'Never synced'}
                 </span>
               </span>
               {/* Auto Sync Toggle with label */}
@@ -183,10 +245,36 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                 <span style={{ display: 'flex', alignItems: 'center', marginLeft: 10 }}>
                   <span style={{ fontSize: 11, color: '#64748b', fontWeight: 500, marginRight: 5 }}>Auto-Sync</span>
                   <Toggle
-                    checked={!!account.auto_sync}
-                    onChange={() => {/* TODO: implement backend update */}}
+                    checked={localAutoSync ?? !!account.auto_sync}
+                    onChange={async (checked) => {
+                      setAutoSyncLoading(true);
+                      setAutoSyncError(null);
+                      setLocalAutoSync(checked);
+                      try {
+                        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
+                        const url = `${baseUrl.replace(/\/$/, '')}/database/account/${account.account_id}/auto-sync`;
+                        const res = await fetch(url, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ auto_sync: checked })
+                        });
+                        const data = await res.json();
+                        if (!data.success) {
+                          setLocalAutoSync(!checked); // revert
+                          setAutoSyncError('Failed to update auto-sync');
+                          alert('Failed to update auto-sync: ' + (data.error || 'Unknown error'));
+                        }
+                      } catch (err) {
+                        setLocalAutoSync(!checked); // revert
+                        setAutoSyncError('Failed to update auto-sync');
+                        alert('Failed to update auto-sync: ' + err.message);
+                      } finally {
+                        setAutoSyncLoading(false);
+                      }
+                    }}
                     size={isMobileScreen ? 'small' : 'medium'}
                     color="#6366f1"
+                    disabled={autoSyncLoading}
                   />
                 </span>
               )}

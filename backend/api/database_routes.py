@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Request
 from services.supabase_service import get_supabase_service
 from typing import Optional
 from services.plaid_service import PlaidService
@@ -114,4 +114,48 @@ async def delete_all_accounts_for_user(user_id: str, authorization: Optional[str
     for account in accounts:
         await delete_account(account["id"], authorization)
     print(f"[Plaid Cleanup] Finished deleting all accounts for user {user_id}")
-    return {"success": True} 
+    return {"success": True}
+
+# PATCH endpoint to update auto_sync for an account
+@router.patch("/account/{account_id}/auto-sync")
+async def update_account_auto_sync(account_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    """
+    Update the auto_sync column for a specific account.
+    """
+    try:
+        data = await request.json()
+        auto_sync = data.get("auto_sync")
+        if auto_sync is None:
+            return {"success": False, "error": "Missing 'auto_sync' in request body"}
+        supabase_service = get_supabase_service()
+        # Update the account's auto_sync column
+        result = supabase_service.client.table('accounts').update({"auto_sync": auto_sync}).eq('account_id', account_id).execute()
+        if result.data:
+            return {"success": True, "account_id": account_id, "auto_sync": auto_sync}
+        else:
+            return {"success": False, "error": "Account not found or update failed"}
+    except Exception as e:
+        print(f"Exception in update_account_auto_sync for account {account_id}: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+@router.get("/account/{account_id}/plaid-item")
+async def get_account_plaid_item(account_id: str, authorization: Optional[str] = Header(None)):
+    """
+    Get the plaid_item (including last_transaction_sync) for a given account_id.
+    """
+    supabase_service = get_supabase_service()
+    account_result = supabase_service.get_account_by_id(account_id)
+    if not account_result.get("success"):
+        return {"success": False, "error": "Account not found"}
+    account = account_result["account"]
+    item_id = account.get("item_id")
+    if not item_id:
+        return {"success": False, "error": "Account missing item_id"}
+    # Query plaid_items by item_id only (assumed unique)
+    response = supabase_service.client.table('plaid_items').select('*').eq('item_id', item_id).single().execute()
+    if not response.data:
+        return {"success": False, "error": "Plaid item not found"}
+    plaid_item = dict(response.data)
+    # Remove sensitive fields if present
+    plaid_item.pop('access_token', None)
+    return {"success": True, "plaid_item": plaid_item} 

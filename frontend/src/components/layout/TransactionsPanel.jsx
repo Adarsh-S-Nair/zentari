@@ -4,7 +4,8 @@ import { FaSearch, FaChevronRight } from 'react-icons/fa';
 import LightDropdown from '../ui/LightDropdown';
 import { formatCurrency } from '../../utils/formatters';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { Spinner, Card } from '../ui';
+import { Spinner, Card, Button } from '../ui';
+import CircleUserToggle from './CircleUserToggle';
 
 const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
   const { transactions, transactionsLoading, accounts, categories } = useFinancial();
@@ -17,6 +18,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
     ...accounts.map((account) => ({
       label: account.name,
       value: account.account_id,
+      mask: account.mask,
     })),
   ];
 
@@ -37,34 +39,44 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
 
   return (
     <main className="flex-1 px-[24px] py-[12px] overflow-hidden">
-      {/* Filter Row */}
-      <div
-        style={{
+      {/* CircleUserToggle and Filters Row */}
+      <div style={{ width: '100%', maxWidth: maxWidth, margin: '0 auto 18px auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, boxSizing: 'border-box' }}>
+        <CircleUserToggle
+          users={[
+            { id: 'combined', name: 'Combined' },
+            { id: 'user1', name: 'Alice' },
+            { id: 'user2', name: 'Bob' },
+            { id: 'user3', name: 'Charlie' },
+          ]}
+          selectedUser={'combined'}
+          onSelectUser={() => {}}
+          onAddAccounts={() => {}}
+          addLoading={false}
+          maxWidth={maxWidth - 120}
+        />
+        <Button
+          label="Filters"
+          color="#3b82f6"
+          width="auto"
+          style={{ height: 40, fontSize: 13, fontWeight: 500, padding: '0 22px', borderRadius: 10 }}
+          icon={<FiFilter size={18} />}
+        />
+      </div>
+
+      {/* Modern search bar below toggle */}
+      <div style={{ width: '100%', maxWidth: maxWidth, margin: '0 auto 18px auto', display: 'flex', alignItems: 'center', boxSizing: 'border-box' }}>
+        <div style={{
+          flex: 1,
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          maxWidth: maxWidth,
-          margin: '0 auto 12px auto',
-          gap: 10,
-        }}
-      >
-        {/* Search Input */}
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            height: 32,
-            border: '1px solid #d1d5db',
-            borderRadius: 6,
-            padding: '0 10px',
-            fontSize: 12,
-            color: '#111827',
-            backgroundColor: '#fff',
-            boxSizing: 'border-box',
-          }}
-        >
-          <FaSearch size={12} style={{ marginRight: 6, color: '#9ca3af' }} />
+          background: 'rgba(99,102,241,0.07)',
+          borderRadius: 10,
+          padding: isMobile ? '7px 10px' : '10px 16px',
+          minHeight: 36,
+          boxSizing: 'border-box',
+          boxShadow: '0 1px 4px 0 rgba(59,130,246,0.04)',
+        }}>
+          <FaSearch size={15} style={{ marginRight: 8, color: '#6b7280' }} />
           <input
             type="text"
             placeholder="Search transactions"
@@ -74,159 +86,137 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700 }) => {
               border: 'none',
               outline: 'none',
               flex: 1,
-              fontSize: 12,
-              height: '100%',
-              color: '#111827',
+              fontSize: 13,
+              height: 24,
+              color: '#222',
               backgroundColor: 'transparent',
-            }}
-          />
-        </div>
-
-        {/* Account Dropdown */}
-        <div style={{ height: 32 }}>
-          <LightDropdown
-            name="account"
-            value={selectedAccount}
-            onChange={(e) => setSelectedAccount(e.target.value)}
-            options={accountOptions}
-            style={{
-              height: 32,
-              fontSize: 12,
+              minWidth: 0,
               boxSizing: 'border-box',
             }}
           />
         </div>
-
-        {/* Filters Button */}
-        <button
-          style={{
-            height: 32,
-            padding: '0 12px',
-            backgroundColor: '#fff',
-            border: '1px solid #d1d5db',
-            borderRadius: 6,
-            fontSize: 12,
-            fontWeight: 500,
-            color: '#374151',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            cursor: 'pointer',
-            boxSizing: 'border-box',
-          }}
-        >
-          <FiFilter size={12} />
-          Filters
-        </button>
       </div>
 
-      {/* Transactions Table */}
-      <Card className={`w-full mx-auto p-0 overflow-hidden shadow-sm rounded-xl border border-gray-100`} style={{ maxWidth: maxWidth, height: 'calc(100vh - 150px)', display: 'flex', flexDirection: 'column' }}>
-        <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: 0 }}>
+      {/* Transactions Card - styled like recent transactions */}
+      <div
+        style={{
+          width: '100%',
+          maxWidth: maxWidth,
+          background: 'linear-gradient(120deg, #f7f8fa 0%, #f3f4f6 100%)',
+          borderRadius: 14,
+          boxShadow: '0 2px 8px 0 rgba(59,130,246,0.10)',
+          border: '1.5px solid #e5e7eb',
+          padding: 0,
+          margin: '0 auto 18px auto',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 500, color: '#222', padding: isMobile ? '10px 10px 6px 10px' : '13px 18px 7px 18px', borderBottom: '1px solid #f1f5f9', background: 'transparent', letterSpacing: 0.1 }}>All Transactions</div>
+        <div
+          ref={listRef}
+          style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0,
+            maxHeight: isMobile ? 'calc(100vh - 310px)' : 'calc(100vh - 280px)',
+            overflowY: 'auto',
+            padding: 0
+          }}
+        >
           {transactionsLoading ? (
-            <div className="h-full flex items-center justify-center">
-              <Spinner size={24} />
+            <div className="h-full flex items-center justify-center" style={{ minHeight: 120 }}>
+              <Spinner size={28} />
             </div>
           ) : filteredTransactions.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-gray-500 text-sm text-center px-6">
+            <div className="h-full flex items-center justify-center text-gray-500 text-sm text-center px-6" style={{ minHeight: 120 }}>
               {transactions.length === 0
                 ? 'No transactions found. Add accounts to see your transaction history.'
                 : 'No transactions match your filters.'}
             </div>
           ) : (
-            filteredTransactions.map((txn, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '42px 1fr 80px 16px',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  borderBottom: '1px solid #f3f4f6',
-                  fontSize: 12,
-                  gap: 12,
-                  transition: 'background 0.15s ease',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = '#f9fafb')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = 'transparent')
-                }
-              >
-                {/* Icon */}
-                {txn.icon_url ? (
-                  <img
-                    src={txn.icon_url}
-                    alt=""
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 8,
-                      objectFit: 'contain',
-                      backgroundColor: '#f3f4f6',
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 42,
-                      height: 42,
-                      backgroundColor: '#e5e7eb',
-                      borderRadius: 8,
-                    }}
-                  />
-                )}
-
-                {/* Description + Metadata */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <div style={{ color: '#111827', fontWeight: 500 }}>{txn.description}</div>
-
-                  <div style={{ fontSize: 11, color: '#6b7280', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    <span>{formatDate(txn.date)}</span>
-                    <span>· {txn.accounts?.name || 'Unknown Account'}</span>
-                  </div>
-
-                  {txn.category_name && (
-                    <div style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 2 }}>
-                      <div
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          backgroundColor: txn.category_color || '#6b7280',
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span>{txn.category_name}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Amount */}
+            filteredTransactions.map((txn, i) => {
+              const isPositive = txn.amount > 0;
+              const amountColor = isPositive ? '#16a34a' : '#dc2626';
+              const amountPrefix = isPositive ? '+' : '';
+              return (
                 <div
+                  key={i}
                   style={{
-                    textAlign: 'right',
-                    fontWeight: 500,
-                    color: txn.amount > 0 ? '#16a34a' : '#1f2937',
-                    fontSize: 12,
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: i % 2 === 0 ? '#fff' : '#f8fafc',
+                    borderBottom: i === filteredTransactions.length - 1 ? 'none' : '1px solid #f1f5f9',
+                    padding: isMobile ? '24px 10px' : '28px 32px',
+                    minHeight: isMobile ? 80 : 96,
+                    boxSizing: 'border-box',
+                    transition: 'background 0.18s',
+                    cursor: 'pointer',
+                    gap: 0,
                   }}
+                  onMouseOver={e => e.currentTarget.style.background = '#f1f5ff'}
+                  onMouseOut={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f8fafc'}
                 >
-                  {txn.amount > 0
-                    ? `+${formatCurrency(txn.amount)}`
-                    : formatCurrency(Math.abs(txn.amount))}
+                  {/* Icon - circle style */}
+                  <div style={{ flexShrink: 0, marginRight: isMobile ? 16 : 22 }}>
+                    {txn.icon_url ? (
+                      <img src={txn.icon_url} alt="icon" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', background: '#f3f4f6', border: '1.5px solid #e5e7eb' }} />
+                    ) : (
+                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e5e7eb' }} />
+                    )}
+                  </div>
+                  {/* Description/metadata */}
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 2, overflow: 'hidden' }}>
+                    <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 500, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: isMobile ? 140 : 200 }}>{txn.description}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 5 : 8, flexWrap: 'wrap', minHeight: isMobile ? 12 : 16 }}>
+                      <span style={{ fontSize: isMobile ? 11 : 12, color: '#64748b', fontWeight: 400 }}>{formatDate(txn.date)}</span>
+                      <span style={{ fontSize: isMobile ? 11 : 12, color: '#64748b', fontWeight: 400 }}>
+                        · {txn.accounts?.name || 'Unknown Account'}
+                        {txn.accounts?.mask && (
+                          <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: isMobile ? 11 : 12, marginLeft: 4 }}>
+                            {'●'.repeat(4)}{txn.accounts.mask}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    {/* Category pill row */}
+                    {txn.category_name && (
+                      <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{
+                          fontSize: isMobile ? 11 : 12,
+                          fontWeight: 400,
+                          color: txn.category_color || '#6366f1',
+                          background: txn.category_color ? `${txn.category_color}22` : '#eef2ff',
+                          borderRadius: 7,
+                          padding: isMobile ? '2px 7px' : '3px 10px',
+                          letterSpacing: 0.1,
+                          display: 'inline-block',
+                          minWidth: 0,
+                          maxWidth: isMobile ? 80 : 120,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>{txn.category_name}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Amount */}
+                  <div style={{ flex: 1, textAlign: 'right', fontWeight: 600, fontSize: isMobile ? 14 : 16, color: amountColor, minWidth: isMobile ? 48 : 70, letterSpacing: -0.5, marginTop: 0, whiteSpace: 'nowrap', overflow: 'hidden', paddingRight: isMobile ? 8 : 12 }}>
+                    {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
+                  </div>
+                  {/* Chevron */}
+                  <div style={{ paddingLeft: 8 }}>
+                    <FaChevronRight size={14} color="#9ca3af" style={{ cursor: 'pointer' }} />
+                  </div>
                 </div>
-
-                {/* Chevron */}
-                <div style={{ paddingLeft: 6 }}>
-                  <FaChevronRight size={12} color="#9ca3af" style={{ cursor: 'pointer' }} />
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
-      </Card>
+      </div>
     </main>
   );
 };
