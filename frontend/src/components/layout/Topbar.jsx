@@ -12,6 +12,8 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
   const [showMenu, setShowMenu] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const triggerRef = useRef(null);
+  const [visible, setVisible] = useState(true);
+  const lastScrollY = useRef(0);
 
   // Fetch user's name and avatar from user metadata and profiles table
   useEffect(() => {
@@ -37,6 +39,26 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
     }
   }, [user]);
 
+  // Hide Topbar on scroll down, show on scroll up (mobile only)
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerWidth > 670) return;
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY.current && currentScrollY > 40) {
+        setVisible(false); // scrolling down
+      } else {
+        setVisible(true); // scrolling up
+      }
+      lastScrollY.current = currentScrollY;
+    };
+    if (window.innerWidth <= 670) {
+      window.addEventListener('scroll', handleScroll);
+    }
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -61,18 +83,23 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
 
   return (
     <>
-      <div style={{
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        background: '#fff',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        boxShadow: '0 2px 8px 0 rgba(59,130,246,0.04)',
-        border: '1.5px solid #f3f4f6',
-        boxSizing: 'border-box',
-      }}>
+      <div
+        style={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          background: '#fff',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          boxShadow: '0 2px 8px 0 rgba(59,130,246,0.04)',
+          border: '1.5px solid #f3f4f6',
+          boxSizing: 'border-box',
+          transition: 'transform 0.3s cubic-bezier(.4,1.5,.5,1), opacity 0.2s',
+          transform: visible ? 'translateY(0)' : 'translateY(-110%)',
+          opacity: visible ? 1 : 0,
+        }}
+      >
         <div
           style={{
             width: '100%',
