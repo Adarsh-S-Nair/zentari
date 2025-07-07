@@ -58,7 +58,7 @@ function SimulationPanel({ loading, loadingPhase, result, currentSimDate, isMobi
   const showFullResult = !loading && result
 
   return (
-    <main className="flex-1 px-[24px] overflow-y-auto overflow-x-hidden">
+    <main className="px-[24px]">
       <div className={`flex flex-col items-center ${showFullResult ? 'pt-[24px] pb-[24px]' : 'justify-center min-h-[calc(100vh-100px)]'}`}>
         
         {loading ? (

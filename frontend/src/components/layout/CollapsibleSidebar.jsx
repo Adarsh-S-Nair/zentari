@@ -35,18 +35,17 @@ export default function CollapsibleSidebar({
         className="transition-all duration-200 ease-out h-[100vh] px-[8px] flex flex-col"
         style={{
           background: '#fff',
-          // borderRadius removed for flat look
           width: fullyOpen ? '220px' : '40px',
           paddingTop: '20px',
           paddingBottom: '12px',
           boxShadow: fullyOpen ? '0 4px 24px 0 rgba(59,130,246,0.06)' : '0 1.5px 4px 0 rgba(59,130,246,0.03)',
           fontFamily: '"Inter", system-ui, sans-serif',
           color: '#222',
-          overflowY: 'auto',
-          position: isMobile ? 'relative' : 'absolute',
+          position: isMobile ? 'relative' : 'fixed',
           top: 0,
           left: 0,
-          zIndex: isMobile ? 10 : 40,
+          height: '100vh',
+          zIndex: isMobile ? 10 : 120,
           border: '1.5px solid #f3f4f6',
         }}
       >

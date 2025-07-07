@@ -44,7 +44,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   const isMobileScreen = typeof window !== 'undefined' && window.innerWidth <= 400;
 
   return (
-    <main className="flex-1 px-[24px] overflow-y-auto overflow-x-hidden">
+    <main className="px-[24px]">
       <div style={{ width: '100%', maxWidth: maxWidth, margin: '0 auto' }}>
         <div className="flex flex-col items-center pt-[20px] pb-[24px]">
           {/* Account Overview Card - Gradient, white text, full width */}

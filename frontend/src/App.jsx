@@ -203,54 +203,42 @@ function App() {
     setLoginOpen(false);
   };
 
-  // Mobile viewport height fix
-  useEffect(() => {
-    const setVh = () => {
-      document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
-    };
-    setVh();
-    window.addEventListener('resize', setVh);
-    return () => window.removeEventListener('resize', setVh);
-  }, []);
-
   return (
-    <div className="app-main-container">
-      <FinancialProvider setToast={setToast}>
-        <LoginModal
-          isOpen={loginOpen}
-          onClose={() => setLoginOpen(false)}
-          onLoginSuccess={handleLoginSuccess}
+    <FinancialProvider setToast={setToast}>
+      <LoginModal
+        isOpen={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+      <Router>
+        <AppContent
+          loading={loading}
+          loadingPhase={loadingPhase}
+          loginOpen={loginOpen}
+          setLoginOpen={setLoginOpen}
+          user={user}
+          userChecked={userChecked}
+          setUser={setUser}
+          result={result}
+          setResult={setResult}
+          toast={toast}
+          setToast={setToast}
+          currentSimDate={currentSimDate}
+          setCurrentSimDate={setCurrentSimDate}
+          logoutOpen={logoutOpen}
+          setLogoutOpen={setLogoutOpen}
+          isTablet={isTablet}
+          isMobile={isMobile}
+          allTabs={allTabs}
+          visibleTabs={visibleTabs}
+          form={form}
+          setForm={setForm}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
+          circleUsers={circleUsers}
         />
-        <Router>
-          <AppContent
-            loading={loading}
-            loadingPhase={loadingPhase}
-            loginOpen={loginOpen}
-            setLoginOpen={setLoginOpen}
-            user={user}
-            userChecked={userChecked}
-            setUser={setUser}
-            result={result}
-            setResult={setResult}
-            toast={toast}
-            setToast={setToast}
-            currentSimDate={currentSimDate}
-            setCurrentSimDate={setCurrentSimDate}
-            logoutOpen={logoutOpen}
-            setLogoutOpen={setLogoutOpen}
-            isTablet={isTablet}
-            isMobile={isMobile}
-            allTabs={allTabs}
-            visibleTabs={visibleTabs}
-            form={form}
-            setForm={setForm}
-            handleChange={handleChange}
-            handleSubmit={handleSubmit}
-            circleUsers={circleUsers}
-          />
-        </Router>
-      </FinancialProvider>
-    </div>
+      </Router>
+    </FinancialProvider>
   );
 }
 
@@ -322,7 +310,7 @@ function AppContent({
       <Route
         path="/accounts"
         element={user ? (
-          <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
+          <div className="flex h-screen w-screen overflow-x-hidden relative">
             {!isMobile && (
               <CollapsibleSidebar
                 visibleTabs={visibleTabs}
@@ -336,9 +324,9 @@ function AppContent({
                 currentTab={'/accounts'}
               />
             )}
-            <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+            <div className={`flex-1 h-full flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
               <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} />
-              <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
+              <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
                 <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
               </div>
               {isMobile && (
@@ -357,7 +345,7 @@ function AppContent({
       <Route
         path="/transactions"
         element={user ? (
-          <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
+          <div className="flex h-screen w-screen overflow-x-hidden relative">
             {!isMobile && (
               <CollapsibleSidebar
                 visibleTabs={visibleTabs}
@@ -371,9 +359,9 @@ function AppContent({
                 currentTab={'/transactions'}
               />
             )}
-            <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+            <div className={`flex-1 h-full flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
               <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} />
-              <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}>
+              <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
                 <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
               </div>
               {isMobile && (
@@ -422,7 +410,7 @@ function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, hand
   const { accounts } = useContext(FinancialContext) || {};
   const account = accounts?.find(acc => String(acc.id) === String(accountId));
   return (
-    <div className="flex h-screen w-screen overflow-x-hidden overflow-y-hidden relative">
+    <div className="flex h-screen w-screen overflow-x-hidden relative">
       {!isMobile && (
         <CollapsibleSidebar
           visibleTabs={visibleTabs}
@@ -436,7 +424,7 @@ function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, hand
           currentTab={'/accounts'}
         />
       )}
-      <div className={`flex-1 h-full overflow-y-auto flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}> 
+      <div className={`flex-1 h-full flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
         <Topbar
           user={user}
           onLoginClick={() => setLoginOpen(true)}
@@ -445,7 +433,7 @@ function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, hand
           showBackArrow={true}
           onBack={() => navigate('/accounts')}
         />
-        <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-[60px]' : ''}`}> 
+        <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
           <AccountDetail maxWidth={maxWidth} account={account} />
         </div>
         {isMobile && (

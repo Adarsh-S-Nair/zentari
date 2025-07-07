@@ -66,7 +66,9 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
         display: 'flex',
         justifyContent: 'center',
         background: '#fff',
-        // borderRadius removed for flat look
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
         boxShadow: '0 2px 8px 0 rgba(59,130,246,0.04)',
         border: '1.5px solid #f3f4f6',
         boxSizing: 'border-box',
