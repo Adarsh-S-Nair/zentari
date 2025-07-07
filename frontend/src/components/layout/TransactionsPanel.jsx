@@ -78,7 +78,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
           flex: 1,
           display: 'flex',
           alignItems: 'center',
-          background: 'rgba(99,102,241,0.07)',
+          background: '#f3f4f6',
           borderRadius: 10,
           padding: isMobile ? '7px 10px' : '10px 16px',
           minHeight: 36,
@@ -236,7 +236,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                       </div>
                       {/* Right: Amount only, vertically centered */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 70, marginLeft: 8, height: '100%' }}>
-                        <div style={{ fontWeight: 600, fontSize: 15, color: amountColor, letterSpacing: -0.5, whiteSpace: 'nowrap', overflow: 'hidden', paddingRight: 2 }}>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: amountColor, letterSpacing: -0.5, whiteSpace: 'nowrap', overflow: 'hidden', paddingRight: 2 }}>
                           {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
                         </div>
                       </div>
@@ -287,7 +287,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                         )}
                       </div>
                       {/* Amount */}
-                      <div style={{ flex: 1, textAlign: 'right', fontWeight: 600, fontSize: 16, color: amountColor, minWidth: 70, letterSpacing: -0.5, marginTop: 0, whiteSpace: 'nowrap', overflow: 'hidden', paddingRight: 12 }}>
+                      <div style={{ flex: 1, textAlign: 'right', fontWeight: 600, fontSize: 14, color: amountColor, minWidth: 70, letterSpacing: -0.5, marginTop: 0, whiteSpace: 'nowrap', overflow: 'hidden', paddingRight: 12 }}>
                         {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
                       </div>
                       {/* Chevron */}
