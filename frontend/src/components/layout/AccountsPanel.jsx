@@ -131,19 +131,19 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
           <>
             {/* Net Worth Banner */}
             {!allAccountsEmpty && (
-              <div className="w-full max-w-[700px] mx-auto flex flex-row flex-wrap gap-4 mb-6 box-border px-1">
+              <div className="w-full max-w-[700px] mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 box-border px-1">
                 {/* Net Worth Card */}
-                <div className="flex-1 min-w-[220px] max-w-[400px] rounded-xl bg-gradient-to-tr from-blue-500 to-blue-300 text-white border-none px-5 py-4 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl">
+                <div className="w-full flex-1 rounded-xl bg-gradient-to-tr from-blue-500 to-blue-300 text-white border-none px-5 py-4 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl">
                   <span className="text-[13px] font-medium opacity-90 tracking-wide mb-1">Net Worth</span>
                   <span className="text-[22px] font-bold mt-0 -tracking-[0.5px] drop-shadow">{formatCurrency(totalBalance)}</span>
                 </div>
                 {/* Total Assets Card */}
-                <div className="flex-1 min-w-[220px] max-w-[400px] rounded-xl bg-gradient-to-tr from-green-500 to-green-300 text-white border border-gray-200 px-5 py-4 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl">
+                <div className="w-full flex-1 rounded-xl bg-gradient-to-tr from-green-500 to-green-300 text-white border border-gray-200 px-5 py-4 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl">
                   <span className="text-[13px] font-medium opacity-90 tracking-wide mb-1">Total Assets</span>
                   <span className="text-[22px] font-bold mt-0 -tracking-[0.5px]">{formatCurrency(assetTotal)}</span>
                 </div>
                 {/* Total Liabilities Card */}
-                <div className="flex-1 min-w-[220px] max-w-[400px] rounded-xl bg-gradient-to-tr from-red-500 to-red-300 text-white border border-gray-200 px-5 py-4 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl">
+                <div className="w-full flex-1 rounded-xl bg-gradient-to-tr from-red-500 to-red-300 text-white border border-gray-200 px-5 py-4 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl">
                   <span className="text-[13px] font-medium opacity-90 tracking-wide mb-1">Total Liabilities</span>
                   <span className="text-[22px] font-bold mt-0 -tracking-[0.5px]">{formatCurrency(liabilityTotal)}</span>
                 </div>

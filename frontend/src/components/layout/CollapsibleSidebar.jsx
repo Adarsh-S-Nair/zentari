@@ -35,7 +35,7 @@ export default function CollapsibleSidebar({
         className={`transition-all duration-200 ease-out h-screen px-2 flex flex-col bg-white overflow-y-auto ${isMobile ? 'relative z-[110]' : 'fixed z-[200]'} top-0 left-0 border border-gray-100 ${fullyOpen ? 'w-[260px] pt-5 pb-3 shadow-[0_4px_24px_0_rgba(59,130,246,0.06)]' : 'w-14 pt-5 pb-3 shadow-[0_1.5px_4px_0_rgba(59,130,246,0.03)]'} font-sans text-gray-900`}
       >
         {/* 🔷 Logo */}
-        <div className={`w-full ${fullyOpen ? 'ml-2 mb-3.5 pb-3 border-b border-gray-100' : 'mb-6 flex justify-center pb-3 border-b border-gray-100'}`}>
+        <div className={`w-full ${fullyOpen ? 'flex justify-start pl-3' : 'flex justify-center'} pb-3 border-b border-gray-100 mb-4`}>
           <img
             src={fullyOpen ? logoFull : logoCollapsed}
             alt="Logo"
@@ -67,7 +67,7 @@ export default function CollapsibleSidebar({
 
 function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate }) {
   const isExpandable = tab.hasContent
-  const baseClass = fullyOpen ? 'px-3 py-2 h-12' : 'justify-center h-10'
+  const baseClass = fullyOpen ? 'w-full h-10 flex items-center justify-start px-3' : 'w-10 h-10 flex items-center justify-center'
   const hoverClass = isActive ? '' : 'hover:bg-indigo-50 cursor-pointer'
 
   const [localExpanded, setLocalExpanded] = useState(isActive)
@@ -78,12 +78,7 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
   const textColor = isActive ? '#fff' : '#6b7280'
 
   const isExpanded = isActive && localExpanded
-  const rounded =
-    !fullyOpen || !isExpandable
-      ? 'rounded-[10px]'
-      : isExpanded
-      ? 'rounded-t-[10px]'
-      : 'rounded-[10px]'
+  const rounded = 'rounded-[10px]'
 
   const activeTabClass = isActive ? 'bg-gradient-to-r from-indigo-500 to-blue-400 text-white font-bold' : '';
 
@@ -119,23 +114,22 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
       <div
         className={`flex items-center gap-2 transition-colors duration-200 ${baseClass} ${hoverClass} ${rounded} ${activeTabClass}`}
         onClick={() => !isActive && navigate(tab.route)}
-        style={{ color: isActive ? undefined : textColor, letterSpacing: 0.2 }}
+        style={{ letterSpacing: 0.2 }}
         onMouseEnter={e => { if (!isActive) e.currentTarget.style.transform = 'scale(1.04)'; }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
         onMouseDown={e => { if (!isActive) e.currentTarget.style.transform = 'scale(0.97) translateY(1.5px)'; }}
         onMouseUp={e => { if (!isActive) e.currentTarget.style.transform = 'scale(1.04)'; }}
       >
-        <div style={{ fontSize: '14px', color: textColor }}>
-          {React.cloneElement(tab.icon, { size: 14, color: textColor })}
+        <div className={`text-[14px] ${isActive ? 'text-white' : 'text-gray-400'}`}>
+          {React.cloneElement(tab.icon, { size: 14 })}
         </div>
         {fullyOpen && (
           <div className="flex justify-between w-full items-center">
-            <h2 className="text-[11px] font-bold" style={{ color: textColor }}>{tab.label}</h2>
+            <h2 className={`text-[11px] font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{tab.label}</h2>
             {tab.hasContent && (
               <FiChevronDown
                 size={14}
-                style={{ color: textColor }}
-                className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}
+                className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : 'rotate-0'} ${isActive ? 'text-white' : 'text-gray-400'}`}
               />
             )}
           </div>
@@ -144,24 +138,12 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
 
       {fullyOpen && isExpandable && localExpanded && (
         <div
-          style={{
-            maxHeight: isActive ? `${contentHeight}px` : '0px',
-            transition: shouldAnimate ? 'max-height 0.2s ease-out' : 'none',
-            overflow: 'hidden',
-            backgroundColor: '#1c232f',
-            borderBottomLeftRadius: 6,
-            borderBottomRightRadius: 6,
-            marginBottom: '8px',
-          }}
+          className={`overflow-hidden bg-slate-900 rounded-b-md mb-2 transition-[max-height] duration-200 ease-out`}
+          style={{ maxHeight: isActive ? `${contentHeight}px` : '0px' }}
         >
           <div
             ref={contentRef}
-            className="px-4 py-3 bg-slate-900 rounded-b-md"
-            style={{
-              visibility: readyToShow ? 'visible' : 'hidden',
-              opacity: readyToShow ? 1 : 0,
-              transition: 'opacity 0.15s ease-out',
-            }}
+            className={`px-4 py-3 bg-slate-900 rounded-b-md transition-opacity duration-150 ease-out ${readyToShow ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
           >
             <SimulationControls {...formProps} />
           </div>
