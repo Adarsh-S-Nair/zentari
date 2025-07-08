@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Button, Spinner } from '../ui';
+import { Button } from '../ui';
 import { PlaidLinkModal } from '../modals';
 import { useFinancial } from '../../contexts/FinancialContext';
 import AccountsSummaryCard from './AccountsSummaryCard';
@@ -100,10 +100,11 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
             <Button
               label="Add Accounts"
               onClick={handleAddAccounts}
-              width="auto"
+              width="w-32"
               loading={plaidLoading}
               disabled={plaidLoading}
-              color="#3b82f6"
+              className="h-8"
+              color="networth"
             />
           </div>
         )}
@@ -116,16 +117,15 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
             <img src={noAccountsImage} alt="No Accounts" className="w-[240px] object-contain mb-1" />
             <h2 className="text-[15px] font-medium text-gray-800">No Accounts Added</h2>
             <p className="text-[13px] text-gray-500 mt-[-4px] max-w-[260px]">Add your financial accounts to see your cash, credit, loans, and investments.</p>
-            <div>
-              <Button
-                label="Add Accounts"
-                onClick={handleAddAccounts}
-                width="auto"
-                loading={plaidLoading}
-                disabled={plaidLoading}
-                color="#3b82f6"
-              />
-            </div>
+            <Button
+              label="Add Accounts"
+              onClick={handleAddAccounts}
+              width="w-32"
+              loading={plaidLoading}
+              disabled={plaidLoading}
+              className="h-8"
+              color="networth"
+            />
           </div>
         ) : (
           <>

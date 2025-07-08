@@ -45,7 +45,7 @@ function MiniSpinner({ center = false }) {
   return (
     <div
       className={`inline-block align-middle border-2 border-white border-t-transparent rounded-full animate-spin${center ? '' : ' mr-2'}`}
-      style={{ width: 14, height: 14 }}
+      style={{ width: 12, height: 12 }}
     />
   )
 }
@@ -79,7 +79,7 @@ function Button({
 
   // Pick color classes
   const colorClasses = colorMap[color] || colorMap.networth
-  const baseClasses = `inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-[13px] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300 ${width}`
+  const baseClasses = `inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-[13px] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300 ${width} cursor-pointer hover:scale-105`
   const inactiveClasses = 'opacity-60 cursor-not-allowed'
   const activeClasses = !isInactive ? 'hover:scale-[1.06] active:scale-95 cursor-pointer' : ''
 

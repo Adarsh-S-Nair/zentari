@@ -37,7 +37,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
   return (
     <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-0 box-border mb-4">
       {/* Sticky Filters/Search/Toggle Bar */}
-      <div className="sticky top-[56px] z-20 bg-white w-full box-border px-2 sm:px-4 py-4 mb-5 border-b border-gray-200">
+      <div className="sticky top-[56px] z-20 bg-white w-full box-border py-4 mb-5 border-b border-gray-200">
         <div className="flex flex-col gap-2 w-full">
           <div className="flex items-center justify-between gap-3 w-full">
             <CircleUserToggle
@@ -50,14 +50,14 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
             />
             <Button
               label="Filters"
+              icon={<FiFilter size={16} />}
+              width="w-32"
+              className="h-8"
               color="networth"
-              width="w-auto"
-              className="h-8 text-[13px] font-medium rounded-lg px-4"
-              icon={<FiFilter size={18} />}
             />
           </div>
           <div className="flex items-center w-full">
-            <div className="flex flex-1 items-center bg-gray-100 rounded-lg shadow-sm py-2 px-2 sm:px-4 min-h-[36px] w-full">
+            <div className="flex flex-1 items-center bg-gray-100 rounded-lg shadow-sm py-2 px-2 min-h-[36px] w-full">
               <FaSearch size={15} className="mr-2 text-gray-400" />
               <input
                 type="text"
@@ -92,7 +92,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
             return (
               <div
                 key={i}
-                className={`flex items-center bg-white px-2 sm:px-4 py-4 min-h-[80px] box-border border-b border-gray-200 transition-colors duration-150 cursor-pointer w-full max-w-full hover:bg-gray-50`}
+                className={`flex items-center bg-white px-2 py-4 min-h-[80px] box-border border-b border-gray-200 transition-colors duration-150 cursor-pointer w-full max-w-full hover:bg-gray-50`}
               >
                 {/* Icon/avatar */}
                 <div className={`flex-shrink-0 mr-3 sm:mr-4 w-12 h-12 rounded-full flex items-center justify-center overflow-hidden self-center ${txn.icon_url ? 'bg-transparent border-none' : 'bg-gray-200 border border-gray-200'}`}>
