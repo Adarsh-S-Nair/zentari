@@ -153,14 +153,14 @@ function Button({
           <MiniSpinner center />
         </span>
       ) : (
-        <>
+        <span className="whitespace-nowrap flex items-center">
           {icon && <span className="inline-flex items-center mr-1">{icon}</span>}
           {label || children}
-        </>
+        </span>
       )}
       {/* Invisible text for width preservation when loading */}
       {loading && (
-        <span className="invisible select-none">
+        <span className="invisible select-none whitespace-nowrap flex items-center">
           {icon && <span className="inline-flex items-center mr-1">{icon}</span>}
           {label || children}
         </span>
