@@ -63,9 +63,9 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   else if (type === 'investment') gradientClass = 'bg-gradient-to-tr from-blue-500 to-blue-300';
 
   return (
-    <main className="w-full max-w-[700px] mx-auto px-4 box-border">
+    <main className="w-full max-w-[700px] mx-auto px-4 box-border pb-0 mb-0">
       <div className="w-full m-0">
-        <div className="flex flex-col items-center pt-5 pb-6">
+        <div className="flex flex-col items-center pt-5 pb-2">
           {/* Account Overview Card - Credit card style, blue gradient */}
           <div
             className={`w-full max-w-[700px] rounded-2xl ${gradientClass} text-white px-7 py-6 shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl relative overflow-hidden flex flex-col gap-4 mb-7`}
@@ -246,7 +246,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
           )}
 
           {/* Recent Transactions Widget - Card rows, mobile friendly */}
-          <div className="w-full bg-gradient-to-tr from-gray-50 to-gray-100 rounded-xl shadow-sm border border-gray-200 p-0 mb-6 box-border overflow-hidden">
+          <div className="w-full bg-gradient-to-tr from-gray-50 to-gray-100 rounded-xl shadow-sm border border-gray-200 p-0 mb-2 box-border overflow-hidden">
             {/* Section label above the transaction list */}
             <div className="text-[14px] font-semibold text-gray-800 py-4 ml-6 tracking-wide bg-none border-none w-auto inline-block">
               Recent Transactions
