@@ -19,6 +19,7 @@ import { FiInfo } from 'react-icons/fi';
 import { IoMdCash } from 'react-icons/io';
 import { FaCreditCard, FaChartLine } from 'react-icons/fa6';
 import InfoBubble from '../ui/InfoBubble';
+import PageToolbar from './PageToolbar';
 
 function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
   const [plaidModalOpen, setPlaidModalOpen] = useState(false);
@@ -115,22 +116,24 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
       <div className={`flex flex-col items-center ${allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''} w-full box-border ${allAccountsEmpty ? 'px-3' : ''}`}>
         {/* Circle User Toggle Row */}
         {!allAccountsEmpty && (
-          <div className="sticky top-[56px] z-20 bg-white w-full max-w-[700px] mb-4 flex items-center justify-between gap-3 border-b border-gray-200 py-4">
-            <CircleUserToggle
-              users={circleUsers}
-              selectedUser={selectedCircleUser}
-              onSelectUser={setSelectedCircleUser}
-            />
-            <Button
-              label="Add Accounts"
-              onClick={handleAddAccounts}
-              width="w-32"
-              loading={plaidLoading}
-              disabled={plaidLoading}
-              className="h-8"
-              color="networth"
-            />
-          </div>
+          <PageToolbar>
+            <div className="max-w-[700px] mx-auto flex items-center justify-between gap-3 px-3">
+              <CircleUserToggle
+                users={circleUsers}
+                selectedUser={selectedCircleUser}
+                onSelectUser={setSelectedCircleUser}
+              />
+              <Button
+                label="Add Accounts"
+                onClick={handleAddAccounts}
+                width="w-32"
+                loading={plaidLoading}
+                disabled={plaidLoading}
+                className="h-8"
+                color="networth"
+              />
+            </div>
+          </PageToolbar>
         )}
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)]">
@@ -154,7 +157,7 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
         ) : (
           <>
             {/* Unified Net Worth Card with Breakdown Bars */}
-            <div className="w-full max-w-[700px] mx-auto rounded-xl bg-gradient-to-r from-indigo-500 to-blue-400 text-white border-none px-5 py-6 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl mb-6">
+            <div className="w-full max-w-[700px] mx-auto rounded-xl bg-gradient-to-r from-indigo-500 to-blue-400 text-white border-none px-5 py-6 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl mb-6 mt-2">
               <div className="flex items-center w-full mb-1 justify-between">
                 <div className="flex items-center">
                   <FaChartLine size={20} className="mr-2" style={{ color: 'white', opacity: 0.92 }} />

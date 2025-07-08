@@ -13,24 +13,16 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
   const [avatarUrl, setAvatarUrl] = useState(null);
   const triggerRef = useRef(null);
 
-  // Fetch user's name and avatar from user metadata and profiles table
   useEffect(() => {
     if (user) {
-      const userName = user.user_metadata?.display_name || user.email || 'User';
-      setUserName(userName);
-      // Fetch avatar_url from profiles table
+      const name = user.user_metadata?.display_name || user.email || 'User';
+      setUserName(name);
       supabase
         .from('profiles')
         .select('avatar_url')
         .eq('id', user.id)
         .single()
-        .then(({ data, error }) => {
-          if (data && data.avatar_url) {
-            setAvatarUrl(data.avatar_url);
-          } else {
-            setAvatarUrl(null);
-          }
-        });
+        .then(({ data }) => setAvatarUrl(data?.avatar_url || null));
     } else {
       setUserName('');
       setAvatarUrl(null);
@@ -47,104 +39,47 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
   };
 
   const userMenuItems = [
-    {
-      label: userName || user?.email || 'User',
-      icon: <FaUser size={13} />,
-      disabled: true
-    },
-    {
-      label: 'Sign Out',
-      icon: <FiLogOut size={14} style={{ marginTop: 1 }} />,
-      onClick: () => setLogoutOpen(true)
-    }
+    { label: userName || user?.email || 'User', icon: <FaUser size={13} />, disabled: true },
+    { label: 'Sign Out', icon: <FiLogOut size={14} style={{ marginTop: 1 }} />, onClick: () => setLogoutOpen(true) }
   ];
 
   return (
     <>
-      <div style={{
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        background: '#fff',
-        boxShadow: '0 2px 8px 0 rgba(59,130,246,0.04)',
-        border: '1.5px solid #f3f4f6',
-        boxSizing: 'border-box',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 100,
-        height: 56,
-        minHeight: 56,
-        maxHeight: 56,
-        marginLeft: isMobile ? 0 : 35,
-        transition: 'margin-left 0.2s',
-      }}>
-        <div
-          style={{
-            width: '100%',
-            maxWidth: 700,
-            padding: '0 20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            boxSizing: 'border-box',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div
+        className="fixed top-0 z-[100] bg-white border-b border-gray-200 h-[56px] min-h-[56px] max-h-[56px] flex items-center transition-all"
+        style={isMobile ? { left: 0, width: '100%' } : { left: 56, width: 'calc(100% - 56px)' }}
+      >
+        <div className="max-w-[700px] mx-auto flex justify-between items-center w-full px-3 sm:px-4 md:px-6">
+          {/* Left: Back, Logo, Title */}
+          <div className="flex items-center gap-2 min-w-0 truncate">
             {showBackArrow && (
               <button
                 onClick={onBack}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#2563eb',
-                  fontSize: 22,
-                  padding: 0,
-                  height: 36,
-                  width: 36,
-                  borderRadius: 10,
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
-                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                className="flex items-center text-[#2563eb] text-[22px] h-9 w-9 rounded-[10px] hover:bg-[#f3f4f6] transition-colors"
                 aria-label="Back"
               >
                 <FiChevronLeft size={22} />
               </button>
             )}
             {institutionLogo && (
-              <img src={institutionLogo} alt="Institution Logo" style={{ height: 24, width: 24, objectFit: 'contain', marginRight: 8, borderRadius: 6, background: '#f3f4f6' }} />
+              <img src={institutionLogo} alt="Institution Logo" className="h-6 w-6 object-contain rounded bg-[#f3f4f6]" />
             )}
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#1f2937' }}>{currentPage || 'Zentari'}</span>
+            <span className="text-[14px] font-semibold text-gray-900 truncate">{currentPage || 'Zentari'}</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {user && (
-              <>
-                <IconButton icon={<FiBell size={16} color="#374151" />} />
-                <IconButton icon={<FiHelpCircle size={16} color="#374151" />} />
-              </>
-            )}
-
+          {/* Right: Bell, Help, User/Login */}
+          <div className="flex items-center gap-2 flex-wrap justify-end min-w-0">
+            {user && <IconButton icon={<FiBell size={16} color="#374151" />} />}
+            {user && <span className="hidden sm:inline"><IconButton icon={<FiHelpCircle size={16} color="#374151" />} /></span>}
             {user ? (
-              <div style={{ position: 'relative' }}>
+              <div className="relative">
                 <div
                   ref={triggerRef}
                   role="button"
                   onClick={() => setShowMenu(prev => !prev)}
-                  style={{
-                    ...iconButtonStyle,
-                    backgroundColor: showMenu ? '#3b82f6' : '#f3f4f6',
-                    color: showMenu ? '#fff' : '#374151',
-                    border: showMenu ? '1px solid #3b82f6' : '1px solid #f3f4f6',
-                    transition: 'background 0.18s, color 0.18s, border 0.18s, transform 0.16s cubic-bezier(.4,1.5,.5,1)',
-                  }}
-                  onMouseEnter={e => { if (!showMenu) e.currentTarget.style.backgroundColor = '#e5e7eb'; }}
-                  onMouseLeave={e => { if (!showMenu) e.currentTarget.style.backgroundColor = '#f3f4f6'; }}
+                  className={`w-[34px] h-[34px] rounded-full flex items-center justify-center border transition-all duration-150 ${showMenu ? 'bg-blue-600 text-white border-blue-600' : 'bg-[#f3f4f6] text-gray-700 border-[#f3f4f6]'} cursor-pointer`}
+                  onMouseEnter={e => { if (!showMenu) e.currentTarget.classList.add('bg-gray-200'); }}
+                  onMouseLeave={e => { if (!showMenu) e.currentTarget.classList.remove('bg-gray-200'); }}
                   onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.97) translateY(1.5px)'; }}
                   onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
                 >
@@ -152,13 +87,12 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
                     <img
                       src={avatarUrl}
                       alt="Profile"
-                      style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', display: 'block', background: '#e5e7eb', padding: 0 }}
+                      className="w-7 h-7 rounded-full object-cover bg-gray-200"
                     />
                   ) : (
                     <FaUser size={18} color={showMenu ? '#fff' : '#374151'} />
                   )}
                 </div>
-
                 <ContextMenu
                   isOpen={showMenu}
                   onClose={() => setShowMenu(false)}
@@ -170,28 +104,8 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
             ) : (
               <div
                 role="button"
-                onClick={() => {
-                  if (onLoginClick) {
-                    onLoginClick();
-                  } else {
-                    console.warn('[Topbar] onLoginClick is not defined');
-                  }
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 12px',
-                  backgroundColor: 'transparent',
-                  color: '#3b82f6',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  borderRadius: 10,
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s ease',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                onClick={() => onLoginClick && onLoginClick()}
+                className="flex items-center gap-2 px-3 py-1.5 bg-transparent text-blue-600 text-[13px] font-medium rounded-[10px] cursor-pointer transition-colors duration-200 hover:bg-[#f3f4f6]"
               >
                 <MdLogin size={16} color="#3b82f6" />
                 Log in / Sign up
@@ -200,39 +114,16 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
           </div>
         </div>
       </div>
-
-      {/* Spacer to prevent content from being hidden under the fixed topbar */}
-      <div style={{ height: 56, minHeight: 56, maxHeight: 56, width: '100%' }} />
-
-      <LogoutModal
-        isOpen={logoutOpen}
-        onClose={() => setLogoutOpen(false)}
-        onConfirm={handleLogout}
-      />
+      <div className="h-[56px] min-h-[56px] max-h-[56px] w-full" />
+      <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onConfirm={handleLogout} />
     </>
   );
-};
-
-const iconButtonStyle = {
-  width: 34,
-  height: 34,
-  borderRadius: 9999,
-  backgroundColor: '#f3f4f6',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  boxShadow: 'none',
-  border: '1px solid #f3f4f6',
-  cursor: 'pointer',
-  transition: 'background 0.18s, color 0.18s, border 0.18s, transform 0.16s cubic-bezier(.4,1.5,.5,1)',
 };
 
 const IconButton = ({ icon }) => (
   <div
     role="button"
-    style={iconButtonStyle}
-    onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#e5e7eb'; }}
-    onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#f3f4f6'; }}
+    className="w-[34px] h-[34px] rounded-full bg-[#f3f4f6] flex items-center justify-center border border-[#f3f4f6] cursor-pointer transition-all duration-150 hover:bg-gray-200"
     onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.97) translateY(1.5px)'; }}
     onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
   >

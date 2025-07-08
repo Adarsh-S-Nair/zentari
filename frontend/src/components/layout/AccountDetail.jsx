@@ -209,7 +209,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
 
           {/* Limit/Available Balance Card (if exists) */}
           {(balances.limit != null || balances.available != null) && (
-            <div className="w-full bg-gradient-to-tr from-gray-50 to-gray-100 rounded-xl border border-gray-200 px-6 py-4 text-slate-800 flex flex-col items-end box-border mb-6 text-[13px] font-medium gap-1">
+            <div className="w-full bg-gradient-to-tr from-gray-50 to-gray-100 rounded-xl border border-gray-200 px-3 sm:px-6 py-4 text-slate-800 flex flex-col items-end box-border mb-6 text-[13px] font-medium gap-1">
               {balances.available != null && (
                 <div className="flex w-full justify-between items-center mb-1">
                   <span className="flex items-center gap-2 opacity-85">
@@ -262,7 +262,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                   <div
                     key={txn.id}
                     className={
-                      `flex items-center justify-between bg-white rounded-none shadow-sm mb-0 px-6 py-4 min-h-[70px] box-border transition-colors duration-150 cursor-pointer gap-0 hover:bg-indigo-50`
+                      `flex items-center justify-between bg-white rounded-none shadow-sm mb-0 px-3 sm:px-6 py-4 min-h-[70px] box-border transition-colors duration-150 cursor-pointer gap-0 hover:bg-indigo-50`
                     }
                   >
                     {/* Icon/avatar */}

@@ -44,50 +44,33 @@ export default function LogoutModal({ isOpen, onClose, onLogout }) {
   if (!isOpen) return null;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 50,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        backdropFilter: 'blur(2px)',
-      }}
-    >
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-[3px] z-[300] flex items-center justify-center">
       <div
         ref={modalRef}
+        className="z-[400] w-[360px] bg-white rounded-[14px] px-6 pt-7 pb-5 shadow-2xl transition-all"
         style={{
-          width: '360px',
-          backgroundColor: '#ffffff',
-          borderRadius: '14px',
-          padding: '28px 24px 22px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
           transform: visible ? 'translateY(0)' : 'translateY(-20px)',
           opacity: visible ? 1 : 0,
           transition: 'all 0.2s ease',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-          <FiLogOut size={20} color="#b91c1c" />
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: 0 }}>Log out</h2>
+        <div className="flex items-center gap-2.5 mb-3.5">
+          <FiLogOut size={20} className="text-red-700" />
+          <h2 className="text-[18px] font-semibold text-gray-900 m-0">Log out</h2>
         </div>
-
-        <p style={{ fontSize: 14, color: '#4b5563', lineHeight: '1.5', marginBottom: 20 }}>
+        <p className="text-[14px] text-gray-600 leading-[1.5] mb-5">
           Are you sure you want to log out of your account?
         </p>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="flex justify-end gap-2">
           <Button
-            color="var(--color-white)"
+            color="white"
             darkText
             onClick={closeWithDelay}
             disabled={loading}
             label="Cancel"
           />
           <Button
-            color="var(--color-danger)"
+            color="bg-gradient-to-r from-red-700 to-red-600 text-white hover:from-red-800 hover:to-red-700"
             onClick={handleConfirmLogout}
             disabled={loading}
             loading={loading}

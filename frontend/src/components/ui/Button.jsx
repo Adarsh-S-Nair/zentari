@@ -56,8 +56,8 @@ const colorMap = {
   red: 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white',
   green: 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white',
   yellow: 'bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white',
-  gray: 'bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-800',
-  white: 'bg-white hover:bg-gray-100 active:bg-gray-200 text-gray-900',
+  gray: 'bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-800 shadow-sm border border-gray-200',
+  white: 'bg-white hover:bg-gray-100 active:bg-gray-200 text-gray-900 shadow-sm border border-gray-200',
 }
 
 function Button({
@@ -78,7 +78,12 @@ function Button({
   const isInactive = disabled || loading
 
   // Pick color classes
-  const colorClasses = colorMap[color] || colorMap.networth
+  const colorClasses =
+    color in colorMap
+      ? colorMap[color]
+      : color.includes(' ')
+        ? color
+        : colorMap.networth
   const baseClasses = `inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-[13px] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300 ${width} cursor-pointer hover:scale-105`
   const inactiveClasses = 'opacity-60 cursor-not-allowed'
   const activeClasses = !isInactive ? 'hover:scale-[1.06] active:scale-95 cursor-pointer' : ''
