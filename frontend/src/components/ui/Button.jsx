@@ -51,7 +51,7 @@ function MiniSpinner({ center = false }) {
 }
 
 const colorMap = {
-  networth: 'bg-gradient-to-tr from-blue-500 to-blue-300 text-white hover:from-blue-600 hover:to-blue-400 active:from-blue-700 active:to-blue-500',
+  networth: 'bg-gradient-to-r from-indigo-500 to-blue-400 text-white hover:from-indigo-600 hover:to-blue-500 active:from-indigo-700 active:to-blue-600',
   blue: 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white',
   red: 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white',
   green: 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white',
