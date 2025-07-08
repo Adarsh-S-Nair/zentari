@@ -87,11 +87,11 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
   const totalBalance = assetTotal + liabilityTotal;
 
   return (
-    <main className="w-full px-3 pt-8">
+    <main className="w-full px-3">
       <div className={`flex flex-col items-center ${allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''} w-full box-border ${allAccountsEmpty ? 'px-3' : ''}`}>
         {/* Circle User Toggle Row */}
         {!allAccountsEmpty && (
-          <div className="w-full max-w-[700px] mb-4 flex items-center justify-between gap-3">
+          <div className="sticky top-[56px] z-20 bg-white w-full max-w-[700px] mb-4 flex items-center justify-between gap-3 border-b border-gray-200 py-4">
             <CircleUserToggle
               users={circleUsers}
               selectedUser={selectedCircleUser}

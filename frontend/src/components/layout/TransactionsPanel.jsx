@@ -35,9 +35,9 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
   };
 
   return (
-    <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-4 sm:px-4 pt-0 box-border mb-4">
+    <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-0 box-border mb-4">
       {/* Sticky Filters/Search/Toggle Bar */}
-      <div className="sticky top-[56px] z-20 bg-white w-full box-border px-2 sm:px-4 py-2 mb-5">
+      <div className="sticky top-[56px] z-20 bg-white w-full box-border px-2 sm:px-4 py-4 mb-5 border-b border-gray-200">
         <div className="flex flex-col gap-2 w-full">
           <div className="flex items-center justify-between gap-3 w-full">
             <CircleUserToggle
