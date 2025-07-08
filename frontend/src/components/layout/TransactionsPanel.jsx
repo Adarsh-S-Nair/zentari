@@ -5,9 +5,11 @@ import { formatCurrency } from '../../utils/formatters';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Spinner, Button } from '../ui';
 import CircleUserToggle from './CircleUserToggle';
+import { useNavigate } from 'react-router-dom';
 
 const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
   const { transactions, transactionsLoading, accounts, user } = useFinancial();
+  const navigate = useNavigate();
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(user?.id || 'combined');
@@ -93,6 +95,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
               <div
                 key={i}
                 className={`flex items-center bg-white px-2 py-4 min-h-[80px] box-border border-b border-gray-200 transition-colors duration-150 cursor-pointer w-full max-w-full hover:bg-gray-50`}
+                onClick={() => navigate(`/transaction/${txn.id}`)}
               >
                 {/* Icon/avatar */}
                 <div className={`flex-shrink-0 mr-3 sm:mr-4 w-12 h-12 rounded-full flex items-center justify-center overflow-hidden self-center ${txn.icon_url ? 'bg-transparent border-none' : 'bg-gray-200 border border-gray-200'}`}>

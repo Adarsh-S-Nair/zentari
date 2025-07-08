@@ -29,6 +29,7 @@ import { FiArrowLeft } from 'react-icons/fi';
 import { FinancialContext } from './contexts/FinancialContext';
 import AccountDetail from './components/layout/AccountDetail';
 import LandingPage from './components/layout/LandingPage';
+import TransactionDetail from './components/layout/TransactionDetail';
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -393,6 +394,22 @@ function AppContent({
           />
         ) : null}
       />
+      <Route
+        path="/transaction/:transactionId"
+        element={user ? (
+          <TransactionDetailLayout
+            user={user}
+            isMobile={isMobile}
+            isTablet={isTablet}
+            visibleTabs={visibleTabs}
+            form={form}
+            handleChange={handleChange}
+            handleSubmit={handleSubmit}
+            setLoginOpen={setLoginOpen}
+            maxWidth={maxWidth}
+          />
+        ) : null}
+      />
       <Route path="/" element={user ? <Navigate to="/accounts" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
       <Route path="/login" element={user ? <Navigate to="/accounts" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
       <Route
@@ -444,6 +461,53 @@ function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, hand
             setLogoutOpen={() => {}}
             visibleTabs={visibleTabs}
             currentTab={'/accounts'}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TransactionDetailLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth }) {
+  const { transactionId } = useParams();
+  const navigate = useNavigate();
+  const { transactions } = useContext(FinancialContext) || {};
+  const transaction = transactions?.find(txn => String(txn.id) === String(transactionId));
+  return (
+    <div className="flex min-h-screen w-full overflow-x-hidden relative">
+      {!isMobile && (
+        <CollapsibleSidebar
+          visibleTabs={visibleTabs}
+          form={form}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
+          onLoginClick={() => setLoginOpen(true)}
+          user={user}
+          isTablet={isTablet}
+          isMobile={isMobile}
+          currentTab={'/transactions'}
+        />
+      )}
+      <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}> 
+        <Topbar
+          user={user}
+          onLoginClick={() => setLoginOpen(true)}
+          currentPage={'Transaction'}
+          maxWidth={maxWidth}
+          showBackArrow={true}
+          onBack={() => navigate('/transactions')}
+          isMobile={isMobile}
+        />
+        <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}> 
+          <TransactionDetail maxWidth={maxWidth} transaction={transaction} />
+        </div>
+        {isMobile && (
+          <MobileBottomBar
+            user={user}
+            onLoginClick={() => setLoginOpen(true)}
+            setLogoutOpen={() => {}}
+            visibleTabs={visibleTabs}
+            currentTab={'/transactions'}
           />
         )}
       </div>
