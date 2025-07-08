@@ -1,15 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiFilter } from 'react-icons/fi';
 import { FaSearch, FaChevronRight } from 'react-icons/fa';
-import LightDropdown from '../ui/LightDropdown';
 import { formatCurrency } from '../../utils/formatters';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { Spinner, Card, Button } from '../ui';
+import { Spinner, Button } from '../ui';
 import CircleUserToggle from './CircleUserToggle';
-import { supabase } from '../../supabaseClient';
 
 const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
-  const { transactions, transactionsLoading, accounts, categories, user } = useFinancial();
+  const { transactions, transactionsLoading, accounts, user } = useFinancial();
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(user?.id || 'combined');
@@ -20,15 +18,6 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
       setSelectedUser(user.id);
     }
   }, [user]);
-
-  const accountOptions = [
-    { label: 'All Accounts', value: 'all' },
-    ...accounts.map((account) => ({
-      label: account.name,
-      value: account.account_id,
-      mask: account.mask,
-    })),
-  ];
 
   const filteredTransactions = transactions.filter(
     (txn) =>
@@ -45,108 +34,52 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
     });
   };
 
-  // Helper for mask display
-  const getMaskDisplay = (mask, isMobile) => {
-    if (!mask) return '';
-    return mask
-  };
-
-  // Helper to lighten a hex color
-  function lightenColor(hex, percent) {
-    if (!hex || typeof hex !== 'string') return hex;
-    let c = hex.replace('#', '');
-    if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
-    const num = parseInt(c, 16);
-    let r = (num >> 16) + Math.round(255 * percent);
-    let g = ((num >> 8) & 0x00FF) + Math.round(255 * percent);
-    let b = (num & 0x0000FF) + Math.round(255 * percent);
-    r = r > 255 ? 255 : r;
-    g = g > 255 ? 255 : g;
-    b = b > 255 ? 255 : b;
-    return `#${(r.toString(16)).padStart(2, '0')}${(g.toString(16)).padStart(2, '0')}${(b.toString(16)).padStart(2, '0')}`;
-  }
-
   return (
-    <main className="w-full" style={{ padding: '16px 10px', margin: 0 }}>
+    <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-4 sm:px-4 pt-0 box-border mb-4">
       {/* Sticky Filters/Search/Toggle Bar */}
-      <div style={{
-        position: 'sticky',
-        top: 56, // height of Topbar
-        zIndex: 20,
-        background: '#fff',
-        width: '100%',
-        boxShadow: '0 2px 8px 0 rgba(59,130,246,0.04)',
-        padding: '10px 0 8px 0',
-        marginBottom: 18,
-      }}>
-        <div style={{ width: '100%', maxWidth: maxWidth, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, boxSizing: 'border-box' }}>
-          <CircleUserToggle
-            users={circleUsers}
-            selectedUser={selectedUser}
-            onSelectUser={setSelectedUser}
-            onAddAccounts={() => {}}
-            addLoading={false}
-            maxWidth={maxWidth - 120}
-          />
-          <Button
-            label="Filters"
-            color="#3b82f6"
-            width="auto"
-            style={{ height: 32, fontSize: 13, fontWeight: 500, padding: '0 16px', borderRadius: 10 }}
-            icon={<FiFilter size={18} />}
-          />
-        </div>
-        <div style={{ width: '100%', maxWidth: maxWidth, margin: '10px auto 0 auto', display: 'flex', alignItems: 'center', boxSizing: 'border-box' }}>
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            background: '#f3f4f6',
-            borderRadius: 10,
-            padding: isMobile ? '7px 10px' : '10px 16px',
-            minHeight: 36,
-            boxSizing: 'border-box',
-            boxShadow: '0 1px 4px 0 rgba(59,130,246,0.04)',
-          }}>
-            <FaSearch size={15} style={{ marginRight: 8, color: '#6b7280' }} />
-            <input
-              type="text"
-              placeholder="Search transactions"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                border: 'none',
-                outline: 'none',
-                flex: 1,
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#6b7280',
-                fontFamily: 'inherit',
-                height: 24,
-                backgroundColor: 'transparent',
-                minWidth: 0,
-                boxSizing: 'border-box',
-              }}
+      <div className="sticky top-[56px] z-20 bg-white w-full box-border px-2 sm:px-4 py-2 mb-5">
+        <div className="flex flex-col gap-2 w-full">
+          <div className="flex items-center justify-between gap-3 w-full">
+            <CircleUserToggle
+              users={circleUsers}
+              selectedUser={selectedUser}
+              onSelectUser={setSelectedUser}
+              onAddAccounts={() => {}}
+              addLoading={false}
+              maxWidth={maxWidth - 120}
             />
+            <Button
+              label="Filters"
+              color="networth"
+              width="w-auto"
+              className="h-8 text-[13px] font-medium rounded-lg px-4"
+              icon={<FiFilter size={18} />}
+            />
+          </div>
+          <div className="flex items-center w-full">
+            <div className="flex flex-1 items-center bg-gray-100 rounded-lg shadow-sm py-2 px-2 sm:px-4 min-h-[36px] w-full">
+              <FaSearch size={15} className="mr-2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search transactions"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="border-none outline-none flex-1 text-[14px] font-semibold text-gray-600 bg-transparent min-w-0 h-6"
+                style={{ fontFamily: 'inherit' }}
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Transactions Card - styled like recent transactions */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: maxWidth,
-          margin: '0 auto 18px auto',
-          boxSizing: 'border-box',
-        }}
-      >
+      <div className="w-full box-border mx-auto max-w-full sm:max-w-[700px]">
         {transactionsLoading ? (
-          <div className="h-full flex items-center justify-center" style={{ minHeight: 120 }}>
+          <div className="h-full flex items-center justify-center min-h-[120px]">
             <Spinner size={28} />
           </div>
         ) : filteredTransactions.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-gray-500 text-sm text-center px-6" style={{ minHeight: 120 }}>
+          <div className="h-full flex items-center justify-center text-gray-500 text-sm text-center px-6 min-h-[120px]">
             {transactions.length === 0
               ? 'No transactions found. Add accounts to see your transaction history.'
               : 'No transactions match your filters.'}
@@ -154,109 +87,36 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
         ) : (
           filteredTransactions.map((txn, i) => {
             const isPositive = txn.amount > 0;
-            const amountColor = isPositive ? '#16a34a' : '#dc2626';
+            const amountColor = isPositive ? 'text-green-600' : 'text-red-600';
             const amountPrefix = isPositive ? '+' : '';
             return (
               <div
                 key={i}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: '#fff',
-                  borderRadius: 12,
-                  boxShadow: '0 1px 4px 0 rgba(59,130,246,0.04)',
-                  marginBottom: 10,
-                  padding: isMobile ? '14px 10px' : '18px 24px',
-                  minHeight: 70,
-                  boxSizing: 'border-box',
-                  transition: 'background 0.18s',
-                  cursor: 'pointer',
-                  gap: 0,
-                  border: '1.5px solid #e5e7eb',
-                }}
-                onMouseOver={e => e.currentTarget.style.background = '#f1f5ff'}
-                onMouseOut={e => e.currentTarget.style.background = '#fff'}
+                className={`flex items-center bg-white px-2 sm:px-4 py-4 min-h-[80px] box-border border-b border-gray-200 transition-colors duration-150 cursor-pointer w-full max-w-full hover:bg-gray-50`}
               >
                 {/* Icon/avatar */}
-                <div style={{
-                  flexShrink: 0,
-                  marginRight: 16,
-                  width: 44,
-                  height: 44,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  // Only show border/background if no icon_url
-                  background: txn.icon_url ? 'transparent' : '#e5e7eb',
-                  border: txn.icon_url ? 'none' : '1.5px solid #e5e7eb',
-                }}>
+                <div className={`flex-shrink-0 mr-3 sm:mr-4 w-12 h-12 rounded-full flex items-center justify-center overflow-hidden self-center ${txn.icon_url ? 'bg-transparent border-none' : 'bg-gray-200 border border-gray-200'}`}>
                   {txn.icon_url ? (
-                    <img src={txn.icon_url} alt="icon" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
+                    <img src={txn.icon_url} alt="icon" className="w-full h-full rounded-full object-cover block" />
                   ) : (
-                    <FaChevronRight size={20} color="#9ca3af" />
+                    <FaChevronRight size={20} className="text-gray-400" />
                   )}
                 </div>
-                {/* Main info */}
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: isMobile ? 180 : 220 }}>
-                    {txn.description}
+                {/* Main info and category */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  <div className="text-[16px] font-semibold text-gray-900 truncate max-w-[120px] sm:max-w-[220px]">{txn.description}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[11px] text-slate-500 font-normal">{formatDate(txn.date)}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minHeight: 12 }}>
-                    <span style={{ fontSize: 10, color: '#64748b', fontWeight: 400 }}>{formatDate(txn.date)}</span>
-                    {txn.category_name && (
-                      <span style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        marginLeft: 8,
-                        maxWidth: 80,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        verticalAlign: 'middle',
-                      }}>
-                        <span style={{
-                          display: 'inline-block',
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          background: txn.category_color || '#6366f1',
-                          marginRight: 5,
-                          flexShrink: 0,
-                        }} />
-                        <span style={{
-                          fontSize: 9,
-                          fontWeight: 500,
-                          color: '#64748b',
-                          letterSpacing: 0.15,
-                          minWidth: 0,
-                          textOverflow: 'ellipsis',
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                        }}>{txn.category_name}</span>
-                      </span>
-                    )}
-                  </div>
+                  {txn.category_name && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: txn.category_color || '#6366f1' }} />
+                      <span className="text-[10px] font-medium text-slate-500 tracking-wide min-w-0 text-ellipsis overflow-hidden whitespace-nowrap">{txn.category_name}</span>
+                    </div>
+                  )}
                 </div>
                 {/* Amount */}
-                <div style={{
-                  flexShrink: 0,
-                  textAlign: 'right',
-                  fontWeight: 700,
-                  fontSize: 12,
-                  color: amountColor,
-                  minWidth: 70,
-                  letterSpacing: -0.5,
-                  marginLeft: 12,
-                  whiteSpace: 'nowrap',
-                  transition: 'color 0.18s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
+                <div className={`flex-shrink-0 text-right font-bold text-[14px] min-w-[56px] sm:min-w-[70px] ml-2 sm:ml-3 whitespace-nowrap transition-colors duration-150 flex items-center justify-center self-center ${amountColor}`}>
                   {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
                 </div>
               </div>

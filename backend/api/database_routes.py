@@ -195,4 +195,26 @@ async def delete_user_completely(user_id: str, authorization: Optional[str] = He
         supabase_service.client.auth.admin.delete_user(user_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete user from Supabase Auth: {e}")
-    return {"success": True, "message": f"User {user_id} and all associated data deleted."} 
+    return {"success": True, "message": f"User {user_id} and all associated data deleted."}
+
+# PATCH endpoint to update account name
+@router.patch("/account/{account_id}/name")
+async def update_account_name(account_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    """
+    Update the name column for a specific account.
+    """
+    try:
+        data = await request.json()
+        name = data.get("name")
+        if not name or not name.strip():
+            return {"success": False, "error": "Missing or empty 'name' in request body"}
+        supabase_service = get_supabase_service()
+        # Update the account's name column
+        result = supabase_service.client.table('accounts').update({"name": name.strip()}).eq('account_id', account_id).execute()
+        if result.data:
+            return {"success": True, "account_id": account_id, "name": name.strip()}
+        else:
+            return {"success": False, "error": "Account not found or update failed"}
+    except Exception as e:
+        print(f"Exception in update_account_name for account {account_id}: {str(e)}")
+        return {"success": False, "error": str(e)} 

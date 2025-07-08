@@ -21,9 +21,17 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   const [autoSyncLoading, setAutoSyncLoading] = useState(false);
   const [autoSyncError, setAutoSyncError] = useState(null);
   const [localAutoSync, setLocalAutoSync] = useState(account?.auto_sync);
+  const [editingName, setEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(account?.name || '');
+  const [savingName, setSavingName] = useState(false);
+  const [nameError, setNameError] = useState(null);
+  const [localName, setLocalName] = useState(account?.name || '');
 
   // Get plaid item from context
   const plaidItem = account?.item_id ? plaidItems?.[account.item_id] : null;
+
+  // Use the app's blue color for toggles
+  const appBlue = '#6366f1';
 
   if (loading || (!accounts && !account)) {
     return (
@@ -55,14 +63,14 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   else if (type === 'investment') gradientClass = 'bg-gradient-to-tr from-blue-500 to-blue-300';
 
   return (
-    <main className="w-full max-w-[700px] mx-auto px-2 box-border">
+    <main className="w-full max-w-[700px] mx-auto px-4 box-border">
       <div className="w-full m-0">
         <div className="flex flex-col items-center pt-5 pb-6">
           {/* Account Overview Card - Credit card style, blue gradient */}
           <div
-            className={`w-full max-w-[420px] mx-auto rounded-2xl ${gradientClass} text-white px-7 py-6 shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl relative overflow-hidden flex flex-col gap-4 mb-7`}
+            className={`w-full max-w-[700px] rounded-2xl ${gradientClass} text-white px-7 py-6 shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl relative overflow-hidden flex flex-col gap-4 mb-7`}
           >
-            {/* Top Row: Logo + Masked Card Number */}
+            {/* Top Row: Logo + Masked Card Number and Auto-Sync */}
             <div className="flex items-center gap-4 min-w-0 flex-1 overflow-hidden">
               <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-200">
                 {account.institution_logo ? (
@@ -78,27 +86,124 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                   {'●'.repeat(4)}{lastFour}
                 </span>
               )}
-            </div>
-            {/* Top Row: Account Name and Balance */}
-            <div className="flex items-center justify-between w-full mt-5 mb-0 gap-2">
-              <div className="text-[17px] font-semibold -tracking-[0.5px] text-white flex items-center gap-2 min-w-0 overflow-hidden max-w-[calc(100%-120px)]">
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap inline-block min-w-0 flex-1">{account.name}</span>
-                <IconButton ariaLabel="Edit account name">
-                  <MdEdit size={18} style={{ color: '#e0e7ff', opacity: 0.85, flexShrink: 0 }} />
-                </IconButton>
-              </div>
-              <div className="text-[19px] font-bold text-white -tracking-[1px] text-ellipsis overflow-hidden whitespace-nowrap min-w-0 pr-0 max-w-[120px] flex-shrink text-right">
-                {balances.current != null ? formatCurrency(balances.current) : 'N/A'}
-              </div>
-            </div>
-            {/* Second Row: Account Subtype Pill and Current Balance label */}
-            <div className="flex items-center justify-between w-full mt-2 mb-0">
-              {account.subtype && (
-                <span className="text-[12px] font-medium text-gray-100 bg-white/15 rounded-full px-3 py-1 inline-block tracking-wide w-fit min-w-0 text-ellipsis overflow-hidden whitespace-nowrap">
-                  {capitalizeWords(account.subtype)}
-                </span>
+              {/* Auto-Sync Toggle - Aligned right in row */}
+              {'auto_sync' in account && (
+                <div className="flex items-center gap-1 ml-auto">
+                  <FaSyncAlt size={13} className="text-blue-100 opacity-80" />
+                  <span className="text-[11px] text-blue-100 font-medium mr-1">Auto-Sync</span>
+                  <Toggle
+                    checked={localAutoSync ?? !!account.auto_sync}
+                    onChange={async (checked) => {
+                      setAutoSyncLoading(true);
+                      setAutoSyncError(null);
+                      setLocalAutoSync(checked);
+                      try {
+                        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
+                        const url = `${baseUrl.replace(/\/$/, '')}/database/account/${account.account_id}/auto-sync`;
+                        const res = await fetch(url, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ auto_sync: checked })
+                        });
+                        const data = await res.json();
+                        if (!data.success) {
+                          setLocalAutoSync(!checked); // revert
+                          setAutoSyncError('Failed to update auto-sync');
+                          alert('Failed to update auto-sync: ' + (data.error || 'Unknown error'));
+                        }
+                      } catch (err) {
+                        setLocalAutoSync(!checked); // revert
+                        setAutoSyncError('Failed to update auto-sync');
+                        alert('Failed to update auto-sync: ' + err.message);
+                      } finally {
+                        setAutoSyncLoading(false);
+                      }
+                    }}
+                    size="small"
+                    color={appBlue}
+                    disabled={autoSyncLoading}
+                  />
+                </div>
               )}
-              <div className="text-[12px] text-blue-100 font-medium">Current Balance</div>
+            </div>
+            {/* Top Row: Account Name, Subtype, Balance, and Current Balance label */}
+            <div className="flex items-stretch justify-between w-full mt-5 mb-0 gap-2">
+              <div className="flex flex-col min-w-0 max-w-[calc(100%-120px)] h-full justify-between items-start">
+                <span className="text-[17px] font-semibold -tracking-[0.5px] text-white flex items-center gap-2 min-w-0 overflow-hidden h-[28px] max-h-[28px]">
+                  {editingName ? (
+                    <input
+                      className="bg-white/20 text-white px-3 py-1.5 text-[17px] font-semibold focus:ring-2 focus:ring-blue-300 outline-none min-w-0 flex-1 shadow-none transition-all duration-150 h-[28px] max-h-[28px]"
+                      value={editedName || localName}
+                      autoFocus
+                      onChange={e => setEditedName(e.target.value)}
+                      onFocus={e => { if (!editedName) setEditedName(localName); }}
+                      onBlur={async () => {
+                        setEditingName(false);
+                        const newName = (editedName || localName).trim();
+                        if (newName && newName !== localName) {
+                          setSavingName(true);
+                          setNameError(null);
+                          try {
+                            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+                            const url = `${baseUrl.replace(/\/$/, '')}/database/account/${account.account_id}/name`;
+                            const res = await fetch(url, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ name: newName })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              setLocalName(newName);
+                              setEditedName('');
+                            } else {
+                              setNameError(data.error || 'Failed to update name');
+                              alert(data.error || 'Failed to update name');
+                            }
+                          } catch (err) {
+                            setNameError(err.message);
+                            alert('Failed to update name: ' + err.message);
+                          } finally {
+                            setSavingName(false);
+                          }
+                        } else {
+                          setEditedName(localName);
+                        }
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.target.blur();
+                        } else if (e.key === 'Escape') {
+                          setEditedName(localName);
+                          setEditingName(false);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span
+                      className="overflow-hidden text-ellipsis whitespace-nowrap inline-block min-w-0 flex-1 cursor-pointer hover:underline"
+                      onClick={() => setEditingName(true)}
+                    >
+                      {localName}
+                    </span>
+                  )}
+                  {!editingName && (
+                    <IconButton ariaLabel="Edit account name" onClick={() => setEditingName(true)}>
+                      <MdEdit size={18} style={{ color: '#e0e7ff', opacity: 0.85, flexShrink: 0 }} />
+                    </IconButton>
+                  )}
+                </span>
+                {account.subtype && (
+                  <span className="text-[12px] font-medium text-gray-100 bg-white/15 rounded-full px-3 py-1 inline-block tracking-wide w-fit min-w-0 text-ellipsis overflow-hidden whitespace-nowrap mt-1">
+                    {capitalizeWords(account.subtype)}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col items-end min-w-0 max-w-[120px] flex-shrink text-right h-full justify-between">
+                <span className="text-[19px] font-bold text-white -tracking-[1px] text-ellipsis overflow-hidden whitespace-nowrap pr-0">
+                  {balances.current != null ? formatCurrency(balances.current) : 'N/A'}
+                </span>
+                <span className="text-[12px] text-blue-100 font-medium mt-1">Current Balance</span>
+              </div>
             </div>
           </div>
 
@@ -137,47 +242,6 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                   {plaidItem && plaidItem.last_transaction_sync ? formatLastUpdated(plaidItem.last_transaction_sync) : 'Never synced'}
                 </span>
               </div>
-              {/* Auto-Sync Row */}
-              {'auto_sync' in account && (
-                <div className="flex w-full justify-between items-center">
-                  <span className="flex items-center gap-2 opacity-85">
-                    <FaSyncAlt size={15} className="opacity-70 text-gray-700 mr-1" />
-                    Auto-Sync
-                  </span>
-                  <Toggle
-                    checked={localAutoSync ?? !!account.auto_sync}
-                    onChange={async (checked) => {
-                      setAutoSyncLoading(true);
-                      setAutoSyncError(null);
-                      setLocalAutoSync(checked);
-                      try {
-                        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
-                        const url = `${baseUrl.replace(/\/$/, '')}/database/account/${account.account_id}/auto-sync`;
-                        const res = await fetch(url, {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ auto_sync: checked })
-                        });
-                        const data = await res.json();
-                        if (!data.success) {
-                          setLocalAutoSync(!checked); // revert
-                          setAutoSyncError('Failed to update auto-sync');
-                          alert('Failed to update auto-sync: ' + (data.error || 'Unknown error'));
-                        }
-                      } catch (err) {
-                        setLocalAutoSync(!checked); // revert
-                        setAutoSyncError('Failed to update auto-sync');
-                        alert('Failed to update auto-sync: ' + err.message);
-                      } finally {
-                        setAutoSyncLoading(false);
-                      }
-                    }}
-                    size={isMobileScreen ? 'small' : 'medium'}
-                    color="#6366f1"
-                    disabled={autoSyncLoading}
-                  />
-                </div>
-              )}
             </div>
           )}
 

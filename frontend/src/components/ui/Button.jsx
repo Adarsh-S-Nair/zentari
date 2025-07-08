@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 
 // Blend a hex color with gray to make it duller and darker
 function mixWithGray(hex, gray = '#6b7280', ratio = 0.7) {
@@ -41,39 +41,47 @@ function darkenColor(hex, amount = 0.3) {
 }
 
 // Smaller mini spinner
-function MiniSpinner() {
+function MiniSpinner({ center = false }) {
   return (
     <div
-      className="mini-spinner"
-      style={{
-        width: '8px',
-        height: '8px',
-        border: '1px solid var(--color-text-white)',
-        borderTop: '1px solid transparent',
-        borderRadius: '50%',
-        marginRight: '4px',
-        animation: 'spin 0.6s linear infinite'
-      }}
+      className={`inline-block align-middle border-2 border-white border-t-transparent rounded-full animate-spin${center ? '' : ' mr-2'}`}
+      style={{ width: 14, height: 14 }}
     />
   )
+}
+
+const colorMap = {
+  networth: 'bg-gradient-to-tr from-blue-500 to-blue-300 text-white hover:from-blue-600 hover:to-blue-400 active:from-blue-700 active:to-blue-500',
+  blue: 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white',
+  red: 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white',
+  green: 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white',
+  yellow: 'bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white',
+  gray: 'bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-800',
+  white: 'bg-white hover:bg-gray-100 active:bg-gray-200 text-gray-900',
 }
 
 function Button({
   label,
   children,
   onClick,
-  color = 'var(--color-primary)',
-  width = '100%',
+  color = 'networth',
+  width = 'w-full',
   loading = false,
   disabled = false,
   darkText = false,
-  style = {},
+  className = '',
   type = 'button',
   icon = null,
+  ...props
 }) {
   const [isHovering, setIsHovering] = useState(false)
-  const btnRef = useRef(null)
   const isInactive = disabled || loading
+
+  // Pick color classes
+  const colorClasses = colorMap[color] || colorMap.networth
+  const baseClasses = `inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-[13px] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300 ${width}`
+  const inactiveClasses = 'opacity-60 cursor-not-allowed'
+  const activeClasses = !isInactive ? 'hover:scale-[1.06] active:scale-95 cursor-pointer' : ''
 
   // Convert CSS variable to hex for color blending
   const getComputedColor = (cssVar) => {
@@ -121,66 +129,43 @@ function Button({
 
   const text = darkText ? darkTextColors : lightText
 
-  const buttonStyle = {
-    width,
-    backgroundColor: isInactive ? inactiveBg : isHovering ? hoverBg : baseColor,
-    color: '#fff',
-    padding: '7px 18px',
-    border: 'none',
-    borderRadius: 10,
-    fontSize: '13px',
-    fontWeight: 600,
-    cursor: isInactive ? 'not-allowed' : 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    boxShadow: 'none',
-    transition: 'background 0.18s, color 0.18s, box-shadow 0.18s, border 0.18s, transform 0.22s cubic-bezier(.4,1.5,.5,1)',
-    fontFamily: 'Inter, system-ui, sans-serif',
-    WebkitFontSmoothing: 'auto',
-    MozOsxFontSmoothing: 'auto',
-    textRendering: 'geometricPrecision',
-    outline: 'none',
-    transform: isHovering && !isInactive ? 'scale(1.06)' : 'scale(1)',
-    ...style
-  }
-
-  // Hop animation on click
-  const handleClick = (e) => {
-    if (isInactive) return;
-    if (onClick) onClick(e);
-  }
-
   return (
-    <>
-      <button
-        ref={btnRef}
-        type={type}
-        onClick={handleClick}
-        disabled={isInactive}
-        style={buttonStyle}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-        onFocus={() => setIsHovering(true)}
-        onBlur={() => setIsHovering(false)}
-        aria-busy={loading}
-        onMouseDown={e => { if (!isInactive) e.currentTarget.style.transform = 'scale(0.97)'; }}
-        onMouseUp={e => { if (!isInactive) e.currentTarget.style.transform = 'scale(1.06)'; }}
-      >
-        {loading && <MiniSpinner />}
-        {icon && <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: 6 }}>{icon}</span>}
-        {label || children}
-      </button>
-
-      <style>
-        {`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}
-      </style>
-    </>
+    <button
+      type={type}
+      onClick={isInactive ? undefined : onClick}
+      disabled={isInactive}
+      className={[
+        baseClasses,
+        colorClasses,
+        isInactive ? inactiveClasses : activeClasses,
+        'relative',
+        className,
+      ].join(' ')}
+      aria-busy={loading}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      onFocus={() => setIsHovering(true)}
+      onBlur={() => setIsHovering(false)}
+      {...props}
+    >
+      {loading ? (
+        <span className="absolute inset-0 flex items-center justify-center">
+          <MiniSpinner center />
+        </span>
+      ) : (
+        <>
+          {icon && <span className="inline-flex items-center mr-1">{icon}</span>}
+          {label || children}
+        </>
+      )}
+      {/* Invisible text for width preservation when loading */}
+      {loading && (
+        <span className="invisible select-none">
+          {icon && <span className="inline-flex items-center mr-1">{icon}</span>}
+          {label || children}
+        </span>
+      )}
+    </button>
   )
 }
 

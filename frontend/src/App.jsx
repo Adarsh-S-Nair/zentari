@@ -345,7 +345,7 @@ function AppContent({
       <Route
         path="/transactions"
         element={user ? (
-          <div className="flex min-h-screen w-full overflow-x-hidden relative">
+          <div className="flex min-h-screen w-full relative">
             {!isMobile && (
               <CollapsibleSidebar
                 visibleTabs={visibleTabs}
