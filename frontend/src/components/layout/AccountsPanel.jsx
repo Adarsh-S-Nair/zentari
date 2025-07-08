@@ -87,16 +87,11 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
   const totalBalance = assetTotal + liabilityTotal;
 
   return (
-    <main className="w-full" style={{ padding: '16px 10px', margin: 0 }}>
-      <div
-        className={`flex flex-col items-center ${
-          allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''
-        }`}
-        style={{ padding: allAccountsEmpty ? '0 12px' : '0', width: '100%', boxSizing: 'border-box' }}
-      >
+    <main className="w-full px-3 pt-8">
+      <div className={`flex flex-col items-center ${allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''} w-full box-border ${allAccountsEmpty ? 'px-3' : ''}`}>
         {/* Circle User Toggle Row */}
         {!allAccountsEmpty && (
-          <div style={{ width: '100%', maxWidth: maxWidth, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div className="w-full max-w-[700px] mb-4 flex items-center justify-between gap-3">
             <CircleUserToggle
               users={circleUsers}
               selectedUser={selectedCircleUser}
@@ -117,25 +112,10 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
             <Spinner size={28} />
           </div>
         ) : allAccountsEmpty ? (
-          <div className="flex flex-col items-center justify-center text-center px-[20px]">
-            <img
-              src={noAccountsImage}
-              alt="No Accounts"
-              className="w-[240px] object-contain mb-[4px]"
-            />
-            <h2 style={{ fontSize: '15px', fontWeight: 500, color: '#1f2937' }}>
-              No Accounts Added
-            </h2>
-            <p
-              style={{
-                fontSize: '13px',
-                color: '#6b7280',
-                marginTop: '-4px',
-                maxWidth: '260px',
-              }}
-            >
-              Add your financial accounts to see your cash, credit, loans, and investments.
-            </p>
+          <div className="flex flex-col items-center justify-center text-center px-5">
+            <img src={noAccountsImage} alt="No Accounts" className="w-[240px] object-contain mb-1" />
+            <h2 className="text-[15px] font-medium text-gray-800">No Accounts Added</h2>
+            <p className="text-[13px] text-gray-500 mt-[-4px] max-w-[260px]">Add your financial accounts to see your cash, credit, loans, and investments.</p>
             <div>
               <Button
                 label="Add Accounts"
@@ -151,115 +131,28 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
           <>
             {/* Net Worth Banner */}
             {!allAccountsEmpty && (
-              <>
-                <div
-                  style={{
-                    width: '100%',
-                    maxWidth: maxWidth,
-                    margin: '0 auto',
-                    display: 'flex',
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    gap: 16,
-                    marginBottom: 20,
-                    boxSizing: 'border-box',
-                    padding: '0 4px',
-                  }}
-                >
-                  {/* Net Worth Card */}
-                  <div
-                    style={{
-                      flex: 1,
-                      minWidth: 220,
-                      maxWidth: 400,
-                      background: 'linear-gradient(90deg, #6366f1 0%, #60a5fa 100%)',
-                      color: '#fff',
-                      borderRadius: 12,
-                      boxShadow: '0 2px 12px 0 rgba(59,130,246,0.08)',
-                      border: 'none',
-                      padding: '16px 20px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      justifyContent: 'center',
-                      boxSizing: 'border-box',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.92, letterSpacing: 0.2, marginBottom: 2 }}>Net Worth</span>
-                    <span style={{ fontSize: 22, fontWeight: 700, marginTop: 0, letterSpacing: -0.5, textShadow: '0 1px 4px rgba(59,130,246,0.10)' }}>
-                      {formatCurrency(totalBalance)}
-                    </span>
-                  </div>
-                  {/* Total Assets Card */}
-                  <div
-                    style={{
-                      flex: 1,
-                      minWidth: 220,
-                      maxWidth: 400,
-                      background: 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)',
-                      borderRadius: 12,
-                      border: '1.5px solid #e5e7eb',
-                      boxShadow: '0 1px 6px 0 rgba(59,130,246,0.04)',
-                      padding: '16px 20px',
-                      color: '#fff',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      justifyContent: 'center',
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.92, letterSpacing: 0.2, marginBottom: 2 }}>Total Assets</span>
-                    <span style={{ fontSize: 22, fontWeight: 700, marginTop: 0, letterSpacing: -0.5 }}>{formatCurrency(assetTotal)}</span>
-                  </div>
-                  {/* Total Liabilities Card */}
-                  <div
-                    style={{
-                      flex: 1,
-                      minWidth: 220,
-                      maxWidth: 400,
-                      background: 'linear-gradient(90deg, #dc2626 0%, #f87171 100%)',
-                      borderRadius: 12,
-                      border: '1.5px solid #e5e7eb',
-                      boxShadow: '0 1px 6px 0 rgba(59,130,246,0.04)',
-                      padding: '16px 20px',
-                      color: '#fff',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      justifyContent: 'center',
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.92, letterSpacing: 0.2, marginBottom: 2 }}>Total Liabilities</span>
-                    <span style={{ fontSize: 22, fontWeight: 700, marginTop: 0, letterSpacing: -0.5 }}>{formatCurrency(liabilityTotal)}</span>
-                  </div>
+              <div className="w-full max-w-[700px] mx-auto flex flex-row flex-wrap gap-4 mb-6 box-border px-1">
+                {/* Net Worth Card */}
+                <div className="flex-1 min-w-[220px] max-w-[400px] rounded-xl bg-gradient-to-tr from-blue-500 to-blue-300 text-white border-none px-5 py-4 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl">
+                  <span className="text-[13px] font-medium opacity-90 tracking-wide mb-1">Net Worth</span>
+                  <span className="text-[22px] font-bold mt-0 -tracking-[0.5px] drop-shadow">{formatCurrency(totalBalance)}</span>
                 </div>
-              </>
+                {/* Total Assets Card */}
+                <div className="flex-1 min-w-[220px] max-w-[400px] rounded-xl bg-gradient-to-tr from-green-700 to-green-500 text-white border border-gray-200 px-5 py-4 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl">
+                  <span className="text-[13px] font-medium opacity-90 tracking-wide mb-1">Total Assets</span>
+                  <span className="text-[22px] font-bold mt-0 -tracking-[0.5px]">{formatCurrency(assetTotal)}</span>
+                </div>
+                {/* Total Liabilities Card */}
+                <div className="flex-1 min-w-[220px] max-w-[400px] rounded-xl bg-gradient-to-tr from-red-700 to-red-500 text-white border border-gray-200 px-5 py-4 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl">
+                  <span className="text-[13px] font-medium opacity-90 tracking-wide mb-1">Total Liabilities</span>
+                  <span className="text-[22px] font-bold mt-0 -tracking-[0.5px]">{formatCurrency(liabilityTotal)}</span>
+                </div>
+              </div>
             )}
-
             {/* Tabs + Add Button */}
-            <div
-              style={{
-                width: '100%',
-                maxWidth: maxWidth,
-                margin: '0 auto 8px auto',
-                boxSizing: 'border-box',
-                padding: '0 4px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: isMobile ? 'nowrap' : 'wrap',
-                  gap: 8,
-                  marginBottom: '12px',
-                }}
-              >
-                <div style={{ flexGrow: 1, overflowX: 'auto' }}>
+            <div className="w-full max-w-[700px] mx-auto box-border px-1 mb-4">
+              <div className="flex justify-between items-center flex-wrap gap-2 mb-3">
+                <div className="flex-grow overflow-x-auto">
                   <Tabs
                     tabs={[
                       grouped.cash?.length > 0 && {
@@ -288,9 +181,8 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
                   />
                 </div>
               </div>
-
               {/* Account Content */}
-              <div style={{ minHeight: '200px' }}>
+              <div className="min-h-[200px]">
                 <AccountsList
                   accounts={getActiveTabAccounts(grouped, activeTab)}
                   activeTab={activeTab}
@@ -302,7 +194,6 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
           </>
         )}
       </div>
-
       <PlaidLinkModal
         isOpen={plaidModalOpen}
         onClose={handlePlaidClose}

@@ -50,15 +50,9 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
   });
 
   return (
-    <div style={{ width: '100%', padding: '0 0 8px 0' }}>
+    <div className="w-full pb-2">
       {/* Card grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        gap: '20px',
-        width: '100%',
-        margin: '0 auto',
-      }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto">
         {sortedAccounts.map((acc) => {
           const balance = acc.balances?.current || 0;
           const isZero = balance === 0;
@@ -66,124 +60,63 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
           if (!triggerRefs.current[acc.account_id]) {
             triggerRefs.current[acc.account_id] = React.createRef();
           }
-          // Use a subtle neutral gradient for the card background
-          const cardBg = 'linear-gradient(120deg, #f7f8fa 0%, #f3f4f6 100%)';
           return (
             <div
               key={acc.account_id}
-              style={{
-                borderRadius: 16,
-                background: cardBg,
-                color: '#222',
-                boxShadow: '0 1px 2px 0 rgba(59,130,246,0.03)',
-                border: '1.5px solid #e5e7eb',
-                padding: '20px 22px',
-                minHeight: 140,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                position: 'relative',
-                overflow: 'hidden',
-                transition: 'transform 0.16s cubic-bezier(.4,1.5,.5,1), box-shadow 0.18s',
-                cursor: 'pointer',
-              }}
+              className="rounded-2xl bg-gradient-to-tr from-gray-50 to-gray-100 text-gray-900 shadow-lg border border-gray-200 px-6 py-5 min-h-[140px] flex flex-col justify-between relative overflow-hidden transition-transform duration-200 hover:scale-102 hover:shadow-xl cursor-pointer group"
               onClick={() => navigate(`/accounts/${acc.id}`)}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'scale(1.012)';
-                e.currentTarget.style.boxShadow = '0 3px 12px 0 rgba(59,130,246,0.07)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(59,130,246,0.03)';
-              }}
               tabIndex={0}
               role="button"
               aria-label={`View account ${acc.name}`}
             >
               {/* Top: Logo/Bank + Mask */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <div style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: '50%',
-                  background: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                  border: '1.5px solid #e5e7eb'
-                }}>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-200">
                   {acc.institution_logo ? (
                     <img
                       src={acc.institution_logo}
                       alt={acc.institution_name || 'Bank'}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      className="w-full h-full object-cover"
                       onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                     />
                   ) : null}
-                  <div style={{
-                    display: acc.institution_logo ? 'none' : 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '100%',
-                    height: '100%',
-                    color: '#6b7280',
-                    opacity: 0.7
-                  }}>
+                  <div className={`${acc.institution_logo ? 'hidden' : 'flex'} items-center justify-center w-full h-full text-gray-400 opacity-70`}>
                     <FaUniversity size={16} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="flex items-center gap-2">
                   {acc.mask && (
-                    <span style={{
-                      fontSize: 12,
-                      color: '#64748b',
-                      fontWeight: 600,
-                      background: 'rgba(100,116,139,0.13)',
-                      borderRadius: 999,
-                      padding: '2px 10px',
-                      letterSpacing: 1,
-                      display: 'inline-block',
-                      minWidth: 36,
-                      textAlign: 'center',
-                      fontFamily: 'monospace',
-                    }}>{'●'.repeat(4)}{acc.mask}</span>
+                    <span className="text-[12px] text-slate-500 font-semibold bg-slate-400/10 rounded-full px-3 py-1 tracking-widest inline-block min-w-[36px] text-center font-mono">
+                      {'●'.repeat(4)}{acc.mask}
+                    </span>
                   )}
                 </div>
               </div>
               {/* Middle: Name + Type */}
-              <div style={{ marginBottom: 8 }}>
-                <div style={{
-                  fontSize: 16,
-                  fontWeight: 600,
-                  letterSpacing: -0.5,
-                  marginBottom: 2,
-                  textShadow: 'none',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>{acc.name}</div>
-                <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400, textTransform: 'capitalize' }}>
+              <div className="mb-2">
+                <div className="text-[16px] font-semibold -tracking-[0.5px] mb-0.5 truncate text-gray-900">
+                  {acc.name}
+                </div>
+                <div className="text-[11px] opacity-85 font-normal capitalize text-slate-500">
                   {capitalizeWords(acc.subtype)}
                 </div>
               </div>
               {/* Bottom: Balance and Last Sync */}
-              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.92 }}>Balance</div>
-                  <div style={{ fontSize: 10, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div className="mt-auto flex items-center justify-between">
+                <div className="flex flex-col gap-0.5">
+                  <div className="text-[13px] font-medium opacity-90">Balance</div>
+                  <div className="text-[10px] text-slate-500 flex items-center gap-1">
                     <>
                       Last sync: {lastSync ? formatLastUpdated(lastSync) : 'Never synced'}
                       {acc.update_success ? (
-                        <FaCircleCheck size={10} style={{ color: 'var(--color-success)' }} />
+                        <FaCircleCheck size={10} className="text-green-500 ml-1" />
                       ) : (
-                        <FaCircleXmark size={10} style={{ color: 'var(--color-danger)' }} />
+                        <FaCircleXmark size={10} className="text-red-500 ml-1" />
                       )}
                     </>
                   </div>
                 </div>
-                <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: -0.5, color: '#444', textShadow: 'none' }}>
+                <div className="text-[17px] font-semibold -tracking-[0.5px] text-gray-800">
                   {formatCurrency(balance)}
                 </div>
               </div>

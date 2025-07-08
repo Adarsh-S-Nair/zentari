@@ -118,9 +118,11 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                 border: 'none',
                 outline: 'none',
                 flex: 1,
-                fontSize: 13,
+                fontSize: 14,
+                fontWeight: 600,
+                color: '#6b7280',
+                fontFamily: 'inherit',
                 height: 24,
-                color: '#222',
                 backgroundColor: 'transparent',
                 minWidth: 0,
                 boxSizing: 'border-box',
@@ -171,7 +173,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                   transition: 'background 0.18s',
                   cursor: 'pointer',
                   gap: 0,
-                  border: '1.5px solid #f3f4f6',
+                  border: '1.5px solid #e5e7eb',
                 }}
                 onMouseOver={e => e.currentTarget.style.background = '#f1f5ff'}
                 onMouseOut={e => e.currentTarget.style.background = '#fff'}
@@ -183,46 +185,59 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                   width: 44,
                   height: 44,
                   borderRadius: '50%',
-                  background: txn.icon_url ? '#f3f4f6' : '#e5e7eb',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   overflow: 'hidden',
-                  border: '1.5px solid #e5e7eb',
+                  // Only show border/background if no icon_url
+                  background: txn.icon_url ? 'transparent' : '#e5e7eb',
+                  border: txn.icon_url ? 'none' : '1.5px solid #e5e7eb',
                 }}>
                   {txn.icon_url ? (
-                    <img src={txn.icon_url} alt="icon" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
+                    <img src={txn.icon_url} alt="icon" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
                   ) : (
                     <FaChevronRight size={20} color="#9ca3af" />
                   )}
                 </div>
                 {/* Main info */}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: isMobile ? 140 : 220 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: '#222', marginBottom: 2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: isMobile ? 180 : 220 }}>
                     {txn.description}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minHeight: 12 }}>
                     <span style={{ fontSize: 10, color: '#64748b', fontWeight: 400 }}>{formatDate(txn.date)}</span>
                     {txn.category_name && (
                       <span style={{
-                        fontSize: 9,
-                        fontWeight: 500,
-                        color: '#fff',
-                        background: `linear-gradient(90deg, ${txn.category_color || '#6366f1'} 0%, ${lightenColor(txn.category_color || '#6366f1', 0.15)} 100%)`,
-                        borderRadius: 8,
-                        padding: '2px 8px',
-                        letterSpacing: 0.15,
-                        display: 'inline-block',
-                        minWidth: 0,
-                        maxWidth: 80,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
                         marginLeft: 8,
-                        marginTop: 0,
-                        verticalAlign: 'middle',
-                        boxShadow: '0 1px 2px 0 rgba(59,130,246,0.04)',
+                        maxWidth: 80,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                      }}>{txn.category_name}</span>
+                        verticalAlign: 'middle',
+                      }}>
+                        <span style={{
+                          display: 'inline-block',
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: txn.category_color || '#6366f1',
+                          marginRight: 5,
+                          flexShrink: 0,
+                        }} />
+                        <span style={{
+                          fontSize: 9,
+                          fontWeight: 500,
+                          color: '#64748b',
+                          letterSpacing: 0.15,
+                          minWidth: 0,
+                          textOverflow: 'ellipsis',
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap',
+                        }}>{txn.category_name}</span>
+                      </span>
                     )}
                   </div>
                 </div>

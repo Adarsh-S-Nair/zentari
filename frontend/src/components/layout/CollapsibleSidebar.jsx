@@ -32,35 +32,19 @@ export default function CollapsibleSidebar({
       <div
         onMouseEnter={() => !isMobile && setIsHovering(true)}
         onMouseLeave={() => !isMobile && setIsHovering(false)}
-        className="transition-all duration-200 ease-out h-[100vh] px-[8px] flex flex-col"
-        style={{
-          background: '#fff',
-          width: fullyOpen ? '260px' : '56px',
-          paddingTop: '20px',
-          paddingBottom: '12px',
-          boxShadow: fullyOpen ? '0 4px 24px 0 rgba(59,130,246,0.06)' : '0 1.5px 4px 0 rgba(59,130,246,0.03)',
-          fontFamily: '"Inter", system-ui, sans-serif',
-          color: '#222',
-          overflowY: 'auto',
-          position: isMobile ? 'relative' : 'fixed',
-          top: 0,
-          left: 0,
-          zIndex: isMobile ? 110 : 200,
-          border: '1.5px solid #f3f4f6',
-        }}
+        className={`transition-all duration-200 ease-out h-screen px-2 flex flex-col bg-white overflow-y-auto ${isMobile ? 'relative z-[110]' : 'fixed z-[200]'} top-0 left-0 border border-gray-100 ${fullyOpen ? 'w-[260px] pt-5 pb-3 shadow-[0_4px_24px_0_rgba(59,130,246,0.06)]' : 'w-14 pt-5 pb-3 shadow-[0_1.5px_4px_0_rgba(59,130,246,0.03)]'} font-sans text-gray-900`}
       >
         {/* 🔷 Logo */}
-        <div className={`w-full ${fullyOpen ? 'ml-[6px] mb-[14px]' : 'mb-[24px] flex justify-center'}`}>
+        <div className={`w-full ${fullyOpen ? 'ml-2 mb-3.5 pb-3 border-b border-gray-100' : 'mb-6 flex justify-center pb-3 border-b border-gray-100'}`}>
           <img
             src={fullyOpen ? logoFull : logoCollapsed}
             alt="Logo"
-            className="h-[14px] object-contain"
-            style={{ width: fullyOpen ? 'auto' : '14px' }}
+            className={`h-4 object-contain ${fullyOpen ? 'w-auto' : 'w-4'}`}
           />
         </div>
 
         {/* 🔹 Tabs */}
-        <div className="w-full flex flex-col gap-[6px] mb-[16px]">
+        <div className="w-full flex flex-col gap-1.5 mb-4">
           {visibleTabs.map((tab, i) => (
             <SidebarTab
               key={i}
@@ -83,8 +67,8 @@ export default function CollapsibleSidebar({
 
 function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate }) {
   const isExpandable = tab.hasContent
-  const baseClass = fullyOpen ? 'px-[12px] py-[4px]' : 'justify-center h-[40px]'
-  const hoverClass = isActive ? '' : 'hover:bg-[#e5e7fa] cursor-pointer'
+  const baseClass = fullyOpen ? 'px-3 py-2 h-12' : 'justify-center h-10'
+  const hoverClass = isActive ? '' : 'hover:bg-indigo-50 cursor-pointer'
 
   const [localExpanded, setLocalExpanded] = useState(isActive)
   const [contentHeight, setContentHeight] = useState(0)
@@ -100,6 +84,8 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
       : isExpanded
       ? 'rounded-t-[10px]'
       : 'rounded-[10px]'
+
+  const activeTabClass = isActive ? 'bg-gradient-to-r from-indigo-500 to-blue-400 text-white font-bold' : '';
 
   useEffect(() => {
     if (isActive) {
@@ -131,18 +117,9 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
   return (
     <div>
       <div
-        className={`flex items-center gap-[8px] transition-colors duration-200 ${baseClass} ${hoverClass} ${rounded}`}
+        className={`flex items-center gap-2 transition-colors duration-200 ${baseClass} ${hoverClass} ${rounded} ${activeTabClass}`}
         onClick={() => !isActive && navigate(tab.route)}
-        style={{
-          background: isActive ? 'linear-gradient(90deg, #6366f1 0%, #3b82f6 100%)' : 'transparent',
-          color: isActive ? '#fff' : textColor,
-          fontWeight: isActive ? 700 : 500,
-          fontSize: 13,
-          letterSpacing: 0.2,
-          marginBottom: 2,
-          transition: 'transform 0.16s cubic-bezier(.4,1.5,.5,1), background 0.18s, color 0.18s',
-          transform: 'scale(1)',
-        }}
+        style={{ color: isActive ? undefined : textColor, letterSpacing: 0.2 }}
         onMouseEnter={e => { if (!isActive) e.currentTarget.style.transform = 'scale(1.04)'; }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
         onMouseDown={e => { if (!isActive) e.currentTarget.style.transform = 'scale(0.97) translateY(1.5px)'; }}
@@ -153,11 +130,7 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
         </div>
         {fullyOpen && (
           <div className="flex justify-between w-full items-center">
-            <h2 style={{
-              fontSize: '11px',
-              fontWeight: 'bold',
-              color: textColor
-            }}>{tab.label}</h2>
+            <h2 className="text-[11px] font-bold" style={{ color: textColor }}>{tab.label}</h2>
             {tab.hasContent && (
               <FiChevronDown
                 size={14}
@@ -183,7 +156,7 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
         >
           <div
             ref={contentRef}
-            className="px-[16px] py-[12px]"
+            className="px-4 py-3 bg-slate-900 rounded-b-md"
             style={{
               visibility: readyToShow ? 'visible' : 'hidden',
               opacity: readyToShow ? 1 : 0,
