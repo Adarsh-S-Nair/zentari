@@ -112,7 +112,7 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
   };
 
   return (
-    <main className="w-full px-3">
+    <main className="w-full px-3" style={{ background: 'var(--color-bg-primary)' }}>
       <div className={`flex flex-col items-center ${allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''} w-full box-border ${allAccountsEmpty ? 'px-3' : ''}`}>
         {/* Circle User Toggle Row */}
         {!allAccountsEmpty && (
@@ -157,138 +157,7 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
         ) : (
           <>
             {/* Unified Net Worth Card with Breakdown Bars */}
-            <div className="w-full max-w-[700px] mx-auto rounded-xl bg-gradient-to-r from-indigo-500 to-blue-400 text-white border-none px-5 py-6 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl mb-6 mt-2">
-              <div className="flex items-center w-full mb-1 justify-between">
-                <div className="flex items-center">
-                  <FaChartLine size={20} className="mr-2" style={{ color: 'white', opacity: 0.92 }} />
-                  <span className="text-[15px] font-medium opacity-90 tracking-wide text-white">Net Worth</span>
-                  <div
-                    ref={netWorthInfoRef}
-                    className="ml-2 cursor-default opacity-80 hover:opacity-100 p-1 rounded-full transition bg-transparent flex items-center"
-                    onMouseEnter={() => handleShow(setShowNetWorthInfo, netWorthTimeout)}
-                    onMouseLeave={() => handleHide(setShowNetWorthInfo, netWorthTimeout)}
-                    onFocus={() => handleShow(setShowNetWorthInfo, netWorthTimeout)}
-                    onBlur={() => handleHide(setShowNetWorthInfo, netWorthTimeout)}
-                    tabIndex={0}
-                    style={{ minWidth: 28, minHeight: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <FiInfo size={16} style={{ color: 'white', opacity: 0.85 }} />
-                  </div>
-                  <InfoBubble
-                    visible={showNetWorthInfo}
-                    anchorRef={netWorthInfoRef}
-                    position="bottom"
-                    center={true}
-                  >
-                    Net Worth = Assets + Liabilities. This is your total financial position.
-                  </InfoBubble>
-                </div>
-                <span className="text-[20px] font-medium -tracking-[0.5px] text-white text-right" style={{ opacity: 0.92 }}>{formatCurrency(totalBalance)}</span>
-              </div>
-              {/* Responsive breakdown bars */}
-              <div className="flex flex-col sm:flex-row w-full gap-4 mt-2">
-                {/* Assets Breakdown */}
-                <div className="flex-1 flex flex-col items-start">
-                  <div className="flex items-center w-full justify-between mb-1">
-                    <div className="flex items-center">
-                      <IoMdCash size={16} className="mr-1" style={{ color: 'white', opacity: 0.85 }} />
-                      <span className="text-[13px] font-medium opacity-80 tracking-wide text-white">Assets</span>
-                      <div
-                        ref={assetsInfoRef}
-                        className="ml-2 cursor-default opacity-80 hover:opacity-100 p-1 rounded-full transition bg-transparent flex items-center"
-                        onMouseEnter={() => handleShow(setShowAssetsInfo, assetsTimeout)}
-                        onMouseLeave={() => handleHide(setShowAssetsInfo, assetsTimeout)}
-                        onFocus={() => handleShow(setShowAssetsInfo, assetsTimeout)}
-                        onBlur={() => handleHide(setShowAssetsInfo, assetsTimeout)}
-                        tabIndex={0}
-                        style={{ minWidth: 24, minHeight: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <FiInfo size={14} style={{ color: 'white', opacity: 0.8 }} />
-                      </div>
-                      <InfoBubble
-                        visible={showAssetsInfo}
-                        anchorRef={assetsInfoRef}
-                        position="bottom"
-                        center={true}
-                      >
-                        Assets are the total value of your cash and investments.
-                      </InfoBubble>
-                    </div>
-                    <span className="text-[14px] font-medium text-white" style={{ opacity: 0.92 }}>{formatCurrency(assetTotal)}</span>
-                  </div>
-                  <div className="w-full h-2.5 flex gap-1 my-1">
-                    <div
-                      className="rounded-full"
-                      style={{
-                        width: `${assetTotal > 0 ? (getTotal(grouped.cash) / assetTotal) * 100 : 0}%`,
-                        background: 'rgba(255,255,255,0.65)',
-                      }}
-                    />
-                    <div
-                      className="rounded-full"
-                      style={{
-                        width: `${assetTotal > 0 ? (getTotal(grouped.investment) / assetTotal) * 100 : 0}%`,
-                        background: 'rgba(255,255,255,0.38)',
-                      }}
-                    />
-                  </div>
-                  <div className="flex text-[11px] gap-3 mt-1">
-                    <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.65)' }} />Cash</span>
-                    <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.38)' }} />Investments</span>
-                  </div>
-                </div>
-                {/* Liabilities Breakdown */}
-                <div className="flex-1 flex flex-col items-start">
-                  <div className="flex items-center w-full justify-between mb-1">
-                    <div className="flex items-center">
-                      <FaCreditCard size={16} className="mr-1" style={{ color: 'white', opacity: 0.85 }} />
-                      <span className="text-[13px] font-medium opacity-80 tracking-wide text-white">Liabilities</span>
-                      <div
-                        ref={liabilitiesInfoRef}
-                        className="ml-2 cursor-default opacity-80 hover:opacity-100 p-1 rounded-full transition bg-transparent flex items-center"
-                        onMouseEnter={() => handleShow(setShowLiabilitiesInfo, liabilitiesTimeout)}
-                        onMouseLeave={() => handleHide(setShowLiabilitiesInfo, liabilitiesTimeout)}
-                        onFocus={() => handleShow(setShowLiabilitiesInfo, liabilitiesTimeout)}
-                        onBlur={() => handleHide(setShowLiabilitiesInfo, liabilitiesTimeout)}
-                        tabIndex={0}
-                        style={{ minWidth: 24, minHeight: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <FiInfo size={14} style={{ color: 'white', opacity: 0.8 }} />
-                      </div>
-                      <InfoBubble
-                        visible={showLiabilitiesInfo}
-                        anchorRef={liabilitiesInfoRef}
-                        position="bottom"
-                        center={true}
-                      >
-                        Liabilities are the total amount you owe, such as credit cards and loans.
-                      </InfoBubble>
-                    </div>
-                    <span className="text-[14px] font-medium text-white" style={{ opacity: 0.92 }}>{formatCurrency(liabilityTotal)}</span>
-                  </div>
-                  <div className="w-full h-2.5 flex gap-1 my-1">
-                    <div
-                      className="rounded-full"
-                      style={{
-                        width: `${liabilityTotal !== 0 ? (Math.abs(getTotal(grouped.credit)) / Math.abs(liabilityTotal)) * 100 : 0}%`,
-                        background: 'rgba(255,255,255,0.65)',
-                      }}
-                    />
-                    <div
-                      className="rounded-full"
-                      style={{
-                        width: `${liabilityTotal !== 0 ? (Math.abs(getTotal(grouped.loan)) / Math.abs(liabilityTotal)) * 100 : 0}%`,
-                        background: 'rgba(255,255,255,0.38)',
-                      }}
-                    />
-                  </div>
-                  <div className="flex text-[11px] gap-3 mt-1">
-                    <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.65)' }} />Credit</span>
-                    <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.38)' }} />Loans</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AccountsSummaryCard grouped={grouped} />
             {/* Tabs + Add Button */}
             <div className="w-full max-w-[700px] mx-auto box-border px-1 mb-4">
               <div className="flex justify-between items-center flex-wrap gap-2 mb-3">

@@ -311,7 +311,7 @@ function AppContent({
       <Route
         path="/accounts"
         element={user ? (
-          <div className="flex min-h-screen w-full relative">
+          <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
             {!isMobile && (
               <CollapsibleSidebar
                 visibleTabs={visibleTabs}
@@ -346,7 +346,7 @@ function AppContent({
       <Route
         path="/transactions"
         element={user ? (
-          <div className="flex min-h-screen w-full relative">
+          <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
             {!isMobile && (
               <CollapsibleSidebar
                 visibleTabs={visibleTabs}
@@ -427,7 +427,7 @@ function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, hand
   const { accounts } = useContext(FinancialContext) || {};
   const account = accounts?.find(acc => String(acc.id) === String(accountId));
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden relative">
+    <div className="flex min-h-screen w-full overflow-x-hidden relative" style={{ background: 'var(--color-bg-primary)' }}>
       {!isMobile && (
         <CollapsibleSidebar
           visibleTabs={visibleTabs}
@@ -474,7 +474,7 @@ function TransactionDetailLayout({ user, isMobile, isTablet, visibleTabs, form, 
   const { transactions } = useContext(FinancialContext) || {};
   const transaction = transactions?.find(txn => String(txn.id) === String(transactionId));
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden relative">
+    <div className="flex min-h-screen w-full overflow-x-hidden relative" style={{ background: 'var(--color-bg-primary)' }}>
       {!isMobile && (
         <CollapsibleSidebar
           visibleTabs={visibleTabs}

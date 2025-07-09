@@ -63,7 +63,8 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
           return (
             <div
               key={acc.account_id}
-              className="rounded-2xl bg-gradient-to-tr from-gray-50 to-gray-100 text-gray-900 shadow-lg border border-gray-200 px-6 py-5 min-h-[140px] flex flex-col justify-between relative overflow-hidden transition-transform duration-200 hover:scale-102 hover:shadow-xl cursor-pointer group"
+              className="rounded-2xl shadow-lg border px-6 py-5 min-h-[140px] flex flex-col justify-between relative overflow-hidden transition-transform duration-200 hover:scale-102 hover:shadow-xl cursor-pointer group"
+              style={{ color: 'var(--color-text-primary)', borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-secondary)' }}
               onClick={() => navigate(`/accounts/${acc.id}`)}
               tabIndex={0}
               role="button"
@@ -71,7 +72,7 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
             >
               {/* Top: Logo/Bank + Mask */}
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-200">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 border" style={{ background: 'var(--color-bg-primary)', borderColor: 'var(--color-border-primary)' }}>
                   {acc.institution_logo ? (
                     <img
                       src={acc.institution_logo}
@@ -80,13 +81,13 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                       onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                     />
                   ) : null}
-                  <div className={`${acc.institution_logo ? 'hidden' : 'flex'} items-center justify-center w-full h-full text-gray-400 opacity-70`}>
+                  <div className={`${acc.institution_logo ? 'hidden' : 'flex'} items-center justify-center w-full h-full opacity-70`} style={{ color: 'var(--color-text-muted)' }}>
                     <FaUniversity size={16} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {acc.mask && (
-                    <span className="text-[12px] text-slate-500 font-semibold bg-slate-400/10 rounded-full px-3 py-1 tracking-widest inline-block min-w-[36px] text-center font-mono">
+                    <span className="text-[12px] font-semibold rounded-full px-3 py-1 tracking-widest inline-block min-w-[36px] text-center font-mono" style={{ color: 'var(--color-text-secondary)', background: 'var(--color-bg-primary)' }}>
                       {'●'.repeat(4)}{acc.mask}
                     </span>
                   )}
@@ -94,18 +95,18 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
               </div>
               {/* Middle: Name + Type */}
               <div className="mb-2">
-                <div className="text-[16px] font-semibold -tracking-[0.5px] mb-0.5 truncate text-gray-900">
+                <div className="text-[16px] font-semibold -tracking-[0.5px] mb-0.5 truncate" style={{ color: 'var(--color-text-secondary)' }}>
                   {acc.name}
                 </div>
-                <div className="text-[11px] opacity-85 font-normal capitalize text-slate-500">
+                <div className="text-[11px] opacity-85 font-normal capitalize" style={{ color: 'var(--color-text-muted)' }}>
                   {capitalizeWords(acc.subtype)}
                 </div>
               </div>
               {/* Bottom: Balance and Last Sync */}
               <div className="mt-auto flex items-center justify-between">
                 <div className="flex flex-col gap-0.5">
-                  <div className="text-[13px] font-medium opacity-90">Balance</div>
-                  <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                  <div className="text-[13px] font-medium opacity-90" style={{ color: 'var(--color-text-secondary)' }}>Balance</div>
+                  <div className="text-[10px] flex items-center gap-1" style={{ color: 'var(--color-text-secondary)' }}>
                     <>
                       Last sync: {lastSync ? formatLastUpdated(lastSync) : 'Never synced'}
                       {acc.update_success ? (
@@ -116,7 +117,7 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
                     </>
                   </div>
                 </div>
-                <div className="text-[17px] font-semibold -tracking-[0.5px] text-gray-800">
+                <div className="text-[17px] font-semibold -tracking-[0.5px]" style={{ color: 'var(--color-text-secondary)' }}>
                   {formatCurrency(balance)}
                 </div>
               </div>

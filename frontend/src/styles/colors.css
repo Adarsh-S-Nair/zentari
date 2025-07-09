@@ -6,7 +6,7 @@
   --color-primary-light: #60a5fa;
   --color-primary-dark: #2563eb;
   --color-primary-hover: #1d4ed8;
-  --color-primary-bg: #eff6ff;
+  --color-primary-bg: #d8e5f5;
 
   /* Success Colors */
   --color-success: #16a34a;
@@ -49,16 +49,18 @@
   --color-gray-900: #111827;
 
   /* Background Colors */
-  --color-bg-primary: var(--color-white);
+  --color-bg-primary: var(--color-gray-100);
   --color-bg-secondary: var(--color-gray-50);
-  --color-bg-tertiary: var(--color-gray-100);
-  --color-bg-hover: #fdfdfd;
+  --color-bg-tertiary: #ffffff;
+  --color-bg-hover: #ececec;
   --color-bg-hover-secondary: var(--color-gray-100);
   --color-bg-dark: var(--color-gray-800);
+  --color-bg-topbar: var(--color-gray-100);
+  --color-bg-selected: #d4e8ff;
 
   /* Text Colors */
-  --color-text-primary: var(--color-gray-900);
-  --color-text-secondary: var(--color-gray-700);
+  --color-text-primary: var(--color-gray-800);
+  --color-text-secondary: var(--color-gray-600);
   --color-text-muted: var(--color-gray-500);
   --color-text-light: var(--color-gray-400);
   --color-text-white: var(--color-white);
@@ -130,6 +132,13 @@
   --color-button-danger-hover: var(--color-danger-light);
   --color-button-disabled: var(--color-gray-400);
   --color-button-disabled-bg: var(--color-gray-100);
+
+  /* Gradient Colors */
+  --color-gradient-primary: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+  --color-gradient-primary-hover: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+  --color-gradient-primary-active: linear-gradient(135deg, #4338ca 0%, #1d4ed8 100%);
+  --color-gradient-success: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  --color-gradient-success-hover: linear-gradient(135deg, #15803d 0%, #166534 100%);
 }
 
 /* Utility classes for common color combinations */
@@ -167,4 +176,165 @@
 
 .border-danger {
   border-color: var(--color-danger-border);
+} 
+
+[data-theme="dark"] {
+  /* Primary Colors */
+  --color-primary: #60a5fa;
+  --color-primary-light: #93c5fd;
+  --color-primary-dark: #2563eb;
+  --color-primary-hover: #3b82f6;
+  --color-primary-bg: #2b3645;
+
+  /* Success Colors */
+  --color-success: #16a34a;
+  --color-success-light: #22c55e;
+  --color-success-bg: #1a3a2b;
+  --color-success-border: #16a34a;
+
+  /* Error/Danger Colors */
+  --color-danger: #ef4444;
+  --color-danger-light: #f87171;
+  --color-danger-bg: #3a2323;
+  --color-danger-border: #ef4444;
+
+  /* Warning Colors */
+  --color-warning: #fbbf24;
+  --color-warning-light: #fde68a;
+  --color-warning-bg: #3a2f1a;
+  --color-warning-border: #fbbf24;
+
+  /* Info Colors */
+  --color-info: #60a5fa;
+  --color-info-light: #93c5fd;
+  --color-info-bg: #1e293b;
+  --color-info-border: #60a5fa;
+
+  /* Neutral Colors */
+  --color-white: #22272e;
+  --color-black: #f3f4f6;
+
+  /* Gray Scale */
+  --color-gray-50: #232728;
+  --color-gray-100: #282c2c;
+  --color-gray-200: #323637;
+  --color-gray-300: #3a3e3f;
+  --color-gray-400: #4b4f50;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #9ca3af;
+  --color-gray-700: #d1d5db;
+  --color-gray-800: #e5e7eb;
+  --color-gray-900: #f9fafb;
+
+  /* Background Colors */
+  --color-bg-primary: #22272e;
+  --color-bg-secondary: #252b32;
+  --color-bg-tertiary: #1c2020;
+  --color-bg-hover: #21252c;
+  --color-bg-hover-secondary: #232728;
+  --color-bg-dark: #181a1b;
+  --color-bg-topbar: #22272e;
+  --color-bg-selected: #273544;
+
+  /* Text Colors */
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #9da0a6;
+  --color-text-muted: #9ca3af;
+  --color-text-light: #6b7280;
+  --color-text-white: #fff;
+
+  /* Border Colors */
+  --color-border-primary: #323637;
+  --color-border-secondary: #3a3e3f;
+  --color-border-dark: #4b4f50;
+
+  /* Shadow Colors */
+  --color-shadow-light: rgba(0, 0, 0, 0.18);
+  --color-shadow-medium: rgba(0, 0, 0, 0.32);
+  --color-shadow-heavy: rgba(0, 0, 0, 0.45);
+
+  /* Chart Colors */
+  --color-chart-primary: #60a5fa;
+  --color-chart-secondary: #4b4f50;
+  --color-chart-bg: #232728;
+
+  /* Breakdown Bar Colors */
+  --color-breakdown-cash: #22c55e;
+  --color-breakdown-investment: #60a5fa;
+  --color-breakdown-credit: #ef4444;
+  --color-breakdown-loan: #fbbf24;
+
+  /* Status Colors */
+  --color-status-open: #60a5fa;
+  --color-status-open-bg: #1e293b;
+  --color-status-closed: #6b7280;
+  --color-status-closed-bg: #232728;
+
+  /* Position Colors */
+  --color-position-long: #22c55e;
+  --color-position-long-bg: #1a3a2b;
+  --color-position-short: #ef4444;
+  --color-position-short-bg: #3a2323;
+
+  /* Action Colors */
+  --color-action-buy: #22c55e;
+  --color-action-buy-bg: #1a3a2b;
+  --color-action-sell: #ef4444;
+  --color-action-sell-bg: #3a2323;
+
+  /* Modal Colors */
+  --color-modal-bg: #232728;
+  --color-modal-overlay: rgba(0, 0, 0, 0.65);
+  --color-modal-shadow: rgba(0, 0, 0, 0.5);
+
+  /* Sidebar Colors */
+  --color-sidebar-bg: #232728;
+  --color-sidebar-hover: #323637;
+  --color-sidebar-active: #3a3e3f;
+  --color-sidebar-text: #f3f4f6;
+  --color-sidebar-text-muted: #9ca3af;
+  --color-sidebar-inactive: #6b7280;
+
+  /* Form Colors */
+  --color-input-bg: #232728;
+  --color-input-border: #323637;
+  --color-input-focus: #60a5fa;
+  --color-input-error: #ef4444;
+
+  /* Button Colors */
+  --color-button-primary: #60a5fa;
+  --color-button-primary-hover: #3b82f6;
+  --color-button-secondary: #323637;
+  --color-button-secondary-hover: #3a3e3f;
+  --color-button-danger: #ef4444;
+  --color-button-danger-hover: #f87171;
+  --color-button-disabled: #4b4f50;
+  --color-button-disabled-bg: #232728;
+
+  /* Gradient Colors */
+  --color-gradient-primary: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+  --color-gradient-primary-hover: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+  --color-gradient-primary-active: linear-gradient(135deg, #4338ca 0%, #1d4ed8 100%);
+  --color-gradient-success: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  --color-gradient-success-hover: linear-gradient(135deg, #15803d 0%, #166534 100%);
+} 
+
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 10px;
+  background: #323637;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #323637;
+  border-radius: 8px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #323637;
+}
+[data-theme="dark"] ::-webkit-scrollbar-corner {
+  background: #252b32;
+}
+
+[data-theme="dark"] {
+  scrollbar-color: #252b32 #22272e;
+  scrollbar-width: thin;
 } 

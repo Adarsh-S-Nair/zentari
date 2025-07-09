@@ -51,7 +51,7 @@ function MiniSpinner({ center = false }) {
 }
 
 const colorMap = {
-  networth: 'bg-gradient-to-r from-indigo-500 to-blue-400 text-white hover:from-indigo-600 hover:to-blue-500 active:from-indigo-700 active:to-blue-600',
+  networth: 'text-white',
   blue: 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white',
   red: 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white',
   green: 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white',
@@ -151,6 +151,12 @@ function Button({
       onMouseLeave={() => setIsHovering(false)}
       onFocus={() => setIsHovering(true)}
       onBlur={() => setIsHovering(false)}
+      style={{ 
+        color: 'var(--color-text-white)',
+        background: color === 'networth' ? 'var(--color-gradient-primary)' : undefined,
+        ...(color === 'networth' && isHovering && !isInactive && { background: 'var(--color-gradient-primary-hover)' }),
+        ...(color === 'networth' && isInactive && { background: 'var(--color-gradient-primary-active)' })
+      }}
       {...props}
     >
       {loading ? (

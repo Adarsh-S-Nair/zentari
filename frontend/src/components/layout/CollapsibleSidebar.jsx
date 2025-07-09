@@ -32,10 +32,11 @@ export default function CollapsibleSidebar({
       <div
         onMouseEnter={() => !isMobile && setIsHovering(true)}
         onMouseLeave={() => !isMobile && setIsHovering(false)}
-        className={`transition-all duration-200 ease-out h-screen px-2 flex flex-col bg-white overflow-y-auto ${isMobile ? 'relative z-[110]' : 'fixed z-[200]'} top-0 left-0 border border-gray-100 ${fullyOpen ? 'w-[260px] pt-5 pb-3 shadow-[0_4px_24px_0_rgba(59,130,246,0.06)]' : 'w-14 pt-5 pb-3 shadow-[0_1.5px_4px_0_rgba(59,130,246,0.03)]'} font-sans text-gray-900`}
+        className={`transition-all duration-200 ease-out h-screen px-2 flex flex-col overflow-y-auto ${isMobile ? 'relative z-[110]' : 'fixed z-[200]'} top-0 left-0 border ${fullyOpen ? 'w-[260px] pt-5 pb-3 shadow-[0_4px_24px_0_rgba(59,130,246,0.06)]' : 'w-14 pt-5 pb-3 shadow-[0_1.5px_4px_0_rgba(59,130,246,0.03)]'} font-sans`}
+        style={{ background: 'var(--color-bg-topbar)', borderColor: 'var(--color-border-primary)', color: 'var(--color-text-primary)' }}
       >
         {/* 🔷 Logo */}
-        <div className={`w-full ${fullyOpen ? 'flex justify-start pl-3' : 'flex justify-center'} pb-3 border-b border-gray-100 mb-4`}>
+        <div className={`w-full ${fullyOpen ? 'flex justify-start pl-3' : 'flex justify-center'} pb-3 border-b mb-4`} style={{ borderColor: 'var(--color-border-primary)' }}>
           <img
             src={fullyOpen ? logoFull : logoCollapsed}
             alt="Logo"
@@ -68,7 +69,7 @@ export default function CollapsibleSidebar({
 function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate }) {
   const isExpandable = tab.hasContent
   const baseClass = fullyOpen ? 'w-full h-10 flex items-center justify-start px-3' : 'w-10 h-10 flex items-center justify-center'
-  const hoverClass = isActive ? '' : 'hover:bg-indigo-50 cursor-pointer'
+  const hoverClass = isActive ? '' : 'cursor-pointer'
 
   const [localExpanded, setLocalExpanded] = useState(isActive)
   const [contentHeight, setContentHeight] = useState(0)
@@ -80,7 +81,7 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
   const isExpanded = isActive && localExpanded
   const rounded = 'rounded-[10px]'
 
-  const activeTabClass = isActive ? 'bg-gradient-to-r from-indigo-500 to-blue-400 text-white font-bold' : '';
+  const activeTabClass = isActive ? 'text-white font-bold' : '';
 
   useEffect(() => {
     if (isActive) {
@@ -114,22 +115,36 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
       <div
         className={`flex items-center gap-2 transition-colors duration-200 ${baseClass} ${hoverClass} ${rounded} ${activeTabClass}`}
         onClick={() => !isActive && navigate(tab.route)}
-        style={{ letterSpacing: 0.2 }}
-        onMouseEnter={e => { if (!isActive) e.currentTarget.style.transform = 'scale(1.04)'; }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+        style={{ letterSpacing: 0.2, background: isActive ? 'var(--color-gradient-primary)' : 'transparent' }}
+        onMouseEnter={e => {
+          if (!isActive) {
+            e.currentTarget.style.transform = 'scale(1.04)';
+            e.currentTarget.style.background = 'var(--color-gray-200)';
+          }
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.background = isActive ? undefined : 'transparent';
+        }}
         onMouseDown={e => { if (!isActive) e.currentTarget.style.transform = 'scale(0.97) translateY(1.5px)'; }}
         onMouseUp={e => { if (!isActive) e.currentTarget.style.transform = 'scale(1.04)'; }}
       >
-        <div className={`text-[14px] ${isActive ? 'text-white' : 'text-gray-400'}`}>
+        <div className="text-[14px]" style={{ color: isActive ? 'var(--color-sidebar-text)' : 'var(--color-sidebar-text-muted)' }}>
           {React.cloneElement(tab.icon, { size: 14 })}
         </div>
         {fullyOpen && (
           <div className="flex justify-between w-full items-center">
-            <h2 className={`text-[11px] font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>{tab.label}</h2>
+            <h2
+              className="text-[11px] font-bold"
+              style={{ color: isActive ? 'var(--color-sidebar-text)' : 'var(--color-sidebar-text-muted)' }}
+            >
+              {tab.label}
+            </h2>
             {tab.hasContent && (
               <FiChevronDown
                 size={14}
-                className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : 'rotate-0'} ${isActive ? 'text-white' : 'text-gray-400'}`}
+                className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}
+                style={{ color: isActive ? 'var(--color-sidebar-text)' : 'var(--color-sidebar-text-muted)' }}
               />
             )}
           </div>
