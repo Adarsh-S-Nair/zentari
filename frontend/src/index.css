@@ -75,3 +75,20 @@ html, body, #root {
 *, *::before, *::after {
   box-sizing: border-box;
 }
+
+/* Safari UI Color Support */
+@supports (padding: max(0px)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Safari home indicator area color */
+@supports (-webkit-touch-callout: none) {
+  body {
+    background-color: var(--safari-ui-color, #ffffff);
+  }
+}
