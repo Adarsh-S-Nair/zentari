@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Spinner } from '../ui';
 import { PlaidLinkModal } from '../modals';
 import { useFinancial } from '../../contexts/FinancialContext';
@@ -21,10 +22,10 @@ import { FaCreditCard, FaChartLine } from 'react-icons/fa6';
 import InfoBubble from '../ui/InfoBubble';
 import PageToolbar from './PageToolbar';
 
-function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
+function AccountsPanel({ isMobile, maxWidth = 700, circleUsers, activeTab: propActiveTab }) {
+  const navigate = useNavigate();
   const [plaidModalOpen, setPlaidModalOpen] = useState(false);
   const [plaidLoading, setPlaidLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('cash');
   const { accounts, loading, error, refreshAccounts, fetchTransactions, user, setToast } = useFinancial();
   const hasSetInitialTab = useRef(false);
   const [selectedCircleUser, setSelectedCircleUser] = useState(user?.id || 'combined');
@@ -48,25 +49,27 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
   };
 
   useEffect(() => {
-    if (accounts && accounts.length > 0 && grouped && !hasSetInitialTab.current) {
+    if (accounts && accounts.length > 0 && grouped && !hasSetInitialTab.current && !propActiveTab) {
       if (grouped.cash?.length > 0) {
-        setActiveTab('cash');
+        navigate('/accounts/cash');
       } else if (grouped.credit?.length > 0) {
-        setActiveTab('credit');
+        navigate('/accounts/credit');
       } else if (grouped.investment?.length > 0) {
-        setActiveTab('investment');
+        navigate('/accounts/investment');
       } else if (grouped.loan?.length > 0) {
-        setActiveTab('loan');
+        navigate('/accounts/loan');
       }
       hasSetInitialTab.current = true;
     }
-  }, [accounts, grouped]);
+  }, [accounts, grouped, propActiveTab, navigate]);
 
   useEffect(() => {
     if (user?.id) {
       setSelectedCircleUser(user.id);
     }
   }, [user]);
+
+
 
   const handlePlaidSuccess = () => {
     refreshAccounts();
@@ -112,29 +115,31 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
   };
 
   return (
-    <main className="w-full px-3" style={{ background: 'var(--color-bg-primary)' }}>
-      <div className={`flex flex-col items-center ${allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''} w-full box-border ${allAccountsEmpty ? 'px-3' : ''}`}>
-        {/* Circle User Toggle Row */}
-        {!allAccountsEmpty && (
-          <PageToolbar>
-            <div className="max-w-[700px] mx-auto flex items-center justify-between gap-3 px-3">
-              <CircleUserToggle
-                users={circleUsers}
-                selectedUser={selectedCircleUser}
-                onSelectUser={setSelectedCircleUser}
-              />
-              <Button
-                label="Add Accounts"
-                onClick={handleAddAccounts}
-                width="w-32"
-                loading={plaidLoading}
-                disabled={plaidLoading}
-                className="h-8"
-                color="networth"
-              />
-            </div>
-          </PageToolbar>
-        )}
+    <>
+      {/* Circle User Toggle Row */}
+      {!allAccountsEmpty && (
+        <PageToolbar>
+          <div className="max-w-[700px] mx-auto flex items-center justify-between gap-3 px-3">
+            <CircleUserToggle
+              users={circleUsers}
+              selectedUser={selectedCircleUser}
+              onSelectUser={setSelectedCircleUser}
+            />
+            <Button
+              label="Add Accounts"
+              onClick={handleAddAccounts}
+              width="w-32"
+              loading={plaidLoading}
+              disabled={plaidLoading}
+              className="h-8"
+              color="networth"
+            />
+          </div>
+        </PageToolbar>
+      )}
+
+      <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-0 box-border mb-4" style={{ background: 'var(--color-bg-primary)' }}>
+        <div className={`flex flex-col items-center ${allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''} w-full box-border ${allAccountsEmpty ? 'px-3' : ''}`}>
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)]">
             <Spinner size={28} />
@@ -185,16 +190,18 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
                         count: grouped.loan.length,
                       },
                     ].filter(Boolean)}
-                    activeId={activeTab}
-                    onChange={setActiveTab}
+                    activeId={propActiveTab || 'cash'}
+                    onChange={(tabId) => {
+                      navigate(`/accounts/${tabId}`);
+                    }}
                   />
                 </div>
               </div>
               {/* Account Content */}
               <div className="min-h-[200px]">
                 <AccountsList
-                  accounts={getActiveTabAccounts(grouped, activeTab)}
-                  activeTab={activeTab}
+                  accounts={getActiveTabAccounts(grouped, propActiveTab || 'cash')}
+                  activeTab={propActiveTab || 'cash'}
                   getAccountTypeIcon={getAccountTypeIcon}
                   getTotal={getTotal}
                 />
@@ -202,7 +209,8 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
             </div>
           </>
         )}
-      </div>
+        </div>
+      </main>
       <PlaidLinkModal
         isOpen={plaidModalOpen}
         onClose={handlePlaidClose}
@@ -212,7 +220,7 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
           setPlaidLoading(false);
         }}
       />
-    </main>
+    </>
   );
 }
 

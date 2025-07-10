@@ -50,7 +50,7 @@ export default function CollapsibleSidebar({
             <SidebarTab
               key={i}
               tab={tab}
-              isActive={currentTab === tab.route}
+              isActive={tab.route.startsWith('/accounts') ? location.pathname.startsWith('/accounts') : currentTab === tab.route}
               fullyOpen={fullyOpen}
               contentRef={contentRef}
               formProps={{ form, handleChange, handleSubmit, error, loading }}

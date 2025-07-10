@@ -43,7 +43,7 @@ const BalanceTabs = ({ balances = {}, onTabChange }) => {
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
               className={`
-                px-6 py-2 text-xs font-medium transition-all duration-200 ease-out rounded-full flex items-center justify-center cursor-pointer relative z-10
+                px-4 py-2 text-xs font-medium transition-all duration-200 ease-out rounded-full flex items-center justify-center cursor-pointer relative z-10
                 ${isActive 
                   ? 'text-white scale-100' 
                   : 'text-white text-opacity-70 hover:text-opacity-100 hover:scale-105'}

@@ -6,7 +6,7 @@ import { MdEdit } from 'react-icons/md';
 import { Card, RightDrawer } from '../ui';
 import ContextMenu from '../ui/ContextMenu';
 import { formatCurrency, formatLastUpdated } from '../../utils/formatters';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useFinancial } from '../../contexts/FinancialContext';
 
 const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => {
@@ -14,6 +14,7 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
   const menuRef = useRef(null);
   const triggerRefs = useRef({});
   const navigate = useNavigate();
+  const location = useLocation();
   const { plaidItems } = useFinancial();
 
   const capitalizeWords = (str) =>
@@ -65,7 +66,12 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
               key={acc.account_id}
               className="rounded-2xl shadow-lg border px-6 py-5 min-h-[140px] flex flex-col justify-between relative overflow-hidden transition-transform duration-200 hover:scale-102 hover:shadow-xl cursor-pointer group"
               style={{ color: 'var(--color-text-primary)', borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-secondary)' }}
-              onClick={() => navigate(`/accounts/${acc.id}`)}
+              onClick={() => {
+                // Preserve the current tab when navigating to account details
+                const currentPath = location.pathname;
+                const basePath = currentPath.startsWith('/accounts/') ? currentPath : '/accounts/cash';
+                navigate(`${basePath}/${acc.id}`);
+              }}
             >
               {/* Top: Logo/Bank + Mask */}
               <div className="flex items-center gap-3 mb-2">

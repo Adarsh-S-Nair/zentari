@@ -196,8 +196,8 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[15px] -tracking-[0.5px] truncate" style={{ color: 'var(--color-text-primary)', maxWidth: '100%' }}>
-                        {txn.description.length > 28 ? txn.description.slice(0, 15) + '...' : txn.description}
+                      <div className="text-[15px] -tracking-[0.5px] truncate max-w-[120px] sm:max-w-[220px]" style={{ color: 'var(--color-text-primary)' }}>
+                        {txn.description}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] -tracking-[0.3px]" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(txn.date)}</span>

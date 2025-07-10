@@ -28,66 +28,46 @@ export default function RightDrawer({ isOpen, onClose, children, header }) {
   if (!isOpen) return null;
 
   return (
-    <>
-      <style>
-        {`
-          .right-drawer-scroll::-webkit-scrollbar {
-            width: 10px;
-            background: var(--color-bg-secondary);
-          }
-          .right-drawer-scroll::-webkit-scrollbar-thumb {
-            background: var(--color-border-primary);
-            border-radius: 8px;
-          }
-          .right-drawer-scroll::-webkit-scrollbar-thumb:hover {
-            background: var(--color-border-secondary);
-          }
-          .right-drawer-scroll::-webkit-scrollbar-corner {
-            background: var(--color-bg-secondary);
-          }
-        `}
-      </style>
-      <div 
-        className="fixed inset-0 z-[300] flex items-start justify-end"
-        style={{ 
-          background: 'var(--color-backdrop-overlay)',
-          backdropFilter: `blur(var(--color-backdrop-blur))`
-        }}
-      >
+    <div 
+      className="fixed inset-0 z-[300] flex items-start justify-end p-4"
+      style={{ 
+        background: 'var(--color-backdrop-overlay)',
+        backdropFilter: `blur(var(--color-backdrop-blur))`
+      }}
+    >
       <div
         ref={drawerRef}
-        className="z-[400] h-full w-[430px] bg-white shadow-2xl transition-all flex flex-col"
+        className="z-[400] h-[calc(100vh-2rem)] w-[420px] bg-white shadow-2xl transition-all flex flex-col rounded-2xl border"
         style={{
           transform: visible ? 'translateX(0)' : 'translateX(100%)',
           opacity: visible ? 1 : 0,
           transition: 'all 0.2s ease',
+          borderColor: 'var(--color-border-primary)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
         }}
       >
         {/* Header with close button */}
-        <div className="flex items-center justify-between px-7 py-3 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b rounded-t-2xl" 
+             style={{ borderColor: 'var(--color-border-primary)' }}>
           {header && (
-            <h2 className="text-lg font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
               {header}
             </h2>
           )}
           <button
             onClick={closeWithDelay}
-            className="p-1 hover:scale-110 transition-transform duration-200 cursor-pointer"
+            className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200 cursor-pointer"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            <FiX size={24} />
+            <FiX size={20} />
           </button>
         </div>
         
         {/* Content area */}
-        <div className="flex-1 overflow-y-auto right-drawer-scroll" style={{ 
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'var(--color-border-primary) var(--color-bg-secondary)'
-        }}>
+        <div className="flex-1 overflow-y-auto py-4">
           {children}
         </div>
       </div>
     </div>
-    </>
   );
 } 
