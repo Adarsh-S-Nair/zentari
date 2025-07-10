@@ -1,4 +1,4 @@
-import React, { useContext, useState, useRef } from 'react';
+import React, { useContext, useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MdEdit } from 'react-icons/md';
 import IconButton from '../ui/IconButton';
@@ -21,6 +21,13 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   const submitRef = useRef(false);
 
   const plaidItem = account?.item_id ? plaidItems?.[account.item_id] : null;
+
+  // Update localName when account data loads
+  useEffect(() => {
+    if (account?.name && account.name !== localName) {
+      setLocalName(account.name);
+    }
+  }, [account?.name, localName]);
 
   if (loading || (!accounts && !account)) {
     return (
@@ -126,22 +133,24 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                 <div className="flex flex-col min-w-0 flex-1 mr-4">
                   <div className="flex items-center min-w-0 h-[28px] max-h-[28px]" style={{ color: 'var(--color-text-white)' }}>
                     {editingName ? (
-                      <input
-                        className="px-3 py-1.5 text-[17px] font-semibold focus:ring-2 outline-none min-w-0 flex-1 shadow-none transition-all duration-150 h-[28px] max-h-[28px]"
-                        style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-text-white)', borderColor: 'var(--color-primary)' }}
-                        value={editedName}
-                        autoFocus
-                        onChange={e => setEditedName(e.target.value)}
-                        onBlur={handleNameSubmit}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleNameSubmit();
-                          } else if (e.key === 'Escape') {
-                            handleNameCancel();
-                          }
-                        }}
-                      />
+                      <form onSubmit={(e) => { e.preventDefault(); handleNameSubmit(); }}>
+                        <input
+                          className="px-3 py-1.5 text-[17px] font-semibold focus:ring-2 outline-none min-w-0 flex-1 shadow-none transition-all duration-150 h-[28px] max-h-[28px]"
+                          style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-text-white)', borderColor: 'var(--color-primary)' }}
+                          value={editedName}
+                          autoFocus
+                          onChange={e => setEditedName(e.target.value)}
+                          onBlur={handleNameSubmit}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleNameSubmit();
+                            } else if (e.key === 'Escape') {
+                              handleNameCancel();
+                            }
+                          }}
+                        />
+                      </form>
                     ) : (
                       <div
                         className="flex items-center min-w-0 cursor-pointer group"

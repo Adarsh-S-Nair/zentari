@@ -3,8 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#22272e" media="(prefers-color-scheme: dark)" />
     <title>Zentari</title>
+    <script>
+      // Function to update Safari status bar style based on theme
+      function updateSafariStatusBar() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+        const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        
+        if (statusBarMeta) {
+          statusBarMeta.setAttribute('content', isDark ? 'black-translucent' : 'default');
+        }
+        
+        if (themeColorMeta) {
+          themeColorMeta.setAttribute('content', isDark ? '#22272e' : '#ffffff');
+        }
+      }
+      
+      // Watch for theme changes
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+            updateSafariStatusBar();
+          }
+        });
+      });
+      
+      // Start observing when DOM is ready
+      document.addEventListener('DOMContentLoaded', function() {
+        observer.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['data-theme']
+        });
+        updateSafariStatusBar(); // Initial update
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
