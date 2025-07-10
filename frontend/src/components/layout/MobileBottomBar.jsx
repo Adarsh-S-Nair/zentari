@@ -26,7 +26,7 @@ export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen, vis
                   : 'bg-transparent text-gray-500 hover:text-blue-600')
               }
             >
-              {tab.icon}
+              {React.cloneElement(tab.icon, { color: isActive ? '#fff' : '#6b7280' })}
             </div>
           </button>
         )

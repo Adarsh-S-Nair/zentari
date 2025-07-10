@@ -3,7 +3,7 @@ import { FaUniversity, FaTrash } from 'react-icons/fa';
 import { FaCircleCheck, FaCircleXmark } from 'react-icons/fa6';
 import { HiOutlineDotsVertical } from 'react-icons/hi';
 import { MdEdit } from 'react-icons/md';
-import { Card } from '../ui';
+import { Card, RightDrawer } from '../ui';
 import ContextMenu from '../ui/ContextMenu';
 import { formatCurrency, formatLastUpdated } from '../../utils/formatters';
 import { useNavigate } from 'react-router-dom';
@@ -66,9 +66,6 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
               className="rounded-2xl shadow-lg border px-6 py-5 min-h-[140px] flex flex-col justify-between relative overflow-hidden transition-transform duration-200 hover:scale-102 hover:shadow-xl cursor-pointer group"
               style={{ color: 'var(--color-text-primary)', borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-secondary)' }}
               onClick={() => navigate(`/accounts/${acc.id}`)}
-              tabIndex={0}
-              role="button"
-              aria-label={`View account ${acc.name}`}
             >
               {/* Top: Logo/Bank + Mask */}
               <div className="flex items-center gap-3 mb-2">
@@ -125,6 +122,8 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
           );
         })}
       </div>
+      
+
     </div>
   );
 };

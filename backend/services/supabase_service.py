@@ -191,7 +191,7 @@ class SupabaseService:
         if 'institution_id' in account_data:
             update_data['institution_id'] = account_data['institution_id']
         
-        self.client.table('accounts').update(update_data).eq('account_id', existing_account_id).execute()
+        self.client.table('accounts').update(update_data).eq('id', existing_account_id).execute()
         
         # Store balance snapshot if balances changed
         if account_data.get('balances') and self._balances_changed(old_balances, account_data['balances']):

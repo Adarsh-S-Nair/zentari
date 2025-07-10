@@ -44,7 +44,13 @@ export default function LogoutModal({ isOpen, onClose, onLogout }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-[3px] z-[300] flex items-center justify-center">
+    <div 
+      className="fixed inset-0 z-[300] flex items-center justify-center"
+      style={{ 
+        background: 'var(--color-backdrop-overlay)',
+        backdropFilter: `blur(var(--color-backdrop-blur))`
+      }}
+    >
       <div
         ref={modalRef}
         className="z-[400] w-[360px] bg-white rounded-[14px] px-6 pt-7 pb-5 shadow-2xl transition-all"

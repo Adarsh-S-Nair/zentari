@@ -27,7 +27,9 @@ import { IoFolderOpen } from 'react-icons/io5';
 import { FaReceipt } from 'react-icons/fa';
 import { FiArrowLeft } from 'react-icons/fi';
 import { FinancialContext } from './contexts/FinancialContext';
+import { RightDrawer } from './components/ui';
 import AccountDetail from './components/layout/AccountDetail';
+
 import LandingPage from './components/layout/LandingPage';
 import TransactionDetail from './components/layout/TransactionDetail';
 
@@ -255,14 +257,6 @@ function AppContent({
   const { accounts } = useContext(FinancialContext) || {};
   const maxWidth = 700;
 
-  // Memoize the account for detail page
-  const accountDetailAccount = useMemo(() => {
-    if (accountId && accounts) {
-      return accounts.find(acc => String(acc.id) === String(accountId));
-    }
-    return null;
-  }, [accountId, accounts]);
-
   const authenticatedRoutes = ['/accounts', '/transactions'];
 
   useEffect(() => {
@@ -284,9 +278,10 @@ function AppContent({
     currentPage = 'Transactions';
     currentTab = '/transactions';
   } else if (matchPath('/accounts/:accountId', location.pathname)) {
-    if (accountDetailAccount) {
-      const lastFour = accountDetailAccount.mask ? String(accountDetailAccount.mask).slice(-4) : '';
-      currentPage = `${accountDetailAccount.name}${lastFour ? ' ••••' + lastFour : ''}`;
+    const account = accounts?.find(acc => String(acc.id) === String(accountId));
+    if (account) {
+      const lastFour = account.mask ? String(account.mask).slice(-4) : '';
+      currentPage = `${account.name}${lastFour ? ' ••••' + lastFour : ''}`;
     } else {
       currentPage = 'Account';
     }
@@ -381,7 +376,7 @@ function AppContent({
       <Route
         path="/accounts/:accountId"
         element={user ? (
-          <AccountDetailLayout
+          <AccountDrawerLayout
             user={user}
             isMobile={isMobile}
             isTablet={isTablet}
@@ -394,6 +389,7 @@ function AppContent({
           />
         ) : null}
       />
+
       <Route
         path="/transaction/:transactionId"
         element={user ? (
@@ -420,53 +416,7 @@ function AppContent({
   );
 }
 
-// Layout for account detail page
-function AccountDetailLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth }) {
-  const { accountId } = useParams();
-  const navigate = useNavigate();
-  const { accounts } = useContext(FinancialContext) || {};
-  const account = accounts?.find(acc => String(acc.id) === String(accountId));
-  return (
-    <div className="flex min-h-screen w-full overflow-x-hidden relative" style={{ background: 'var(--color-bg-primary)' }}>
-      {!isMobile && (
-        <CollapsibleSidebar
-          visibleTabs={visibleTabs}
-          form={form}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          onLoginClick={() => setLoginOpen(true)}
-          user={user}
-          isTablet={isTablet}
-          isMobile={isMobile}
-          currentTab={'/accounts'}
-        />
-      )}
-      <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}> 
-        <Topbar
-          user={user}
-          onLoginClick={() => setLoginOpen(true)}
-          currentPage={'Accounts'}
-          maxWidth={maxWidth}
-          showBackArrow={true}
-          onBack={() => navigate('/accounts')}
-          isMobile={isMobile}
-        />
-        <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}> 
-          <AccountDetail maxWidth={maxWidth} account={account} />
-        </div>
-        {isMobile && (
-          <MobileBottomBar
-            user={user}
-            onLoginClick={() => setLoginOpen(true)}
-            setLogoutOpen={() => {}}
-            visibleTabs={visibleTabs}
-            currentTab={'/accounts'}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
+
 
 function TransactionDetailLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth }) {
   const { transactionId } = useParams();
@@ -512,6 +462,86 @@ function TransactionDetailLayout({ user, isMobile, isTablet, visibleTabs, form, 
         )}
       </div>
     </div>
+  );
+}
+
+// Layout for account drawer
+function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth }) {
+  const { accountId } = useParams();
+  const navigate = useNavigate();
+  const { accounts } = useContext(FinancialContext) || {};
+  const account = accounts?.find(acc => String(acc.id) === String(accountId));
+  
+  // Disable main page scroll when drawer is open on desktop
+  useEffect(() => {
+    if (!isMobile) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'auto';
+      };
+    }
+  }, [isMobile]);
+  
+  // On mobile, show as full page instead of drawer
+  if (isMobile) {
+    return (
+      <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+        <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
+          <Topbar 
+            user={user} 
+            onLoginClick={() => setLoginOpen(true)} 
+            currentPage={'Accounts'} 
+            maxWidth={maxWidth} 
+            isMobile={isMobile}
+            showBackArrow={true}
+            onBack={() => navigate('/accounts')}
+          />
+          <div className="flex-1 pb-[60px]">
+            <AccountDetail account={account} />
+          </div>
+          <MobileBottomBar
+            user={user}
+            onLoginClick={() => setLoginOpen(true)}
+            setLogoutOpen={() => {}}
+            visibleTabs={visibleTabs}
+            currentTab={'/accounts'}
+          />
+        </div>
+      </div>
+    );
+  }
+  
+  // On desktop/tablet, show as drawer
+  return (
+    <>
+      <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+        <CollapsibleSidebar
+          visibleTabs={visibleTabs}
+          form={form}
+          handleChange={handleChange}
+          handleSubmit={handleSubmit}
+          onLoginClick={() => setLoginOpen(true)}
+          user={user}
+          isTablet={isTablet}
+          isMobile={isMobile}
+          currentTab={'/accounts'}
+        />
+        <div className="flex-1 flex flex-col sm:pb-0 ml-[55px]">
+          <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
+          <div className="flex-1">
+            <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={[]} />
+          </div>
+        </div>
+      </div>
+      
+      <RightDrawer 
+        isOpen={true} 
+        onClose={() => navigate('/accounts')}
+        header={account?.name || 'Account Details'}
+      >
+        <AccountDetail account={account} />
+      </RightDrawer>
+    </>
   );
 }
 

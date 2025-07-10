@@ -88,7 +88,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
           ) : (
             filteredTransactions.map((txn, i) => {
               const isPositive = txn.amount > 0;
-              const amountColor = isPositive ? 'var(--color-success)' : 'var(--color-danger)';
+              const amountColor = isPositive ? 'var(--color-success)' : 'var(--color-text-secondary)';
               const amountPrefix = isPositive ? '+' : '';
               return (
                 <div
@@ -109,19 +109,19 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                   </div>
                   {/* Main info and category */}
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="text-[16px] font-semibold truncate max-w-[120px] sm:max-w-[220px]" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
+                    <div className="text-[16px] truncate max-w-[120px] sm:max-w-[220px]" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[11px] font-normal" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(txn.date)}</span>
                     </div>
                     {txn.category_name && (
                       <div className="flex items-center gap-2 mt-1">
                         <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: txn.category_color || 'var(--color-primary)' }} />
-                        <span className="text-[10px] font-medium tracking-wide min-w-0 text-ellipsis overflow-hidden whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
+                        <span className="text-[10px] tracking-wide min-w-0 text-ellipsis overflow-hidden whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
                       </div>
                     )}
                   </div>
                   {/* Amount */}
-                  <div className="flex-shrink-0 text-right font-bold text-[14px] min-w-[56px] sm:min-w-[70px] ml-2 sm:ml-3 whitespace-nowrap transition-colors duration-150 flex items-center justify-center self-center" style={{ color: amountColor }}>
+                  <div className="flex-shrink-0 text-right text-[14px] min-w-[56px] sm:min-w-[70px] ml-2 sm:ml-3 whitespace-nowrap transition-colors duration-150 flex items-center justify-center self-center" style={{ color: amountColor }}>
                     {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
                   </div>
                 </div>

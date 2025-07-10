@@ -80,7 +80,7 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
             {institutionLogo && (
               <img src={institutionLogo} alt="Institution Logo" className="h-6 w-6 object-contain rounded" style={{ background: 'var(--color-bg-tertiary)' }} />
             )}
-            <span className="text-[14px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{currentPage || 'Zentari'}</span>
+            <span className="text-[14px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>{currentPage || 'Zentari'}</span>
           </div>
 
           {/* Right: Theme Toggle, Bell, Help, User/Login */}
