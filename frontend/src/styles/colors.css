@@ -111,7 +111,7 @@
 
   /* Drawer/Modal Backdrop Colors */
   --color-backdrop-overlay: rgba(0, 0, 0, 0.4);
-  --color-backdrop-blur: 3px;
+  --color-backdrop-blur: 1px;
 
   /* Sidebar Colors */
   --color-sidebar-bg: var(--color-gray-800);
@@ -244,11 +244,11 @@
   --color-text-primary: #c1c1c1;
   --color-text-secondary: #9da0a6;
   --color-text-muted: #9ca3af;
-  --color-text-light: #6b7280;
+  --color-text-light: #aaadb4;
   --color-text-white: #fff;
 
   /* Border Colors */
-  --color-border-primary: #323637;
+  --color-border-primary: #2d3132;
   --color-border-secondary: #3a3e3f;
   --color-border-dark: #4b4f50;
 
@@ -292,8 +292,8 @@
   --color-modal-shadow: rgba(0, 0, 0, 0.5);
 
   /* Drawer/Modal Backdrop Colors */
-  --color-backdrop-overlay: rgba(0, 0, 0, 0.7);
-  --color-backdrop-blur: 4px;
+  --color-backdrop-overlay: rgba(0, 0, 0, 0.389);
+  --color-backdrop-blur: 1px;
 
   /* Sidebar Colors */
   --color-sidebar-bg: #232728;

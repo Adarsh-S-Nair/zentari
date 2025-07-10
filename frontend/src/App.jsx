@@ -495,6 +495,7 @@ function AppContent({
             handleSubmit={handleSubmit}
             setLoginOpen={setLoginOpen}
             maxWidth={maxWidth}
+            circleUsers={circleUsers}
           />
         ) : null}
       />
@@ -502,7 +503,7 @@ function AppContent({
       <Route
         path="/transaction/:transactionId"
         element={user ? (
-          <TransactionDetailLayout
+          <TransactionDrawerLayout
             user={user}
             isMobile={isMobile}
             isTablet={isTablet}
@@ -512,6 +513,7 @@ function AppContent({
             handleSubmit={handleSubmit}
             setLoginOpen={setLoginOpen}
             maxWidth={maxWidth}
+            circleUsers={circleUsers}
           />
         ) : null}
       />
@@ -527,14 +529,56 @@ function AppContent({
 
 
 
-function TransactionDetailLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth }) {
+// Layout for transaction drawer
+function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth, circleUsers }) {
   const { transactionId } = useParams();
   const navigate = useNavigate();
   const { transactions } = useContext(FinancialContext) || {};
   const transaction = transactions?.find(txn => String(txn.id) === String(transactionId));
+  
+  // Disable main page scroll when drawer is open on desktop
+  useEffect(() => {
+    if (!isMobile) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'auto';
+      };
+    }
+  }, [isMobile]);
+  
+  // On mobile, show as full page instead of drawer
+  if (isMobile) {
+    return (
+      <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+        <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
+          <Topbar 
+            user={user} 
+            onLoginClick={() => setLoginOpen(true)} 
+            currentPage={'Transaction'} 
+            maxWidth={maxWidth} 
+            isMobile={isMobile}
+            showBackArrow={true}
+            onBack={() => navigate('/transactions')}
+          />
+          <div className="flex-1 pb-[60px]">
+            <TransactionDetail maxWidth={maxWidth} transaction={transaction} />
+          </div>
+          <MobileBottomBar
+            user={user}
+            onLoginClick={() => setLoginOpen(true)}
+            setLogoutOpen={() => {}}
+            visibleTabs={visibleTabs}
+            currentTab={'/transactions'}
+          />
+        </div>
+      </div>
+    );
+  }
+  
+  // On desktop/tablet, show as drawer
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden relative" style={{ background: 'var(--color-bg-primary)' }}>
-      {!isMobile && (
+    <>
+      <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
         <CollapsibleSidebar
           visibleTabs={visibleTabs}
           form={form}
@@ -546,36 +590,27 @@ function TransactionDetailLayout({ user, isMobile, isTablet, visibleTabs, form, 
           isMobile={isMobile}
           currentTab={'/transactions'}
         />
-      )}
-      <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}> 
-        <Topbar
-          user={user}
-          onLoginClick={() => setLoginOpen(true)}
-          currentPage={'Transaction'}
-          maxWidth={maxWidth}
-          showBackArrow={true}
-          onBack={() => navigate('/transactions')}
-          isMobile={isMobile}
-        />
-        <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}> 
-          <TransactionDetail maxWidth={maxWidth} transaction={transaction} />
+        <div className="flex-1 flex flex-col sm:pb-0 ml-[55px]">
+          <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} isMobile={isMobile} />
+          <div className="flex-1">
+            <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
+          </div>
         </div>
-        {isMobile && (
-          <MobileBottomBar
-            user={user}
-            onLoginClick={() => setLoginOpen(true)}
-            setLogoutOpen={() => {}}
-            visibleTabs={visibleTabs}
-            currentTab={'/transactions'}
-          />
-        )}
       </div>
-    </div>
+      
+      <RightDrawer 
+        isOpen={true} 
+        onClose={() => navigate('/transactions')}
+        header={transaction?.description || 'Transaction Details'}
+      >
+        <TransactionDetail maxWidth={maxWidth} transaction={transaction} />
+      </RightDrawer>
+    </>
   );
 }
 
 // Layout for account drawer
-function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth }) {
+function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth, circleUsers }) {
   const { accountId, tab } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -644,7 +679,7 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
         <div className="flex-1 flex flex-col sm:pb-0 ml-[55px]">
           <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
           <div className="flex-1">
-            <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={[]} activeTab={tab || 'cash'} />
+            <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} activeTab={tab || 'cash'} />
           </div>
         </div>
       </div>

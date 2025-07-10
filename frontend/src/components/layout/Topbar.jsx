@@ -23,17 +23,36 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
     if (user) {
       const name = user.user_metadata?.display_name || user.email || 'User';
       setUserName(name);
-      supabase
-        .from('profiles')
-        .select('avatar_url')
-        .eq('id', user.id)
-        .single()
-        .then(({ data }) => setAvatarUrl(data?.avatar_url || null));
+      
+      // Check if we already have the avatar URL cached
+      const cachedAvatarUrl = user.user_metadata?.avatar_url;
+      if (cachedAvatarUrl) {
+        setAvatarUrl(cachedAvatarUrl);
+      } else {
+        // Only fetch from database if not cached
+        supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .single()
+          .then(({ data }) => {
+            if (data?.avatar_url) {
+              setAvatarUrl(data.avatar_url);
+              // Cache the avatar URL in user metadata for future use
+              if (user.user_metadata) {
+                user.user_metadata.avatar_url = data.avatar_url;
+              }
+            } else {
+              setAvatarUrl(null);
+            }
+          })
+          .catch(() => setAvatarUrl(null));
+      }
     } else {
       setUserName('');
       setAvatarUrl(null);
     }
-  }, [user]);
+  }, [user?.id]); // Only depend on user ID, not the entire user object
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);

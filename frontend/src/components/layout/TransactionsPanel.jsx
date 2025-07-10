@@ -58,15 +58,26 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
           />
         </div>
         <div className="max-w-[700px] mx-auto px-3 mt-2">
-          <div className="flex items-center rounded-lg shadow-sm py-2 px-2 min-h-[36px] w-full" style={{ background: 'var(--color-bg-secondary)' }}>
-            <FaSearch size={15} className="mr-2" style={{ color: 'var(--color-text-muted)' }} />
+          <div 
+            className="flex items-center py-2.5 px-3 min-h-[40px] w-full" 
+            style={{ 
+              background: 'var(--color-bg-secondary)',
+              borderRadius: '8px',
+              boxShadow: '0 1px 2px 0 var(--color-shadow-light)'
+            }}
+          >
+            <FaSearch size={14} className="mr-3" style={{ color: 'var(--color-text-muted)' }} />
             <input
               type="text"
               placeholder="Search transactions"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="border-none outline-none flex-1 text-[14px] font-semibold bg-transparent min-w-0 h-6 w-full"
-              style={{ fontFamily: 'inherit', color: 'var(--color-text-primary)' }}
+              className="border-none outline-none flex-1 text-[14px] bg-transparent min-w-0 h-6 w-full"
+              style={{ 
+                fontFamily: 'inherit', 
+                color: 'var(--color-text-primary)',
+                fontSize: '14px'
+              }}
             />
           </div>
         </div>

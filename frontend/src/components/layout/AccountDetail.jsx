@@ -61,38 +61,55 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   function handleNameSubmit() {
     if (submitRef.current) return;
     submitRef.current = true;
-    setEditingName(false);
+    
     const newName = (editedName || '').trim();
-    if (newName && newName !== localName) {
-      setSavingName(true);
-      const fullUrl = `${getApiBaseUrl()}/database/account/${account.account_id}/name`;
-      fetch(fullUrl, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName }),
-      })
-        .then(res => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          return res.json();
-        })
-        .then(data => {
-          if (data.success) {
-            setLocalName(newName);
-            if (typeof refreshAccounts === 'function') refreshAccounts();
-          }
-        })
-        .catch(err => {
-          console.error('Failed to update account name:', err);
-        })
-        .finally(() => {
-          setSavingName(false);
-          setEditedName('');
-          submitRef.current = false;
-        });
-    } else {
+    if (!newName || newName === localName) {
+      setEditingName(false);
       setEditedName('');
       submitRef.current = false;
+      return;
     }
+
+    // Optimistic update - update UI immediately
+    const originalName = localName;
+    setLocalName(newName);
+    setEditingName(false);
+    
+    // Update the account object locally
+    if (account) {
+      account.name = newName;
+    }
+
+    setSavingName(true);
+    const fullUrl = `${getApiBaseUrl()}/database/account/${account.account_id}/name`;
+    fetch(fullUrl, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName }),
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        return res.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error('Failed to update account name');
+        }
+        // Success - name is already updated locally
+      })
+      .catch(err => {
+        console.error('Failed to update account name:', err);
+        // Revert optimistic update on error
+        setLocalName(originalName);
+        if (account) {
+          account.name = originalName;
+        }
+      })
+      .finally(() => {
+        setSavingName(false);
+        setEditedName('');
+        submitRef.current = false;
+      });
   }
 
   function handleNameCancel() {

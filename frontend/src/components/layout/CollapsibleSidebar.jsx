@@ -32,8 +32,15 @@ export default function CollapsibleSidebar({
       <div
         onMouseEnter={() => !isMobile && setIsHovering(true)}
         onMouseLeave={() => !isMobile && setIsHovering(false)}
-        className={`transition-all duration-200 ease-out h-screen px-2 flex flex-col overflow-y-auto ${isMobile ? 'relative z-[110]' : 'fixed z-[200]'} top-0 left-0 border ${fullyOpen ? 'w-[260px] pt-5 pb-3 shadow-[0_4px_24px_0_rgba(59,130,246,0.06)]' : 'w-14 pt-5 pb-3 shadow-[0_1.5px_4px_0_rgba(59,130,246,0.03)]'} font-sans`}
-        style={{ background: 'var(--color-bg-topbar)', borderColor: 'var(--color-border-primary)', color: 'var(--color-text-primary)' }}
+        className={`transition-all duration-200 ease-out h-screen px-2 flex flex-col overflow-y-auto ${isMobile ? 'relative z-[110]' : 'fixed z-[200]'} top-0 left-0 border ${fullyOpen ? 'w-[260px] pt-5 pb-3' : 'w-14 pt-5 pb-3'} font-sans`}
+        style={{ 
+          background: 'var(--color-bg-topbar)', 
+          borderColor: 'var(--color-border-primary)', 
+          color: 'var(--color-text-primary)',
+          boxShadow: fullyOpen 
+            ? '0 4px 24px var(--color-shadow-medium)' 
+            : '0 1.5px 4px var(--color-shadow-light)'
+        }}
       >
         {/* 🔷 Logo */}
         <div className={`w-full ${fullyOpen ? 'flex justify-start pl-3' : 'flex justify-center'} pb-3 border-b mb-4`} style={{ borderColor: 'var(--color-border-primary)' }}>
