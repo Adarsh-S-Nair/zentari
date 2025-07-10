@@ -218,3 +218,25 @@ async def update_account_name(account_id: str, request: Request, authorization: 
     except Exception as e:
         print(f"Exception in update_account_name for account {account_id}: {str(e)}")
         return {"success": False, "error": str(e)} 
+
+# PATCH endpoint to update transaction category
+@router.patch("/transaction/{transaction_id}/category")
+async def update_transaction_category(transaction_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    """
+    Update the category_id column for a specific transaction.
+    """
+    try:
+        data = await request.json()
+        category_id = data.get("category_id")
+        if not category_id or not str(category_id).strip():
+            return {"success": False, "error": "Missing or empty 'category_id' in request body"}
+        supabase_service = get_supabase_service()
+        # Update the transaction's category_id column
+        result = supabase_service.client.table('transactions').update({"category_id": category_id}).eq('id', transaction_id).execute()
+        if result.data:
+            return {"success": True, "transaction_id": transaction_id, "category_id": category_id}
+        else:
+            return {"success": False, "error": "Transaction not found or update failed"}
+    except Exception as e:
+        print(f"Exception in update_transaction_category for transaction {transaction_id}: {str(e)}")
+        return {"success": False, "error": str(e)} 

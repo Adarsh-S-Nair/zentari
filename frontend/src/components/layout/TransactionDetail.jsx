@@ -2,11 +2,24 @@ import React, { useState } from 'react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { useNavigate } from 'react-router-dom';
+import CategoryDropdown from '../ui/CategoryDropdown';
 
 const TransactionDetail = ({ maxWidth = 700, transaction }) => {
-  const { accounts } = useFinancial();
+  const { accounts, categories, updateTransactionCategory, setToast } = useFinancial();
   const navigate = useNavigate();
   const [note, setNote] = useState(transaction?.notes || '');
+  const [localCategoryId, setLocalCategoryId] = useState(transaction?.category_id || null);
+
+  const handleCategoryChange = async (newCategory) => {
+    if (!newCategory || !newCategory.id) return;
+    console.log('newCategory', newCategory);
+    const success = await updateTransactionCategory(transaction.id, newCategory.id);
+    if (success) {
+      setLocalCategoryId(newCategory.id);
+    } else if (setToast) {
+      setToast({ type: 'error', message: 'Failed to update category' });
+    }
+  };
 
   if (!transaction) {
     return (
@@ -73,15 +86,15 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
              </div>
 
              {/* Category */}
-             {transaction.category_name && (
-               <div className="flex justify-between items-center border-t py-4 px-4" style={{ borderColor: 'var(--color-border-primary)' }}>
-                 <span className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>Category</span>
-                 <div className="flex gap-2 items-center">
-                   <div className="w-2 h-2 rounded-full" style={{ background: transaction.category_color || 'var(--color-primary)' }} />
-                   <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>{transaction.category_name}</span>
-                 </div>
-               </div>
-             )}
+             <div className="flex justify-between items-center border-t py-4 px-4" style={{ borderColor: 'var(--color-border-primary)' }}>
+               <span className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>Category</span>
+               <CategoryDropdown
+                 categories={categories}
+                 currentCategory={categories.find(cat => cat.id === localCategoryId)?.name}
+                 currentColor={categories.find(cat => cat.id === localCategoryId)?.color}
+                 onCategoryChange={handleCategoryChange}
+               />
+             </div>
 
              {/* Account */}
              {transaction.accounts?.name && (

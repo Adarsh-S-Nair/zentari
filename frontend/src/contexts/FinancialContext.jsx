@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import { getApiBaseUrl } from '../utils/api';
 
 const FinancialContext = createContext()
 
@@ -196,6 +197,31 @@ export const FinancialProvider = ({ children, setToast }) => {
     setAccounts(prev => [...prev, ...newAccounts])
   }
 
+  // Update a transaction's category
+  const updateTransactionCategory = async (transactionId, categoryId) => {
+    try {
+      const fullUrl = `${getApiBaseUrl()}/database/transaction/${transactionId}/category`;
+      const response = await fetch(fullUrl, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category_id: categoryId })
+      });
+      const result = await response.json();
+      if (!result.success) {
+        if (setToast) setToast({ type: 'error', message: result.error || 'Failed to update category' });
+        return false;
+      }
+      // Optimistically update transaction in state
+      setTransactions(prev => prev.map(txn =>
+        txn.id === transactionId ? { ...txn, category_id: categoryId } : txn
+      ));
+      return true;
+    } catch (error) {
+      if (setToast) setToast({ type: 'error', message: error.message || 'Failed to update category' });
+      return false;
+    }
+  };
+
   const value = {
     accounts,
     transactions,
@@ -212,6 +238,7 @@ export const FinancialProvider = ({ children, setToast }) => {
     fetchCategories,
     setToast,
     plaidItems,
+    updateTransactionCategory,
   }
 
   return (
