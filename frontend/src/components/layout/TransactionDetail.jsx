@@ -12,12 +12,14 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
 
   const handleCategoryChange = async (newCategory) => {
     if (!newCategory || !newCategory.id) return;
-    console.log('newCategory', newCategory);
+    // Optimistically update UI
+    const prevCategoryId = localCategoryId;
+    setLocalCategoryId(newCategory.id);
     const success = await updateTransactionCategory(transaction.id, newCategory.id);
-    if (success) {
-      setLocalCategoryId(newCategory.id);
-    } else if (setToast) {
+    if (!success && setToast) {
       setToast({ type: 'error', message: 'Failed to update category' });
+      // Optionally revert UI change if desired:
+      // setLocalCategoryId(prevCategoryId);
     }
   };
 
