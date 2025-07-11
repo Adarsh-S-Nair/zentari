@@ -3,7 +3,10 @@ from plaid import Configuration, ApiClient
 from plaid.api import plaid_api
 
 class PlaidConfig:
-    def __init__(self, environment='sandbox'):
+    def __init__(self):
+        # Get environment from ENV, default to development
+        environment = os.getenv('ENV', 'development')
+        
         # Map development to sandbox since Plaid only supports sandbox and production
         if environment == 'development':
             environment = 'sandbox'
@@ -69,15 +72,12 @@ class PlaidConfig:
         """Get the configured Plaid client"""
         return self.client
 
-# Global Plaid client instances
-plaid_clients = {}
+# Global Plaid client instance (no longer environment-specific)
+_plaid_client = None
 
-def get_plaid_client(environment='sandbox'):
-    """Get or create the Plaid client instance for the specified environment"""
-    # Map development to sandbox
-    if environment == 'development':
-        environment = 'sandbox'
-    
-    if environment not in plaid_clients:
-        plaid_clients[environment] = PlaidConfig(environment).get_client()
-    return plaid_clients[environment] 
+def get_plaid_client():
+    """Get or create the Plaid client instance for the current environment"""
+    global _plaid_client
+    if _plaid_client is None:
+        _plaid_client = PlaidConfig().get_client()
+    return _plaid_client 

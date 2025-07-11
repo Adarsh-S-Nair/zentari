@@ -226,7 +226,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                         {txn.description}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] -tracking-[0.3px]" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(txn.date)}</span>
+                        <span className="text-[10px] -tracking-[0.3px]" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(txn.datetime)}</span>
                         {txn.category_name && (
                           <span className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full" style={{ background: txn.category_color || 'var(--color-gray-500)' }} />

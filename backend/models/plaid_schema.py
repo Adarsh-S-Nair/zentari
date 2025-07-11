@@ -41,7 +41,3 @@ class AccountsResponse(BaseModel):
     item_id: Optional[str] = None
     institution_id: Optional[str] = None
     error: Optional[str] = None
-
-class SandboxCredentialsResponse(BaseModel):
-    username: str
-    password: str 

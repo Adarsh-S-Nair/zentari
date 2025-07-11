@@ -4,7 +4,7 @@ from services.supabase_service import get_supabase_service
 from models.plaid_schema import (
     LinkTokenRequest, LinkTokenResponse,
     PublicTokenRequest, TokenExchangeResponse,
-    AccountsResponse, SandboxCredentialsResponse
+    AccountsResponse
 )
 import os
 from typing import Optional
@@ -17,8 +17,7 @@ async def create_link_token(request: LinkTokenRequest, authorization: Optional[s
     """
     Create a link token for the Plaid Link flow
     """
-    # Use sandbox environment for development
-    plaid_service = PlaidService(environment='sandbox')
+    plaid_service = PlaidService()
     
     result = plaid_service.create_link_token(
         user_id=request.user_id,
@@ -35,9 +34,7 @@ async def exchange_public_token(request: PublicTokenRequest, authorization: Opti
     """
     Exchange a public token for an access token
     """
-    # For now, we'll use sandbox as default since we don't have user_id in this endpoint
-    # In a real implementation, you'd get user_id from the authorization header
-    plaid_service = PlaidService(environment='sandbox')
+    plaid_service = PlaidService()
     
     result = plaid_service.exchange_public_token(request.public_token)
     
@@ -46,7 +43,7 @@ async def exchange_public_token(request: PublicTokenRequest, authorization: Opti
     
     return TokenExchangeResponse(**result)
 
-def fetch_and_store_accounts(supabase_service, plaid_service, user_id, item_id, access_token, environment):
+def fetch_and_store_accounts(supabase_service, plaid_service, user_id, item_id, access_token):
     # Fetch accounts from Plaid using the access token
     accounts_result = plaid_service.get_accounts(access_token)
     if not accounts_result["success"]:
@@ -64,7 +61,6 @@ def fetch_and_store_accounts(supabase_service, plaid_service, user_id, item_id, 
         user_id=user_id,
         item_id=item_id,
         accounts=accounts_with_token,
-        environment=environment,
         access_token=access_token
     )
     if not accounts_store_result["success"]:
@@ -107,8 +103,7 @@ async def get_accounts(request: PublicTokenRequest, user_id: str, authorization:
     Get accounts for a given public token and store them in the database
     """
     supabase_service = get_supabase_service()
-    user_environment = 'sandbox'  # Default to sandbox for development
-    plaid_service = PlaidService(environment=user_environment)
+    plaid_service = PlaidService()
     # Exchange public token for access token
     exchange_result = plaid_service.exchange_public_token(request.public_token)
     if not exchange_result["success"]:
@@ -116,7 +111,7 @@ async def get_accounts(request: PublicTokenRequest, user_id: str, authorization:
     
     # Fetch and store accounts
     accounts_result, access_token = fetch_and_store_accounts(
-        supabase_service, plaid_service, user_id, exchange_result["item_id"], exchange_result["access_token"], user_environment
+        supabase_service, plaid_service, user_id, exchange_result["item_id"], exchange_result["access_token"]
     )
     # Fetch and store transactions and update plaid item sync state
     try:

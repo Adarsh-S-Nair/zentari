@@ -17,9 +17,8 @@ from datetime import datetime, timedelta
 import json
 
 class PlaidService:
-    def __init__(self, environment='sandbox'):
-        self.environment = environment
-        self.client = get_plaid_client(environment)
+    def __init__(self):
+        self.client = get_plaid_client()
     
     def create_link_token(self, user_id: str, client_name: str = "Zentari"):
         """
@@ -212,9 +211,27 @@ class PlaidService:
                 if personal_finance_category and isinstance(personal_finance_category, dict):
                     primary_category = personal_finance_category.get('primary')
 
+                # Convert Location object to dict if it exists
+                location = getattr(transaction, 'location', None)
+                if location:
+                    try:
+                        location = {
+                            'address': getattr(location, 'address', None),
+                            'city': getattr(location, 'city', None),
+                            'region': getattr(location, 'region', None),
+                            'postal_code': getattr(location, 'postal_code', None),
+                            'country': getattr(location, 'country', None),
+                            'lat': getattr(location, 'lat', None),
+                            'lon': getattr(location, 'lon', None),
+                            'store_number': getattr(location, 'store_number', None)
+                        }
+                    except Exception as e:
+                        print(f"Error converting location: {e}")
+                        location = None
+
                 transaction_data = {
                     "plaid_transaction_id": transaction.transaction_id,
-                    "date": transaction.date.isoformat() if transaction.date else None,
+                    "datetime": transaction.datetime.isoformat() if hasattr(transaction, 'datetime') and transaction.datetime else (transaction.date.isoformat() if transaction.date else None),
                     "description": transaction.name,
                     "category": primary_category,  # Use personal finance category primary
                     "category_id": getattr(transaction, 'category_id', None),
@@ -224,7 +241,10 @@ class PlaidService:
                     "amount": float(transaction.amount),
                     "currency_code": transaction.iso_currency_code or "USD",
                     "pending": transaction.pending,
-                    "account_id": transaction.account_id
+                    "account_id": transaction.account_id,
+                    "location": location,
+                    "payment_channel": getattr(transaction, 'payment_channel', None),
+                    "website": getattr(transaction, 'website', None)
                 }
                 transactions.append(transaction_data)
             
@@ -255,7 +275,12 @@ class PlaidService:
                 request = TransactionsSyncRequest(
                     access_token=access_token
                 )
+            
             response = self.client.transactions_sync(request)
+            
+            # Get response dict for accounts data
+            response_dict = response.to_dict()
+            
             transactions = []
             for transaction in response.added:
                 # Convert PersonalFinanceCategory object to dict if it exists
@@ -276,9 +301,28 @@ class PlaidService:
                 primary_category = None
                 if personal_finance_category and isinstance(personal_finance_category, dict):
                     primary_category = personal_finance_category.get('primary')
+                
+                # Convert Location object to dict if it exists
+                location = getattr(transaction, 'location', None)
+                if location:
+                    try:
+                        location = {
+                            'address': getattr(location, 'address', None),
+                            'city': getattr(location, 'city', None),
+                            'region': getattr(location, 'region', None),
+                            'postal_code': getattr(location, 'postal_code', None),
+                            'country': getattr(location, 'country', None),
+                            'lat': getattr(location, 'lat', None),
+                            'lon': getattr(location, 'lon', None),
+                            'store_number': getattr(location, 'store_number', None)
+                        }
+                    except Exception as e:
+                        print(f"Error converting location: {e}")
+                        location = None
+
                 transaction_data = {
                     "plaid_transaction_id": transaction.transaction_id,
-                    "date": transaction.date.isoformat() if transaction.date else None,
+                    "datetime": transaction.datetime.isoformat() if hasattr(transaction, 'datetime') and transaction.datetime else (transaction.date.isoformat() if transaction.date else None),
                     "description": transaction.name,
                     "category": primary_category,
                     "category_id": getattr(transaction, 'category_id', None),
@@ -288,7 +332,10 @@ class PlaidService:
                     "amount": float(transaction.amount),
                     "currency_code": transaction.iso_currency_code or "USD",
                     "pending": transaction.pending,
-                    "account_id": transaction.account_id
+                    "account_id": transaction.account_id,
+                    "location": location,
+                    "payment_channel": getattr(transaction, 'payment_channel', None),
+                    "website": getattr(transaction, 'website', None)
                 }
                 transactions.append(transaction_data)
             return {
@@ -298,9 +345,16 @@ class PlaidService:
                 "removed": response.removed,    # List of removed transaction IDs
                 "has_more": response.has_more,
                 "next_cursor": response.next_cursor,
-                "request_id": response.request_id
+                "request_id": response.request_id,
+                "accounts": response_dict.get('accounts', [])  # Include accounts with balances
             }
         except Exception as e:
+            print(f"\n=== PLaid /transactions/sync ERROR ===")
+            print(f"Error: {str(e)}")
+            print(f"Error Type: {type(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            print(f"=== END ERROR ===\n")
             return {
                 "success": False,
                 "error": str(e)
@@ -356,7 +410,3 @@ class PlaidService:
         except Exception as e:
             print("Plaid /item/remove error:", e)
             return {'success': False, 'error': str(e)}
-
-def get_plaid_service(environment: str = 'sandbox'):
-    """Factory function to get a PlaidService instance for the given environment."""
-    return PlaidService(environment)

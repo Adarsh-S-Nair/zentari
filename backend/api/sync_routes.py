@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from typing import Optional
-from services.plaid_service import get_plaid_service
+from services.plaid_service import PlaidService
 from services.supabase_service import get_supabase_service
 import os
 
@@ -25,8 +25,7 @@ async def sync_account_balances(user_id: str = Depends(get_current_user)):
     """
     try:
         supabase_service = get_supabase_service()
-        environment = os.environ.get('ENV', 'development')
-        plaid_service = get_plaid_service(environment)
+        plaid_service = PlaidService()
 
         # Fetch all accounts for the user
         accounts_result = supabase_service.get_user_accounts(user_id)
@@ -84,6 +83,52 @@ async def sync_account_balances(user_id: str = Depends(get_current_user)):
         print(f"Error in sync_account_balances: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+def update_account_balances_from_sync(supabase_service, user_id: str, accounts_with_balances: list) -> int:
+    """
+    Update account balances and create snapshots from sync response
+    """
+    try:
+        balance_updates = 0
+        
+        for account_data in accounts_with_balances:
+            account_id = account_data['account_id']
+            balances = account_data.get('balances')
+            
+            if balances:
+                # Get account UUID from our database
+                account_response = supabase_service.client.table('accounts').select('id').eq('account_id', account_id).eq('user_id', user_id).execute()
+                
+                if account_response.data:
+                    account_uuid = account_response.data[0]['id']
+                    
+                    # Update account balances in accounts table
+                    from datetime import datetime
+                    now = datetime.utcnow().isoformat()
+                    
+                    supabase_service.client.table('accounts').update({
+                        'balances': balances,
+                        'updated_at': now
+                    }).eq('id', account_uuid).execute()
+                    
+                    # Store balance snapshot
+                    snapshot_data = {
+                        'account_id': account_uuid,
+                        'available_balance': balances.get('available'),
+                        'current_balance': balances.get('current'),
+                        'limit_balance': balances.get('limit'),
+                        'currency_code': balances.get('iso_currency_code', 'USD'),
+                        'recorded_at': now
+                    }
+                    
+                    supabase_service.client.table('account_snapshots').insert(snapshot_data).execute()
+                    balance_updates += 1
+        
+        return balance_updates
+        
+    except Exception as e:
+        print(f"Error updating account balances from sync: {e}")
+        return 0
+
 def sync_transactions_for_item(supabase_service, plaid_service, user_id, item):
     """Sync transactions for a single plaid_item if any associated account has auto_sync=True."""
     item_id = item.get('item_id')
@@ -108,6 +153,13 @@ def sync_transactions_for_item(supabase_service, plaid_service, user_id, item):
     # Store new/modified transactions
     added = sync_result.get('added', [])
     store_result = supabase_service.store_transactions(added)
+    
+    # Update account balances if they're included in the response
+    balance_updates = 0
+    accounts_with_balances = sync_result.get('accounts', [])
+    if accounts_with_balances:
+        balance_updates = update_account_balances_from_sync(supabase_service, user_id, accounts_with_balances)
+    
     # Update the cursor
     next_cursor = sync_result.get('next_cursor')
     if next_cursor:
@@ -116,6 +168,7 @@ def sync_transactions_for_item(supabase_service, plaid_service, user_id, item):
         'item_id': item_id,
         'success': True,
         'added_count': len(added),
+        'balance_updates': balance_updates,
         'error': store_result.get('error') if not store_result.get('success') else None
     }
 
@@ -127,8 +180,7 @@ async def sync_account_transactions(user_id: str = Depends(get_current_user)):
     """
     try:
         supabase_service = get_supabase_service()
-        environment = os.environ.get('ENV', 'development')
-        plaid_service = get_plaid_service(environment)
+        plaid_service = PlaidService()
 
         # Get all plaid_items for the user
         sync_states_result = supabase_service.get_user_sync_states(user_id)

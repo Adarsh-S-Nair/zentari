@@ -23,14 +23,14 @@ export const formatCurrency = (value, currency = 'USD', minDigits = 2, maxDigits
 
 /**
  * Format date strings to a readable format
- * @param {string} dateStr - Date string in YYYY-MM-DD format
+ * @param {string} dateStr - Date string in YYYY-MM-DD or ISO datetime format
  * @param {string} format - Format type ('short', 'long', 'month')
  * @returns {string} Formatted date string
  */
 export const formatDate = (dateStr, format = 'short') => {
   if (!dateStr) return '-'
   
-  const date = new Date(dateStr + 'T00:00:00Z')
+  const date = new Date(dateStr)
   
   switch (format) {
     case 'long':
@@ -150,4 +150,13 @@ export const formatLastUpdated = (dateString) => {
 export function capitalizeWords(str) {
   if (!str) return '';
   return str.replace(/\b\w/g, c => c.toUpperCase());
-} 
+}
+
+/**
+ * Convert string to proper title case (e.g., "in_store" -> "In Store")
+ * @param {string} str - String to convert
+ * @returns {string} Title cased string
+ */
+export function toTitleCase(str) {
+  return str?.replace(/\w\S*/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase()) ?? '';
+}

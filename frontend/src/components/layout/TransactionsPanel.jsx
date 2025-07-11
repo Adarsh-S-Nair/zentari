@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiFilter } from 'react-icons/fi';
 import { FaSearch, FaChevronRight } from 'react-icons/fa';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Spinner, Button } from '../ui';
 import CircleUserToggle from './CircleUserToggle';
@@ -28,14 +28,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
       txn.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+
 
   return (
     <>
@@ -122,7 +115,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <div className="text-[16px] truncate max-w-[120px] sm:max-w-[220px]" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[11px] font-normal" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(txn.date)}</span>
+                      <span className="text-[11px] font-normal" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(txn.datetime)}</span>
                     </div>
                     {txn.category_name && (
                       <div className="flex items-center gap-2 mt-1">

@@ -24,14 +24,14 @@ class SupabaseService:
             for var, value in original_proxy_vars.items():
                 os.environ[var] = value
     
-    def store_plaid_accounts(self, user_id: str, item_id: str, accounts: list, environment: str, access_token: str = None):
+    def store_plaid_accounts(self, user_id: str, item_id: str, accounts: list, access_token: str = None):
         """Store Plaid accounts in the database with sync state and balance snapshots"""
         try:
             updated_count = 0
             inserted_count = 0
             
             # Get institution data and create/update accounts
-            institution_uuid = self._get_or_create_institution(item_id, environment, access_token)
+            institution_uuid = self._get_or_create_institution(item_id, access_token)
             
             for account in accounts:
                 account_key = self._create_account_key(account)
@@ -63,14 +63,14 @@ class SupabaseService:
             print(f"Error storing Plaid accounts: {e}")
             return {"success": False, "error": str(e)}
     
-    def _get_or_create_institution(self, item_id: str, environment: str, access_token: str = None):
+    def _get_or_create_institution(self, item_id: str, access_token: str = None):
         """Get or create institution record for an item"""
         try:
             if not access_token:
                 return None
             
             from .plaid_service import PlaidService
-            plaid_service = PlaidService(environment)
+            plaid_service = PlaidService()
             
             # Get item info
             item_response = plaid_service.get_item(access_token)
@@ -422,7 +422,7 @@ class SupabaseService:
                     transaction_data.append({
                         'account_id': account_uuid,
                         'plaid_transaction_id': transaction['plaid_transaction_id'],
-                        'date': transaction['date'],
+                        'datetime': transaction['datetime'],
                         'description': transaction['description'],
                         'category_id': category_uuid,
                         'merchant_name': transaction.get('merchant_name'),
@@ -430,7 +430,10 @@ class SupabaseService:
                         'personal_finance_category': transaction.get('personal_finance_category'),
                         'amount': transaction['amount'],
                         'currency_code': transaction['currency_code'],
-                        'pending': transaction['pending']
+                        'pending': transaction['pending'],
+                        'location': transaction.get('location'),
+                        'payment_channel': transaction.get('payment_channel'),
+                        'website': transaction.get('website')
                     })
             
             if transaction_data:
@@ -455,8 +458,8 @@ class SupabaseService:
         """Get transactions for a user"""
         try:
             response = self.client.table('transactions').select(
-                'id, plaid_transaction_id, date, description, category_id, merchant_name, icon_url, personal_finance_category, amount, currency_code, pending, created_at, updated_at, accounts:account_id(account_id, name, mask, type, subtype, user_id), categories:category_id(id, name, color)'
-            ).eq('accounts.user_id', user_id).order('date', desc=True).range(offset, offset + limit - 1).execute()
+                'id, plaid_transaction_id, datetime, description, category_id, merchant_name, icon_url, personal_finance_category, amount, currency_code, pending, location, payment_channel, website, created_at, updated_at, accounts:account_id(account_id, name, mask, type, subtype, user_id), categories:category_id(id, name, color)'
+            ).eq('accounts.user_id', user_id).order('datetime', desc=True).range(offset, offset + limit - 1).execute()
             
             if response.data:
                 transactions = []
