@@ -80,14 +80,11 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
                   <div className="w-5 h-5 rounded-full bg-gray-400" />
                 )}
               </div>
-              <div className="flex flex-col justify-center min-w-0">
-                <div className="font-semibold truncate max-w-[220px] text-[16px]" style={{ color: 'var(--color-text-primary)' }}>
-                  {transaction.description}
+                              <div className="flex flex-col justify-center min-w-0">
+                  <div className="font-semibold truncate max-w-[220px] text-[16px]" style={{ color: 'var(--color-text-primary)' }}>
+                    {transaction.description}
+                  </div>
                 </div>
-                <div className="mt-1 text-[12px]" style={{ color: 'var(--color-text-primary)' }}>
-                  {formatDate(transaction.datetime)}
-                </div>
-              </div>
             </div>
             <div className="text-[18px] flex items-center" style={{ height: '48px', color: amountColor }}>
               {amountPrefix}{formatCurrency(Math.abs(transaction.amount))}
@@ -108,6 +105,12 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
                 }}
               >
                 {transaction.pending ? 'Pending' : 'Posted'}
+              </span>
+            </DetailRow>
+
+            <DetailRow label="Date">
+              <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
+                {formatDate(transaction.datetime)}
               </span>
             </DetailRow>
 

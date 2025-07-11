@@ -120,4 +120,23 @@ async def get_accounts(request: PublicTokenRequest, user_id: str, authorization:
         )
     except Exception as e:
         print(f"Error fetching transactions: {e}")
-    return AccountsResponse(**accounts_result) 
+    return AccountsResponse(**accounts_result)
+
+@router.post("/remove-item")
+async def remove_plaid_item(access_token: str, authorization: Optional[str] = Header(None)):
+    """
+    Remove a Plaid item by access token
+    """
+    try:
+        plaid_service = PlaidService()
+        result = plaid_service.remove_item(access_token)
+        
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return {"success": True, "message": "Plaid item removed successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error removing Plaid item: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error") 
