@@ -119,8 +119,8 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                     </div>
                     {txn.category_name && (
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: txn.category_color || 'var(--color-primary)' }} />
-                        <span className="text-[10px] tracking-wide min-w-0 text-ellipsis overflow-hidden whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
+                        <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: txn.category_color || 'var(--color-primary)' }} />
+                        <span className="text-[10px] tracking-wide truncate max-w-[120px] sm:max-w-[180px]" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
                       </div>
                     )}
                   </div>

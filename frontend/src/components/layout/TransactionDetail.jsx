@@ -4,8 +4,6 @@ import { useFinancial } from '../../contexts/FinancialContext'
 import { useNavigate } from 'react-router-dom'
 import CategoryDropdown from '../ui/CategoryDropdown'
 
-
-
 const DetailRow = ({ label, children, onClick, hoverable = false }) => (
   <div
     className={`flex justify-between items-center border-t py-4 px-4 text-sm transition-colors ${
@@ -27,25 +25,21 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
   const [note, setNote] = useState(transaction?.notes || '')
   const [showCategories, setShowCategories] = useState(false)
 
-
-
-  // Local state for category fields
   const [localCategory, setLocalCategory] = useState({
     id: transaction?.category_id || null,
     name: transaction?.category_name || null,
     color: transaction?.category_color || null,
-  });
+  })
 
-  // Sync local category state with transaction prop
   useEffect(() => {
     if (transaction) {
       setLocalCategory({
         id: transaction.category_id || null,
         name: transaction.category_name || null,
         color: transaction.category_color || null,
-      });
+      })
     }
-  }, [transaction?.category_id, transaction?.category_name, transaction?.category_color]);
+  }, [transaction?.category_id, transaction?.category_name, transaction?.category_color])
 
   if (!transaction) {
     return (
@@ -63,30 +57,28 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
     ? {}
     : { background: 'var(--color-gray-200)', border: '1px solid var(--color-border-primary)' }
 
-  // Handle category selection
   const handleCategorySelect = async (category) => {
     const categoryId = category?.id || null
     setLocalCategory({
       id: category?.id || null,
       name: category?.name || null,
       color: category?.color || null,
-    });
-    setShowCategories(false) // Close the categories list
+    })
+    setShowCategories(false)
     const success = await updateTransactionCategory(transaction.id, categoryId)
     if (!success && setToast) {
       setToast({ type: 'error', message: 'Failed to update category' })
-      // Revert local state if backend update fails
       setLocalCategory({
         id: transaction.category_id,
         name: transaction.category_name,
         color: transaction.category_color,
-      });
+      })
     }
   }
 
   return (
     <main className="w-full max-w-[700px] mx-auto px-4 sm:px-6 overflow-hidden">
-        <div className="flex flex-col gap-6 pt-6">
+      <div className="flex flex-col gap-6 pt-6">
         <div
           className="w-full rounded-2xl px-4 py-6 sm:px-6 shadow-xl"
           style={{
@@ -153,7 +145,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
                     style={{ backgroundColor: localCategory.color }}
                   />
                 )}
-                <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
+                <span className="text-[14px] truncate max-w-[120px] sm:max-w-[180px]" style={{ color: 'var(--color-text-secondary)' }}>
                   {localCategory.name || 'Uncategorized'}
                 </span>
                 <svg 
@@ -168,14 +160,20 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
               </div>
             </DetailRow>
 
-            {/* Categories List */}
-            <CategoryDropdown
-              isOpen={showCategories}
-              onClose={() => setShowCategories(false)}
-              selectedCategory={localCategory}
-              onCategorySelect={handleCategorySelect}
-              setToast={setToast}
-            />
+            {/* Sliding Category Dropdown */}
+            <div 
+              className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                showCategories ? 'max-h-[1000px]' : 'max-h-0'
+              }`}
+            >
+              <CategoryDropdown
+                isOpen={showCategories}
+                onClose={() => setShowCategories(false)}
+                selectedCategory={localCategory}
+                onCategorySelect={handleCategorySelect}
+                setToast={setToast}
+              />
+            </div>
 
             {transaction.accounts?.name && (
               <DetailRow
@@ -272,7 +270,6 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
               )
             })()}
 
-            {/* Notes */}
             <div className="border-t py-4 px-4" style={{ borderColor: 'var(--color-border-primary)' }}>
               <label htmlFor="note" className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>Note</label>
               <textarea

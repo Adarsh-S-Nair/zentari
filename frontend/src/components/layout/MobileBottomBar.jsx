@@ -8,7 +8,9 @@ export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen, vis
   return (
     <div className="fixed bottom-0 left-0 w-full h-[50px] bg-white flex justify-around items-center z-[200] border-t border-gray-100 shadow-[0_-2px_8px_0_rgba(59,130,246,0.04)] font-sans">
       {visibleTabs.map((tab, idx) => {
-        const isActive = location.pathname === tab.route || location.pathname.startsWith(tab.route + '/')
+        const isActive = location.pathname === tab.route || 
+                        location.pathname.startsWith(tab.route + '/') ||
+                        (tab.route === '/transactions' && location.pathname.startsWith('/transaction/'))
 
         return (
           <button
