@@ -111,25 +111,24 @@ def cleanup_orphaned_plaid_items():
                 print(f"🗑️  Item {item_id}: No accounts found, removing from Plaid...")
                 
                 try:
-                    # Call the API to remove the item from Plaid
+                    # Call the API to remove the item from Plaid and clean up database
                     headers = {"Authorization": f"Bearer {user_id}", "Content-Type": "application/json"}
                     response = requests.post(f"{API_URL}/plaid/remove-item", 
                                            headers=headers, 
-                                           json=access_token, 
+                                           json={"access_token": access_token}, 
                                            timeout=30)
                     
                     if response.status_code == 200:
-                        # Remove from our database
-                        db.table('plaid_items').delete().eq('item_id', item_id).execute()
                         print(f"✅ Item {item_id}: Successfully removed from Plaid and database")
                         removed_count += 1
                     else:
-                        print(f"❌ Item {item_id}: Failed to remove from Plaid - HTTP {response.status_code}")
-                        error_count += 1
+                        print(f"❌ Item {item_id}: Failed to remove from Plaid (HTTP {response.status_code})")
+                        print(f"   Response: {response.text}")
+                        error_count += 1  # Count as error since we couldn't remove it
                         
                 except Exception as e:
-                    print(f"💥 Item {item_id}: Error during removal - {e}")
-                    error_count += 1
+                    print(f"❌ Item {item_id}: Error during Plaid removal ({e})")
+                    error_count += 1  # Count as error since we couldn't remove it
             else:
                 print(f"✅ Item {item_id}: Has {len(accounts_response.data)} associated accounts, keeping")
         

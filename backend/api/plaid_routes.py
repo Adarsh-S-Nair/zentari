@@ -122,19 +122,35 @@ async def get_accounts(request: PublicTokenRequest, user_id: str, authorization:
         print(f"Error fetching transactions: {e}")
     return AccountsResponse(**accounts_result)
 
+from pydantic import BaseModel
+
+class RemoveItemRequest(BaseModel):
+    access_token: str
+
 @router.post("/remove-item")
-async def remove_plaid_item(access_token: str, authorization: Optional[str] = Header(None)):
+async def remove_plaid_item(request: RemoveItemRequest, authorization: Optional[str] = Header(None)):
     """
-    Remove a Plaid item by access token
+    Remove a Plaid item by access token and clean up local database
     """
     try:
         plaid_service = PlaidService()
-        result = plaid_service.remove_item(access_token)
+        supabase_service = get_supabase_service()
+        
+        # First, try to remove from Plaid
+        result = plaid_service.remove_item(request.access_token)
         
         if not result["success"]:
             raise HTTPException(status_code=400, detail=result["error"])
         
-        return {"success": True, "message": "Plaid item removed successfully"}
+        # Only if Plaid removal was successful, clean up our database
+        cleanup_result = supabase_service.remove_plaid_item_by_access_token(request.access_token)
+        
+        if not cleanup_result["success"]:
+            print(f"Warning: Plaid item removed but failed to clean up local database: {cleanup_result.get('error')}")
+            # Still return success since Plaid removal worked
+            return {"success": True, "message": "Plaid item removed successfully (local cleanup had issues)"}
+        
+        return {"success": True, "message": "Plaid item removed successfully from both Plaid and local database"}
     except HTTPException:
         raise
     except Exception as e:

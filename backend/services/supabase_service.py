@@ -644,6 +644,26 @@ class SupabaseService:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
+    def remove_plaid_item_by_access_token(self, access_token: str):
+        # Find and delete a plaid_item row by access_token
+        try:
+            # First find the item by access_token
+            response = self.client.table('plaid_items').select('user_id, item_id').eq('access_token', access_token).execute()
+            
+            if not response.data:
+                return {'success': False, 'error': 'No plaid_item found with this access_token'}
+            
+            item_data = response.data[0]
+            user_id = item_data['user_id']
+            item_id = item_data['item_id']
+            
+            # Delete the plaid_item
+            self.client.table('plaid_items').delete().eq('user_id', user_id).eq('item_id', item_id).execute()
+            
+            return {'success': True, 'message': f'Removed plaid_item {item_id} for user {user_id}'}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
     def get_accounts_for_item_with_auto_sync(self, user_id: str, item_id: str):
         """Return all accounts for a plaid item with auto_sync = True"""
         try:
