@@ -54,7 +54,6 @@ const CategoryDropdown = ({
       if (newSet.has(groupName)) {
         newSet.delete(groupName)
       } else {
-        newSet.clear()
         newSet.add(groupName)
       }
       return newSet
@@ -129,14 +128,14 @@ const CategoryDropdown = ({
                   onClick={() => toggleGroup(groupName)}
                   className="w-full flex items-center gap-3 px-4 py-4 rounded-md transition-colors duration-150 text-left"
                   style={{ 
-                    backgroundColor: expandedGroups.has(groupName) ? 'var(--color-bg-primary)' : 'transparent',
+                    backgroundColor: 'transparent',
                     color: 'var(--color-text-primary)' 
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)'}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)'
+                  }}
                   onMouseLeave={(e) => {
-                    if (!expandedGroups.has(groupName)) {
-                      e.currentTarget.style.backgroundColor = 'transparent'
-                    }
+                    e.currentTarget.style.backgroundColor = 'transparent'
                   }}
                 >
                   <div 
@@ -162,31 +161,32 @@ const CategoryDropdown = ({
                   }`}
                 >
                   <div className="ml-6 py-1">
-                    {group.categories.map((category) => (
-                      <button
-                        key={category.id}
-                        onClick={() => handleCategorySelect(category)}
-                        className="w-full px-4 py-4 text-left rounded-md text-[13px] transition-colors duration-100"
-                        style={{
-                          backgroundColor: selectedCategory?.id === category.id 
-                            ? 'var(--color-bg-primary)' 
-                            : 'transparent',
-                          color: 'var(--color-text-primary)'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (selectedCategory?.id !== category.id) {
-                            e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (selectedCategory?.id !== category.id) {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                          }
-                        }}
-                      >
-                        {category.name}
-                      </button>
-                    ))}
+                    {group.categories.map((category) => {
+                      const isSelected = selectedCategory?.id === category.id
+                      return (
+                        <button
+                          key={category.id}
+                          onClick={() => handleCategorySelect(category)}
+                          className="w-full px-4 py-4 text-left rounded-md text-[13px] transition-colors duration-100"
+                          style={{
+                            backgroundColor: isSelected ? 'var(--color-bg-primary)' : 'transparent',
+                            color: 'var(--color-text-primary)'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }
+                          }}
+                        >
+                          {category.name}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
