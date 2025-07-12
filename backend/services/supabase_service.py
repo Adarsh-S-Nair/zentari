@@ -414,9 +414,24 @@ class SupabaseService:
                 if account_response.data:
                     account_uuid = account_response.data[0]['id']
                     
-                    # Get or create category
+                    # Get or create category from personal_finance_category
                     category_uuid = None
-                    if transaction.get('category'):
+                    if transaction.get('personal_finance_category'):
+                        # Use the detailed category from personal_finance_category
+                        personal_finance_category = transaction['personal_finance_category']
+                        if isinstance(personal_finance_category, dict) and personal_finance_category.get('detailed'):
+                            # Extract the label by removing the primary category prefix
+                            detailed = personal_finance_category['detailed']
+                            primary = personal_finance_category.get('primary', '')
+                            if primary and detailed.startswith(primary + '_'):
+                                # Remove the primary prefix and underscore
+                                label = detailed[len(primary) + 1:]  # +1 for the underscore
+                                category_uuid = self.get_or_create_category(label)
+                            else:
+                                # Fallback: use the detailed as-is
+                                category_uuid = self.get_or_create_category(detailed)
+                    elif transaction.get('category'):
+                        # Fallback to old category field if personal_finance_category is not available
                         category_uuid = self.get_or_create_category(transaction['category'])
                     
                     transaction_data.append({
@@ -458,18 +473,18 @@ class SupabaseService:
         """Get transactions for a user"""
         try:
             response = self.client.table('transactions').select(
-                'id, plaid_transaction_id, datetime, description, category_id, merchant_name, icon_url, personal_finance_category, amount, currency_code, pending, location, payment_channel, website, created_at, updated_at, accounts:account_id(account_id, name, mask, type, subtype, user_id), categories:category_id(id, name, color)'
+                'id, plaid_transaction_id, datetime, description, category_id, merchant_name, icon_url, personal_finance_category, amount, currency_code, pending, location, payment_channel, website, created_at, updated_at, accounts:account_id(account_id, name, mask, type, subtype, user_id), system_categories:category_id(id, primary_group, label, description, hex_color)'
             ).eq('accounts.user_id', user_id).order('datetime', desc=True).range(offset, offset + limit - 1).execute()
             
             if response.data:
                 transactions = []
                 for transaction in response.data:
                     transaction_data = transaction.copy()
-                    if transaction.get('categories'):
-                        category = transaction['categories']
-                        transaction_data['category_name'] = category.get('name')
-                        transaction_data['category_color'] = category.get('color')
-                    transaction_data.pop('categories', None)
+                    if transaction.get('system_categories'):
+                        category = transaction['system_categories']
+                        transaction_data['category_name'] = category.get('label')
+                        transaction_data['category_color'] = category.get('hex_color')
+                    transaction_data.pop('system_categories', None)
                     transactions.append(transaction_data)
                 
                 return {"success": True, "transactions": transactions}
@@ -480,58 +495,34 @@ class SupabaseService:
             return {"success": False, "error": str(e)}
 
     # Category Methods (simplified)
-    def get_or_create_category(self, category_name: str, color: str = None):
-        """Get or create category"""
+    def get_or_create_category(self, category_name: str):
+        """Get or create a system category from the system_categories table"""
         try:
             formatted_name = self._format_category_name(category_name)
-            
-            # Check if category exists
-            existing = self.client.table('categories').select('id').eq('name', formatted_name).execute()
+
+            # Check if category exists in system_categories table
+            existing = (
+                self.client.table('system_categories')
+                .select('id')
+                .eq('label', formatted_name)
+                .limit(1)
+                .execute()
+            )
             if existing.data:
                 return existing.data[0]['id']
-            
-            # Create new category with auto-generated color if none provided
-            if not color:
-                color = self._generate_category_color(formatted_name)
-            
-            new_category = {
-                'name': formatted_name,
-                'color': color
-            }
-            
-            response = self.client.table('categories').insert(new_category).execute()
-            return response.data[0]['id'] if response.data else None
-            
+
+            # If not found, return None (categories should be pre-populated)
+            print(f"Category '{formatted_name}' not found in system_categories table")
+            return None
+
         except Exception as e:
-            print(f"Error getting/creating category: {e}")
+            print(f"Error getting category: {e}")
             return None
 
     def _format_category_name(self, category_name: str) -> str:
         """Format category name for consistency using proper title case"""
-        if not category_name:
-            return "Uncategorized"
-        
-        # Replace underscores and extra spaces
-        name = category_name.strip().replace("_", " ")
-        
-        # Lowercase everything first to normalize
-        words = name.lower().split()
-        if not words:
-            return "Uncategorized"
-        
-        minor_words = {
-            'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'if', 'in', 'nor',
-            'of', 'on', 'or', 'so', 'the', 'to', 'up', 'yet'
-        }
-
-        formatted_words = []
-        for i, word in enumerate(words):
-            if i == 0 or i == len(words) - 1 or word not in minor_words:
-                formatted_words.append(word.capitalize())
-            else:
-                formatted_words.append(word.lower())
-
-        return ' '.join(formatted_words)
+        from utils.category_utils import format_category_name
+        return format_category_name(category_name)
 
     def _generate_category_color(self, category_name: str) -> str:
         """Generate a clean, muted rainbow color for category names"""
@@ -556,10 +547,27 @@ class SupabaseService:
         return f"#{r:02x}{g:02x}{b:02x}"
 
     def get_categories(self):
-        """Get all categories"""
+        """Get all system categories with their colors"""
         try:
-            response = self.client.table('categories').select('*').order('name').execute()
-            return {"success": True, "categories": response.data}
+            response = self.client.table('system_categories').select(
+                'id, primary_group, label, description, hex_color'
+            ).order('primary_group, label').execute()
+            
+            if response.data:
+                categories = []
+                for category in response.data:
+                    category_data = {
+                        'id': category['id'],
+                        'name': category['label'],  # Keep 'name' for frontend compatibility
+                        'primary_group': category['primary_group'],
+                        'description': category['description'],
+                        'color': category['hex_color']  # Keep 'color' for frontend compatibility
+                    }
+                    categories.append(category_data)
+                
+                return {"success": True, "categories": categories}
+            else:
+                return {"success": True, "categories": []}
         except Exception as e:
             print(f"Error getting categories: {e}")
             return {"success": False, "error": str(e)}
