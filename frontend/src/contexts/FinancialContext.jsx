@@ -211,9 +211,18 @@ export const FinancialProvider = ({ children, setToast }) => {
         if (setToast) setToast({ type: 'error', message: result.error || 'Failed to update category' });
         return false;
       }
-      // Optimistically update transaction in state
+      
+      // Find the category details (categoryId can be null when removing)
+      const category = categoryId ? categories.find(cat => cat.id === categoryId) : null;
+      
+      // Optimistically update transaction in state with category details
       setTransactions(prev => prev.map(txn =>
-        txn.id === transactionId ? { ...txn, category_id: categoryId } : txn
+        txn.id === transactionId ? { 
+          ...txn, 
+          category_id: categoryId,
+          category_name: category?.name || null,
+          category_color: category?.color || null
+        } : txn
       ));
       return true;
     } catch (error) {

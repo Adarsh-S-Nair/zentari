@@ -146,7 +146,6 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers, activeTab: propA
           </div>
         ) : allAccountsEmpty ? (
           <div className="flex flex-col items-center justify-center text-center px-5">
-            <img src={noAccountsImage} alt="No Accounts" className="w-[240px] object-contain mb-1" />
             <h2 className="text-[15px] font-medium text-gray-800">No Accounts Added</h2>
             <p className="text-[13px] text-gray-500 mt-[-4px] max-w-[260px]">Add your financial accounts to see your cash, credit, loans, and investments.</p>
             <Button

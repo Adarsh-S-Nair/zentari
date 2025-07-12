@@ -4,12 +4,16 @@ import { useFinancial } from '../../contexts/FinancialContext'
 import { useNavigate } from 'react-router-dom'
 import CategoryDropdown from '../ui/CategoryDropdown'
 
+
+
 const DetailRow = ({ label, children, onClick, hoverable = false }) => (
   <div
-    className={`flex justify-between items-center border-t py-4 px-4 text-sm ${
-      hoverable ? 'cursor-pointer hover:bg-[var(--color-bg-hover)] transition-colors' : ''
+    className={`flex justify-between items-center border-t py-4 px-4 text-sm transition-colors ${
+      hoverable ? 'cursor-pointer' : ''
     }`}
     style={{ borderColor: 'var(--color-border-primary)' }}
+    onMouseEnter={hoverable ? (e) => e.currentTarget.style.background = 'var(--color-bg-hover)' : undefined}
+    onMouseLeave={hoverable ? (e) => e.currentTarget.style.background = 'transparent' : undefined}
     onClick={onClick}
   >
     <span className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>{label}</span>
@@ -18,18 +22,30 @@ const DetailRow = ({ label, children, onClick, hoverable = false }) => (
 )
 
 const TransactionDetail = ({ maxWidth = 700, transaction }) => {
-  const { accounts, categories, updateTransactionCategory, setToast } = useFinancial()
+  const { accounts, updateTransactionCategory, setToast } = useFinancial()
   const navigate = useNavigate()
-
   const [note, setNote] = useState(transaction?.notes || '')
-  const [localCategoryId, setLocalCategoryId] = useState(transaction?.category_id || null)
+  const [showCategories, setShowCategories] = useState(false)
 
-  // Update localCategoryId when transaction changes (e.g., on page refresh)
+
+
+  // Local state for category fields
+  const [localCategory, setLocalCategory] = useState({
+    id: transaction?.category_id || null,
+    name: transaction?.category_name || null,
+    color: transaction?.category_color || null,
+  });
+
+  // Sync local category state with transaction prop
   useEffect(() => {
-    if (transaction?.category_id) {
-      setLocalCategoryId(transaction.category_id)
+    if (transaction) {
+      setLocalCategory({
+        id: transaction.category_id || null,
+        name: transaction.category_name || null,
+        color: transaction.category_color || null,
+      });
     }
-  }, [transaction?.category_id])
+  }, [transaction?.category_id, transaction?.category_name, transaction?.category_color]);
 
   if (!transaction) {
     return (
@@ -43,26 +59,34 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
   const isPositive = transaction.amount > 0
   const amountColor = isPositive ? 'var(--color-success)' : 'var(--color-text-secondary)'
   const amountPrefix = isPositive ? '+' : ''
-  const logoStyle = transaction.icon_url ? {} : {
-    background: 'var(--color-gray-200)',
-    border: '1px solid var(--color-border-primary)'
-  }
+  const logoStyle = transaction.icon_url
+    ? {}
+    : { background: 'var(--color-gray-200)', border: '1px solid var(--color-border-primary)' }
 
-  const handleCategoryChange = async (newCategory) => {
-    if (!newCategory?.id) return
-    const prevCategoryId = localCategoryId
-    setLocalCategoryId(newCategory.id)
-    const success = await updateTransactionCategory(transaction.id, newCategory.id)
+  // Handle category selection
+  const handleCategorySelect = async (category) => {
+    const categoryId = category?.id || null
+    setLocalCategory({
+      id: category?.id || null,
+      name: category?.name || null,
+      color: category?.color || null,
+    });
+    setShowCategories(false) // Close the categories list
+    const success = await updateTransactionCategory(transaction.id, categoryId)
     if (!success && setToast) {
       setToast({ type: 'error', message: 'Failed to update category' })
-      // setLocalCategoryId(prevCategoryId) // Optional revert
+      // Revert local state if backend update fails
+      setLocalCategory({
+        id: transaction.category_id,
+        name: transaction.category_name,
+        color: transaction.category_color,
+      });
     }
   }
 
   return (
-    <main className="w-full max-w-[700px] mx-auto px-4 sm:px-6 pb-0 mb-0 overflow-hidden">
-      <div className="flex flex-col gap-6 pt-6">
-        {/* Card */}
+    <main className="w-full max-w-[700px] mx-auto px-4 sm:px-6 overflow-hidden">
+        <div className="flex flex-col gap-6 pt-6">
         <div
           className="w-full rounded-2xl px-4 py-6 sm:px-6 shadow-xl"
           style={{
@@ -71,33 +95,36 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
           }}
         >
           {/* Header */}
-          <div className="flex justify-between px-4 items-start">
-            <div className="flex gap-4 items-start flex-1 min-w-0">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden" style={logoStyle}>
+          <div className="flex justify-between px-4 items-center">
+            <div className="flex gap-4 items-center flex-1 min-w-0">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0" style={logoStyle}>
                 {transaction.icon_url ? (
                   <img src={transaction.icon_url} alt="icon" className="w-full h-full object-cover rounded-full" />
                 ) : (
                   <div className="w-5 h-5 rounded-full bg-gray-400" />
                 )}
               </div>
-                              <div className="flex flex-col justify-center min-w-0">
-                  <div className="font-semibold truncate max-w-[220px] text-[16px]" style={{ color: 'var(--color-text-primary)' }}>
-                    {transaction.description}
-                  </div>
+              <div className="flex flex-col justify-center min-w-0 flex-1">
+                <div className="text-[16px] font-semibold -tracking-[0.5px] truncate max-w-[120px] sm:max-w-[220px]" style={{ color: 'var(--color-text-primary)' }}>
+                  {transaction.description}
                 </div>
+              </div>
             </div>
-            <div className="text-[18px] flex items-center" style={{ height: '48px', color: amountColor }}>
-              {amountPrefix}{formatCurrency(Math.abs(transaction.amount))}
+            <div className="flex-shrink-0 min-w-[80px] text-right">
+              <span className="text-[18px] font-semibold -tracking-[0.2px]" style={{ color: amountColor }}>
+                {amountPrefix}{formatCurrency(Math.abs(transaction.amount))}
+              </span>
             </div>
           </div>
 
           {/* Rows */}
-          <div className="mt-6 text-sm text-gray-600 flex flex-col">
+          <div className="mt-6 text-sm flex flex-col">
             <DetailRow label="Status">
-              <span className="text-[13px] px-3 py-1.5 rounded-full font-medium shadow-sm"
+              <span
+                className="text-[13px] px-3 py-1.5 rounded-full font-medium shadow-sm"
                 style={{
                   color: transaction.pending ? 'var(--color-warning)' : 'var(--color-success)',
-                  background: transaction.pending 
+                  background: transaction.pending
                     ? 'linear-gradient(135deg, var(--color-warning-bg) 0%, rgba(255, 193, 7, 0.15) 100%)'
                     : 'linear-gradient(135deg, var(--color-success-bg) 0%, rgba(40, 167, 69, 0.15) 100%)',
                   border: `1px solid ${transaction.pending ? 'rgba(255, 193, 7, 0.2)' : 'rgba(40, 167, 69, 0.2)'}`,
@@ -114,14 +141,41 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
               </span>
             </DetailRow>
 
-            <DetailRow label="Category">
-              <CategoryDropdown
-                categories={categories}
-                currentCategory={transaction.category_name || categories.find(cat => cat.id === localCategoryId)?.name}
-                currentColor={transaction.category_color || categories.find(cat => cat.id === localCategoryId)?.color}
-                onCategoryChange={handleCategoryChange}
-              />
+            <DetailRow 
+              label="Category" 
+              hoverable 
+              onClick={() => setShowCategories(!showCategories)}
+            >
+              <div className="flex items-center gap-2">
+                {localCategory.color && (
+                  <div 
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: localCategory.color }}
+                  />
+                )}
+                <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {localCategory.name || 'Uncategorized'}
+                </span>
+                <svg 
+                  className={`w-4 h-4 transition-transform ${showCategories ? 'rotate-180' : ''}`}
+                  style={{ color: 'var(--color-text-secondary)' }}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </DetailRow>
+
+            {/* Categories List */}
+            <CategoryDropdown
+              isOpen={showCategories}
+              onClose={() => setShowCategories(false)}
+              selectedCategory={localCategory}
+              onCategorySelect={handleCategorySelect}
+              setToast={setToast}
+            />
 
             {transaction.accounts?.name && (
               <DetailRow
@@ -161,23 +215,26 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
 
             {transaction.subtype && (
               <DetailRow label="Type">
-                <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>{transaction.subtype}</span>
+                <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {transaction.subtype}
+                </span>
               </DetailRow>
             )}
 
             {transaction.payment_channel && (
-                           <DetailRow label="Payment Channel">
-               <span className="text-[13px] px-3 py-1.5 rounded-full font-medium shadow-sm"
-                 style={{
-                   color: 'var(--color-primary)',
-                   background: 'linear-gradient(135deg, var(--color-primary-bg) 0%, rgba(59, 130, 246, 0.15) 100%)',
-                   border: '1px solid rgba(59, 130, 246, 0.2)',
-                   boxShadow: '0 2px 4px rgba(59, 130, 246, 0.15)'
-                 }}
-               >
-                 {toTitleCase(transaction.payment_channel)}
-               </span>
-             </DetailRow>
+              <DetailRow label="Payment Channel">
+                <span
+                  className="text-[13px] px-3 py-1.5 rounded-full font-medium shadow-sm"
+                  style={{
+                    color: 'var(--color-primary)',
+                    background: 'linear-gradient(135deg, var(--color-primary-bg) 0%, rgba(59, 130, 246, 0.15) 100%)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                    boxShadow: '0 2px 4px rgba(59, 130, 246, 0.15)'
+                  }}
+                >
+                  {toTitleCase(transaction.payment_channel)}
+                </span>
+              </DetailRow>
             )}
 
             {transaction.website && (

@@ -1,179 +1,201 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { MdKeyboardArrowDown } from 'react-icons/md';
+import React, { useState, useEffect } from 'react'
+import { useFinancial } from '../../contexts/FinancialContext'
+
+const categoryListStyles = `
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`
 
 const CategoryDropdown = ({ 
-  categories = [],
-  currentCategory, 
-  currentColor, 
-  onCategoryChange,
-  className = "" 
+  isOpen, 
+  onClose, 
+  selectedCategory, 
+  onCategorySelect 
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
-  const triggerRef = useRef(null);
-  const dropdownRef = useRef(null);
-  const [search, setSearch] = useState("");
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [shouldRenderDropdown, setShouldRenderDropdown] = useState(false);
+  const { categories } = useFinancial()
+  const [expandedGroups, setExpandedGroups] = useState(new Set())
+  const [searchQuery, setSearchQuery] = useState('')
 
-  // Calculate position when opening dropdown
-  const updatePosition = () => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      let left = rect.right - 192; // 192px = w-48
-      if (left < 0) left = 0;
-      const top = rect.bottom + 8;
-      console.log('Trigger rect:', rect);
-      console.log('Dropdown position:', { top, left });
-      setPosition({
-        top,
-        left,
-        width: rect.width
-      });
-    }
-  };
+  const groupedCategories = React.useMemo(() => {
+    if (!categories) return {}
+    const grouped = {}
+    const query = searchQuery.toLowerCase().trim()
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (triggerRef.current && !triggerRef.current.contains(event.target) &&
-          dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
+    categories.forEach(category => {
+      if (query && !category.name.toLowerCase().includes(query) && 
+          !category.primary_group?.toLowerCase().includes(query)) {
+        return
       }
-    };
+      const group = category.primary_group || 'Other'
+      if (!grouped[group]) {
+        grouped[group] = {
+          name: group,
+          color: category.color,
+          categories: []
+        }
+      }
+      grouped[group].categories.push(category)
+    })
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    return grouped
+  }, [categories, searchQuery])
 
-  useEffect(() => {
-    if (isOpen) {
-      setShouldRenderDropdown(true);
-      setDropdownVisible(false);
-      // Trigger animation on next tick
-      setTimeout(() => setDropdownVisible(true), 10);
-    } else {
-      setDropdownVisible(false);
-      // Wait for animation to finish before unmounting
-      const timeout = setTimeout(() => setShouldRenderDropdown(false), 200);
-      return () => clearTimeout(timeout);
-    }
-  }, [isOpen]);
-
-  const handleToggle = () => {
-    console.log('Toggle clicked, current isOpen:', isOpen); // Debug
-    if (!isOpen) {
-      updatePosition();
-    }
-    setIsOpen(!isOpen);
-    console.log('Setting isOpen to:', !isOpen); // Debug
-  };
+  const toggleGroup = (groupName) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(groupName)) {
+        newSet.delete(groupName)
+      } else {
+        newSet.clear()
+        newSet.add(groupName)
+      }
+      return newSet
+    })
+  }
 
   const handleCategorySelect = (category) => {
-    onCategoryChange?.(category);
-    setIsOpen(false);
-  };
+    setSearchQuery('')
+    setExpandedGroups(new Set())
+    onCategorySelect(category)
+  }
 
-  // Filtered categories
-  const filteredCategories = categories.filter(cat =>
-    cat.name.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const groupsToExpand = new Set()
+      Object.keys(groupedCategories).forEach(groupName => {
+        if (groupedCategories[groupName].categories.length > 0) {
+          groupsToExpand.add(groupName)
+        }
+      })
+      setExpandedGroups(groupsToExpand)
+    } else {
+      setExpandedGroups(new Set())
+    }
+  }, [searchQuery, groupedCategories])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchQuery('')
+      setExpandedGroups(new Set())
+    }
+  }, [isOpen])
+
+  if (!isOpen) return null
 
   return (
-    <div className={`relative ${className}`}>
-      {/* Category Display (Clickable) */}
-      <div 
-        ref={triggerRef}
-        className="flex gap-2 items-center cursor-pointer hover:opacity-80 transition-opacity"
-        onClick={handleToggle}
-      >
-        <div 
-          className="w-2 h-2 rounded-full" 
-          style={{ background: currentColor || 'var(--color-primary)' }} 
-        />
-        <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
-          {currentCategory || 'Uncategorized'}
-        </span>
-        <MdKeyboardArrowDown 
-          size={16} 
-          className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          style={{ color: 'var(--color-text-secondary)' }}
-        />
-      </div>
-
-      {/* Dropdown Menu - Rendered via Portal */}
-      {shouldRenderDropdown && createPortal(
-        <div 
-          ref={dropdownRef}
-          className={`fixed w-48 rounded-lg shadow-lg z-[9999] transition-all duration-200 ease-out ${dropdownVisible ? 'opacity-100' : 'opacity-0'}`}
-          style={{ 
-            top: position.top,
-            left: position.left,
-            background: 'var(--color-bg-primary)',
-            border: '1px solid var(--color-border-primary)',
-            boxShadow: '0 8px 32px 0 var(--color-shadow-heavy)',
-            backdropFilter: 'blur(4px)',
-            transform: dropdownVisible ? 'translateY(0)' : 'translateY(-8px)',
-          }}
-          onMouseDown={e => e.stopPropagation()}
-        >
-          {/* Search Bar */}
-          <div className="px-1 pt-2 pb-2 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search categories…"
-              className="w-full rounded-md px-3 py-2 text-[12px] bg-transparent border outline-none"
-              style={{
-                background: 'var(--color-bg-secondary)',
-                border: '1px solid var(--color-input-border)',
-                color: 'var(--color-text-primary)',
-                fontFamily: 'inherit'
-              }}
-            />
-          </div>
-          <div className="py-2">
-            {filteredCategories.map((category) => (
-              <div
-                key={category.id}
-                className="flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors hover:bg-[var(--color-bg-hover)]"
-                onClick={() => handleCategorySelect(category)}
+    <>
+      <style>{categoryListStyles}</style>
+      <div className="overflow-hidden transition-all duration-300 ease-out max-h-none opacity-100">
+        <div className="border-t pt-4" style={{ borderColor: 'var(--color-border-primary)' }}>
+          <div className="grid grid-cols-1">
+            {/* Search bar */}
+            <div className="relative px-3 pb-3">
+              <input
+                type="text"
+                placeholder="Search categories..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full p-3 pr-10 border text-[13px] bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  borderColor: 'var(--color-border-primary)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'inherit'
+                }}
+              />
+              <svg 
+                className="absolute right-5 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none"
+                style={{ color: 'var(--color-text-secondary)' }}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
               >
-                <div 
-                  className="w-2 h-2 rounded-full" 
-                  style={{ background: category.color }} 
-                />
-                <span 
-                  className="text-[12px]"
-                  style={{ color: 'var(--color-text-primary)' }}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+
+            {/* Category groups */}
+            {Object.entries(groupedCategories).map(([groupName, group]) => (
+              <div key={groupName} className="border-t" style={{ borderColor: 'var(--color-border-primary)' }}>
+                {/* Group header */}
+                <button
+                  onClick={() => toggleGroup(groupName)}
+                  className="w-full flex items-center gap-3 px-4 py-4 rounded-md transition-colors duration-150 text-left"
+                  style={{ 
+                    backgroundColor: expandedGroups.has(groupName) ? 'var(--color-bg-primary)' : 'transparent',
+                    color: 'var(--color-text-primary)' 
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)'}
+                  onMouseLeave={(e) => {
+                    if (!expandedGroups.has(groupName)) {
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                    }
+                  }}
                 >
-                  {category.name}
-                </span>
+                  <div 
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: group.color }}
+                  />
+                  <span className="text-[13px] font-medium flex-1">{group.name}</span>
+                  <svg 
+                    className={`w-4 h-4 transition-transform ${expandedGroups.has(groupName) ? 'rotate-180' : ''}`}
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Group categories */}
+                <div 
+                  className={`transition-all duration-300 ease-in-out ${
+                    expandedGroups.has(groupName) ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
+                  }`}
+                >
+                  <div className="ml-6 py-1">
+                    {group.categories.map((category) => (
+                      <button
+                        key={category.id}
+                        onClick={() => handleCategorySelect(category)}
+                        className="w-full px-4 py-4 text-left rounded-md text-[13px] transition-colors duration-100"
+                        style={{
+                          backgroundColor: selectedCategory?.id === category.id 
+                            ? 'var(--color-bg-primary)' 
+                            : 'transparent',
+                          color: 'var(--color-text-primary)'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedCategory?.id !== category.id) {
+                            e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedCategory?.id !== category.id) {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                          }
+                        }}
+                      >
+                        {category.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             ))}
-            {/* Remove Category Option */}
-            <div className="border-t mt-2 pt-2" style={{ borderColor: 'var(--color-border-primary)' }}>
-              <div
-                className="flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors hover:bg-[var(--color-bg-hover)]"
-                onClick={() => handleCategorySelect(null)}
-              >
-                <div className="w-3 h-3 rounded-full bg-gray-300" />
-                <span 
-                  className="text-[12px]"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Remove Category
-                </span>
-              </div>
-            </div>
           </div>
-        </div>,
-        document.body
-      )}
-    </div>
-  );
-};
+        </div>
+      </div>
+    </>
+  )
+}
 
-export default CategoryDropdown; 
+export default CategoryDropdown
