@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { formatCurrency, formatDate, toTitleCase } from '../../utils/formatters'
 import { useFinancial } from '../../contexts/FinancialContext'
 import { useNavigate } from 'react-router-dom'
 import CategoryDropdown from '../ui/CategoryDropdown'
 
-const DetailRow = ({ label, children, onClick, hoverable = false }) => (
+const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColor }) => (
   <div
     className={`flex justify-between items-center border-t py-4 px-4 text-sm transition-colors ${
       hoverable ? 'cursor-pointer' : ''
     }`}
-    style={{ borderColor: 'var(--color-border-primary)' }}
-    onMouseEnter={hoverable ? (e) => e.currentTarget.style.background = 'var(--color-bg-hover)' : undefined}
-    onMouseLeave={hoverable ? (e) => e.currentTarget.style.background = 'transparent' : undefined}
+    style={{ 
+      borderColor: 'var(--color-border-primary)',
+      background: backgroundColor || 'transparent'
+    }}
+    onMouseEnter={hoverable && !backgroundColor ? (e) => e.currentTarget.style.background = 'var(--color-bg-hover)' : undefined}
+    onMouseLeave={hoverable && !backgroundColor ? (e) => e.currentTarget.style.background = 'transparent' : undefined}
     onClick={onClick}
   >
     <span className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>{label}</span>
@@ -24,6 +27,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
   const navigate = useNavigate()
   const [note, setNote] = useState(transaction?.notes || '')
   const [showCategories, setShowCategories] = useState(false)
+  const dropdownRef = useRef(null)
 
   const [localCategory, setLocalCategory] = useState({
     id: transaction?.category_id || null,
@@ -40,6 +44,8 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
       })
     }
   }, [transaction?.category_id, transaction?.category_name, transaction?.category_color])
+
+
 
   if (!transaction) {
     return (
@@ -113,14 +119,14 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
           <div className="mt-6 text-sm flex flex-col">
             <DetailRow label="Status">
               <span
-                className="text-[13px] px-3 py-1.5 rounded-full font-medium shadow-sm"
+                className="text-[12px] px-2 py-1 rounded-md font-normal"
                 style={{
                   color: transaction.pending ? 'var(--color-warning)' : 'var(--color-success)',
                   background: transaction.pending
-                    ? 'linear-gradient(135deg, var(--color-warning-bg) 0%, rgba(255, 193, 7, 0.15) 100%)'
-                    : 'linear-gradient(135deg, var(--color-success-bg) 0%, rgba(40, 167, 69, 0.15) 100%)',
-                  border: `1px solid ${transaction.pending ? 'rgba(255, 193, 7, 0.2)' : 'rgba(40, 167, 69, 0.2)'}`,
-                  boxShadow: `0 2px 4px ${transaction.pending ? 'rgba(255, 193, 7, 0.15)' : 'rgba(40, 167, 69, 0.15)'}`
+                    ? 'linear-gradient(135deg, var(--color-warning-bg) 0%, rgba(255, 193, 7, 0.10) 100%)'
+                    : 'linear-gradient(135deg, var(--color-success-bg) 0%, rgba(40, 167, 69, 0.10) 100%)',
+                  border: `1px solid ${transaction.pending ? 'rgba(255, 193, 7, 0.12)' : 'rgba(40, 167, 69, 0.12)'}`,
+                  boxShadow: `0 1px 2px ${transaction.pending ? 'rgba(255, 193, 7, 0.07)' : 'rgba(40, 167, 69, 0.07)'}`
                 }}
               >
                 {transaction.pending ? 'Pending' : 'Posted'}
@@ -137,6 +143,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
               label="Category" 
               hoverable 
               onClick={() => setShowCategories(!showCategories)}
+              backgroundColor={showCategories ? 'var(--color-bg-primary)' : undefined}
             >
               <div className="flex items-center gap-2">
                 {localCategory.color && (
@@ -160,11 +167,17 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
               </div>
             </DetailRow>
 
-            {/* Sliding Category Dropdown */}
+            {/* Connected Category Dropdown */}
             <div 
-              className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                showCategories ? 'max-h-[1000px]' : 'max-h-0'
-              }`}
+              ref={dropdownRef}
+              className={`transition-all duration-300 ease-in-out overflow-hidden`}
+              style={{
+                maxHeight: showCategories ? 'none' : '0px',
+                background: 'var(--color-bg-primary)',
+                borderBottomLeftRadius: '12px',
+                borderBottomRightRadius: '12px',
+                boxShadow: showCategories ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+              }}
             >
               <CategoryDropdown
                 isOpen={showCategories}
@@ -222,12 +235,12 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
             {transaction.payment_channel && (
               <DetailRow label="Payment Channel">
                 <span
-                  className="text-[13px] px-3 py-1.5 rounded-full font-medium shadow-sm"
+                  className="text-[12px] px-2 py-1 rounded-md font-normal"
                   style={{
                     color: 'var(--color-primary)',
-                    background: 'linear-gradient(135deg, var(--color-primary-bg) 0%, rgba(59, 130, 246, 0.15) 100%)',
-                    border: '1px solid rgba(59, 130, 246, 0.2)',
-                    boxShadow: '0 2px 4px rgba(59, 130, 246, 0.15)'
+                    background: 'linear-gradient(135deg, var(--color-primary-bg) 0%, rgba(59, 130, 246, 0.10) 100%)',
+                    border: '1px solid rgba(59, 130, 246, 0.12)',
+                    boxShadow: '0 1px 2px rgba(59, 130, 246, 0.07)'
                   }}
                 >
                   {toTitleCase(transaction.payment_channel)}
