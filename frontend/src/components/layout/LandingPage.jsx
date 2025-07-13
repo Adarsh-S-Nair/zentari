@@ -252,12 +252,13 @@ export default function LandingPage() {
           {error && <div style={{ color: 'red', fontSize: 13, textAlign: 'center', width: '100%' }}>{error}</div>}
           {success && <div style={{ color: '#16a34a', fontSize: 13, textAlign: 'center', width: '100%' }}>{success}</div>}
           <Button
-            color="#3b82f6"
+            color="networth"
             onClick={handleSubmit}
             disabled={loading}
             loading={loading}
             label={loading ? 'Please wait...' : isSignup ? 'Create account' : 'Log in'}
-            style={{ fontSize: 15, fontWeight: 600, borderRadius: 10, marginTop: 8, width: '100%' }}
+            className="h-8"
+            width="w-full"
           />
           <p style={{ fontSize: 13, textAlign: 'center', marginTop: 6, color: '#6b7280', width: '100%' }}>
             {isSignup ? (
