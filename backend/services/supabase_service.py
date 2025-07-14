@@ -314,6 +314,16 @@ class SupabaseService:
         except Exception as e:
             return {"success": False, "error": str(e)}
     
+    def get_plaid_item_by_item_id(self, item_id: str):
+        """Get plaid_item by item_id (for webhooks)"""
+        try:
+            response = self.client.table('plaid_items').select('*').eq('item_id', item_id).execute()
+            if response.data:
+                return {"success": True, "plaid_item": response.data[0]}
+            return {"success": False, "error": "Plaid item not found"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
     def update_sync_cursor(self, user_id: str, item_id: str, cursor: str):
         """Update transaction cursor for sync state"""
         try:
@@ -443,7 +453,7 @@ class SupabaseService:
                         'merchant_name': transaction.get('merchant_name'),
                         'icon_url': transaction.get('icon_url'),
                         'personal_finance_category': transaction.get('personal_finance_category'),
-                        'amount': transaction['amount'],
+                        'amount': -transaction['amount'],
                         'currency_code': transaction['currency_code'],
                         'pending': transaction['pending'],
                         'location': transaction.get('location'),
@@ -473,7 +483,7 @@ class SupabaseService:
         """Get transactions for a user"""
         try:
             response = self.client.table('transactions').select(
-                'id, plaid_transaction_id, datetime, description, category_id, merchant_name, icon_url, personal_finance_category, amount, currency_code, pending, location, payment_channel, website, created_at, updated_at, accounts:account_id(account_id, name, mask, type, subtype, user_id), system_categories:category_id(id, primary_group, label, description, hex_color)'
+                'id, plaid_transaction_id, datetime, description, category_id, merchant_name, icon_url, personal_finance_category, amount, currency_code, pending, location, payment_channel, website, created_at, updated_at, accounts:account_id(account_id, name, mask, type, subtype, user_id), system_categories:category_id(id, group_id, label, description, hex_color, category_groups:group_id(id, name, icon_lib, icon_name))'
             ).eq('accounts.user_id', user_id).order('datetime', desc=True).range(offset, offset + limit - 1).execute()
             
             if response.data:
@@ -484,6 +494,13 @@ class SupabaseService:
                         category = transaction['system_categories']
                         transaction_data['category_name'] = category.get('label')
                         transaction_data['category_color'] = category.get('hex_color')
+                        # Add group info if present
+                        if category.get('category_groups'):
+                            group = category['category_groups']
+                            transaction_data['category_group_id'] = group.get('id')
+                            transaction_data['category_group_name'] = group.get('name')
+                            transaction_data['category_icon_lib'] = group.get('icon_lib')
+                            transaction_data['category_icon_name'] = group.get('icon_name')
                     transaction_data.pop('system_categories', None)
                     transactions.append(transaction_data)
                 
@@ -550,8 +567,8 @@ class SupabaseService:
         """Get all system categories with their colors"""
         try:
             response = self.client.table('system_categories').select(
-                'id, primary_group, label, description, hex_color'
-            ).order('primary_group, label').execute()
+                'id, group_id, label, description, hex_color, category_groups:group_id(id, name, icon_lib, icon_name)'
+            ).order('label').execute()
             
             if response.data:
                 categories = []
@@ -559,10 +576,16 @@ class SupabaseService:
                     category_data = {
                         'id': category['id'],
                         'name': category['label'],  # Keep 'name' for frontend compatibility
-                        'primary_group': category['primary_group'],
+                        'group_id': category.get('group_id'),
                         'description': category['description'],
                         'color': category['hex_color']  # Keep 'color' for frontend compatibility
                     }
+                    # Add group info if present
+                    if category.get('category_groups'):
+                        group = category['category_groups']
+                        category_data['group_name'] = group.get('name')
+                        category_data['icon_lib'] = group.get('icon_lib')
+                        category_data['icon_name'] = group.get('icon_name')
                     categories.append(category_data)
                 
                 return {"success": True, "categories": categories}

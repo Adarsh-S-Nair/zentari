@@ -135,16 +135,19 @@ def sync_transactions_for_item(supabase_service, plaid_service, user_id, item):
     access_token = item.get('access_token')
     cursor = item.get('transaction_cursor')
     if not item_id or not access_token:
+        print(f"[SYNC] Skipping item {item_id}: missing item_id or access_token")
         return {'item_id': item_id, 'success': False, 'error': 'Missing item_id or access_token'}
     # Only sync if at least one account for this item has auto_sync = True
     accounts = supabase_service.get_accounts_for_item_with_auto_sync(user_id, item_id)
     if not accounts:
+        print(f"[SYNC] Skipping item {item_id}: no accounts with auto_sync")
         return {'item_id': item_id, 'success': False, 'skipped': True, 'reason': 'No accounts with auto_sync'}
     # Sync transactions for this item
-    print(f"Syncing transactions for item {item_id} (access_token: {access_token}) with cursor: {cursor}")
+    print(f"[SYNC] Syncing transactions for item {item_id} (access_token: {access_token}) with cursor: {cursor}")
     sync_result = plaid_service.sync_transactions(access_token, cursor)
+    print(f"[SYNC] Plaid sync_result for item {item_id}: {sync_result}")
     if not sync_result.get('success'):
-        print(f"Error syncing transactions for item {item_id}: {sync_result.get('error')}")
+        print(f"[SYNC] Error syncing transactions for item {item_id}: {sync_result.get('error')}")
         return {
             'item_id': item_id,
             'success': False,
@@ -152,7 +155,9 @@ def sync_transactions_for_item(supabase_service, plaid_service, user_id, item):
         }
     # Store new/modified transactions
     added = sync_result.get('added', [])
+    print(f"[SYNC] {len(added)} transactions to add for item {item_id}")
     store_result = supabase_service.store_transactions(added)
+    print(f"[SYNC] store_transactions result: {store_result}")
     
     # Update account balances if they're included in the response
     balance_updates = 0
@@ -162,8 +167,12 @@ def sync_transactions_for_item(supabase_service, plaid_service, user_id, item):
     
     # Update the cursor
     next_cursor = sync_result.get('next_cursor')
-    if next_cursor:
+    print(f"[SYNC] next_cursor for item {item_id}: {next_cursor}")
+    if next_cursor is not None:  # Handle empty string cursor from Plaid
+        print(f"[SYNC] Updating sync cursor for item {item_id}")
         supabase_service.update_sync_cursor(user_id, item_id, next_cursor)
+    else:
+        print(f"[SYNC] No next_cursor returned for item {item_id}")
     return {
         'item_id': item_id,
         'success': True,

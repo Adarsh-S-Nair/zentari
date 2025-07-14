@@ -15,6 +15,7 @@ from plaid.model.accounts_balance_get_request_options import AccountsBalanceGetR
 from services.plaid_config import get_plaid_client
 from datetime import datetime, timedelta
 import json
+import os
 
 class PlaidService:
     def __init__(self):
@@ -25,11 +26,19 @@ class PlaidService:
         Create a link token for the Plaid Link flow
         """
         try:
+            # Get webhook URL from environment or construct it
+            webhook_url = os.getenv('PLAID_WEBHOOK_URL')
+            if not webhook_url:
+                # Fallback to constructing from API URL
+                api_url = os.getenv('API_URL', 'http://localhost:8000')
+                webhook_url = f"{api_url}/plaid/webhook"
+            
             request = LinkTokenCreateRequest(
                 products=[Products("transactions")],
                 client_name=client_name,
                 country_codes=[CountryCode("US")],
                 language="en",
+                webhook=webhook_url,
                 user=LinkTokenCreateRequestUser(
                     client_user_id=user_id
                 )
@@ -201,10 +210,8 @@ class PlaidService:
                         print(f"Error converting personal_finance_category: {e}")
                         personal_finance_category = None
 
-                # Determine the best icon URL: merchant logo first, then category icon as fallback
-                merchant_logo = getattr(transaction, 'logo_url', None)
-                category_icon = getattr(transaction, 'personal_finance_category_icon_url', None)
-                icon_url = merchant_logo if merchant_logo else category_icon
+                # Only use merchant logo for icon_url
+                icon_url = getattr(transaction, 'logo_url', None)
 
                 # Get the primary category from personal finance category
                 primary_category = None
@@ -266,20 +273,41 @@ class PlaidService:
         This is more efficient than get_transactions for regular updates
         """
         try:
-            if cursor is not None:
+            # Simple request logging
+            print(f"\n=== PLaid /transactions/sync ===")
+            print(f"access_token: {access_token[:20]}..." if access_token else "None")
+            print(f"cursor: {cursor}")
+            
+            # Handle cursor according to Plaid docs: empty string for initial sync, omit for subsequent
+            if cursor is not None and cursor.strip() != '':
                 request = TransactionsSyncRequest(
                     access_token=access_token,
-                    cursor=cursor
+                    cursor=cursor,
+                    count=250
                 )
             else:
+                # For initial sync, use empty cursor as recommended by Plaid
                 request = TransactionsSyncRequest(
-                    access_token=access_token
+                    access_token=access_token,
+                    cursor='',  # Empty cursor for initial sync
+                    count=250
                 )
+            
+            # Log request body
+            request_dict = request.to_dict()
+            print(f"Request: {request_dict}")
             
             response = self.client.transactions_sync(request)
             
-            # Get response dict for accounts data
-            response_dict = response.to_dict()
+            # Simple response logging
+            print(f"Response: has_more={response.has_more}, next_cursor='{response.next_cursor}', added={len(response.added)}, request_id={response.request_id}")
+            
+            # Check if this is a new account with no transactions
+            if len(response.added) == 0 and response.next_cursor == '':
+                print(f"NOTE: No transactions found - this might be a new account or account with no transaction history")
+                print(f"NOTE: In production, new accounts often have no transactions until they have activity")
+            
+            print(f"=== END ===\n")
             
             transactions = []
             for transaction in response.added:
@@ -295,9 +323,7 @@ class PlaidService:
                     except Exception as e:
                         print(f"Error converting personal_finance_category: {e}")
                         personal_finance_category = None
-                merchant_logo = getattr(transaction, 'logo_url', None)
-                category_icon = getattr(transaction, 'personal_finance_category_icon_url', None)
-                icon_url = merchant_logo if merchant_logo else category_icon
+                icon_url = getattr(transaction, 'logo_url', None)
                 primary_category = None
                 if personal_finance_category and isinstance(personal_finance_category, dict):
                     primary_category = personal_finance_category.get('primary')
@@ -338,7 +364,9 @@ class PlaidService:
                     "website": getattr(transaction, 'website', None)
                 }
                 transactions.append(transaction_data)
-            return {
+            # Get response dict for accounts data
+            response_dict = response.to_dict()
+            result = {
                 "success": True,
                 "added": transactions,
                 "modified": response.modified,  # List of modified transaction IDs
@@ -348,6 +376,7 @@ class PlaidService:
                 "request_id": response.request_id,
                 "accounts": response_dict.get('accounts', [])  # Include accounts with balances
             }
+            return result
         except Exception as e:
             print(f"\n=== PLaid /transactions/sync ERROR ===")
             print(f"Error: {str(e)}")

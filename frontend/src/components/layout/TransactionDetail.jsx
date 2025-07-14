@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, toTitleCase } from '../../utils/formatters'
 import { useFinancial } from '../../contexts/FinancialContext'
 import { useNavigate } from 'react-router-dom'
 import CategoryDropdown from '../ui/CategoryDropdown'
+import CategoryIcon from '../ui/CategoryIcon'
 
 const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColor }) => (
   <div
@@ -61,7 +62,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
   const amountPrefix = isPositive ? '+' : ''
   const logoStyle = transaction.icon_url
     ? {}
-    : { background: 'var(--color-gray-200)', border: '1px solid var(--color-border-primary)' }
+    : { background: 'var(--color-bg-secondary)', border: 'none' }
 
   const handleCategorySelect = async (category) => {
     const categoryId = category?.id || null
@@ -98,6 +99,8 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
               <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0" style={logoStyle}>
                 {transaction.icon_url ? (
                   <img src={transaction.icon_url} alt="icon" className="w-full h-full object-cover rounded-full" />
+                ) : transaction.category_icon_lib && transaction.category_icon_name ? (
+                  <CategoryIcon lib={transaction.category_icon_lib} name={transaction.category_icon_name} size={24} color={'var(--color-text-muted)'} />
                 ) : (
                   <div className="w-5 h-5 rounded-full bg-gray-400" />
                 )}

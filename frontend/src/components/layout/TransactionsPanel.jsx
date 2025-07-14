@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiFilter } from 'react-icons/fi';
 import { FaSearch, FaChevronRight } from 'react-icons/fa';
+import CategoryIcon from '../ui/CategoryIcon';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Spinner, Button } from '../ui';
@@ -104,9 +105,11 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                   onClick={() => navigate(`/transaction/${txn.id}`)}
                 >
                   {/* Icon/avatar */}
-                  <div className="flex-shrink-0 mr-3 sm:mr-4 w-12 h-12 rounded-full flex items-center justify-center overflow-hidden self-center" style={{ background: txn.icon_url ? 'transparent' : 'var(--color-gray-200)', border: txn.icon_url ? 'none' : '1px solid var(--color-border-primary)' }}>
+                  <div className="flex-shrink-0 mr-3 sm:mr-4 w-12 h-12 rounded-full flex items-center justify-center overflow-hidden self-center" style={{ background: txn.icon_url ? 'transparent' : 'var(--color-bg-primary)', border: 'none' }}>
                     {txn.icon_url ? (
                       <img src={txn.icon_url} alt="icon" className="w-full h-full rounded-full object-cover block" />
+                    ) : txn.category_icon_lib && txn.category_icon_name ? (
+                      <CategoryIcon lib={txn.category_icon_lib} name={txn.category_icon_name} size={22} color={'var(--color-text-muted)'} />
                     ) : (
                       <FaChevronRight size={20} style={{ color: 'var(--color-text-muted)' }} />
                     )}

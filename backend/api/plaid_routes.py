@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Request
 from services.plaid_service import PlaidService
 from services.supabase_service import get_supabase_service
 from models.plaid_schema import (
@@ -45,8 +45,11 @@ async def exchange_public_token(request: PublicTokenRequest, authorization: Opti
 
 def fetch_and_store_accounts(supabase_service, plaid_service, user_id, item_id, access_token):
     # Fetch accounts from Plaid using the access token
+    print(f"[LINK] Fetching accounts from Plaid for user {user_id}, item {item_id}")
     accounts_result = plaid_service.get_accounts(access_token)
+    print(f"[LINK] Plaid get_accounts result: {accounts_result}")
     if not accounts_result["success"]:
+        print(f"[LINK] Error fetching accounts from Plaid: {accounts_result.get('error')}")
         raise HTTPException(status_code=400, detail=accounts_result["error"])
 
     # Attach access token to each account for storage
@@ -55,6 +58,7 @@ def fetch_and_store_accounts(supabase_service, plaid_service, user_id, item_id, 
         account_with_token = account.copy()
         account_with_token["access_token"] = access_token
         accounts_with_token.append(account_with_token)
+    print(f"[LINK] Accounts to store: {accounts_with_token}")
 
     # Store the accounts in the database
     accounts_store_result = supabase_service.store_plaid_accounts(
@@ -63,39 +67,38 @@ def fetch_and_store_accounts(supabase_service, plaid_service, user_id, item_id, 
         accounts=accounts_with_token,
         access_token=access_token
     )
+    print(f"[LINK] store_plaid_accounts result: {accounts_store_result}")
     if not accounts_store_result["success"]:
-        print(f"Warning: Failed to store accounts: {accounts_store_result.get('error')}")
+        print(f"[LINK] Warning: Failed to store accounts: {accounts_store_result.get('error')}")
 
     # Return the Plaid accounts result and access token for further use
     return accounts_result, access_token
 
+
 def fetch_and_store_transactions(supabase_service, plaid_service, user_id, item_id, access_token):
-    # Perform initial full sync using /transactions/sync (cursor=None)
-    sync_result = plaid_service.sync_transactions(access_token=access_token, cursor=None)
-
-    if sync_result["success"]:
-        # Store new transactions in the database
-        transactions_store_result = supabase_service.store_transactions(sync_result["added"])
-        if transactions_store_result["success"]:
-            print(f"Successfully stored {transactions_store_result.get('stored_count', 0)} transactions")
-        else:
-            print(f"Warning: Failed to store transactions: {transactions_store_result.get('error')}")
-
-        # Prepare sync state info for plaid_items
-        cursor = sync_result.get("next_cursor")
-        last_sync = datetime.utcnow().isoformat()
-
-        # Update or create the plaid_items sync state with cursor and sync time
-        supabase_service.create_or_update_plaid_item(
-            user_id=user_id,
-            item_id=item_id,
-            access_token=access_token,
-            transaction_cursor=cursor,
-            last_transaction_sync=last_sync
-        )
+    # Use the proven sync_transactions_for_item method instead of direct Plaid calls
+    print(f"[LINK] Starting initial transaction sync for user {user_id}, item {item_id}")
+    
+    # Create a mock item object with the data needed by sync_transactions_for_item
+    item = {
+        'item_id': item_id,
+        'access_token': access_token,
+        'transaction_cursor': ''  # Initial sync with empty cursor as per Plaid docs
+    }
+    
+    # Import the sync function from sync_routes
+    from api.sync_routes import sync_transactions_for_item
+    
+    # Call the proven sync method
+    sync_result = sync_transactions_for_item(supabase_service, plaid_service, user_id, item)
+    print(f"[LINK] sync_transactions_for_item result: {sync_result}")
+    
+    if sync_result.get('success'):
+        print(f"[LINK] Successfully synced {sync_result.get('added_count', 0)} transactions")
+    elif sync_result.get('skipped'):
+        print(f"[LINK] Sync skipped: {sync_result.get('reason', 'unknown')}")
     else:
-        # Log if there was an error or no transactions found
-        print(f"No transactions found or error fetching transactions: {sync_result.get('error', 'No transactions')}")
+        print(f"[LINK] Sync failed: {sync_result.get('error', 'unknown error')}")
 
 @router.post("/accounts", response_model=AccountsResponse)
 async def get_accounts(request: PublicTokenRequest, user_id: str, authorization: Optional[str] = Header(None)):
@@ -105,8 +108,11 @@ async def get_accounts(request: PublicTokenRequest, user_id: str, authorization:
     supabase_service = get_supabase_service()
     plaid_service = PlaidService()
     # Exchange public token for access token
+    print(f"[LINK] Exchanging public token for access token for user {user_id}")
     exchange_result = plaid_service.exchange_public_token(request.public_token)
+    print(f"[LINK] exchange_public_token result: {exchange_result}")
     if not exchange_result["success"]:
+        print(f"[LINK] Error exchanging public token: {exchange_result.get('error')}")
         raise HTTPException(status_code=400, detail=exchange_result["error"])
     
     # Fetch and store accounts
@@ -119,7 +125,7 @@ async def get_accounts(request: PublicTokenRequest, user_id: str, authorization:
             supabase_service, plaid_service, user_id, exchange_result["item_id"], access_token
         )
     except Exception as e:
-        print(f"Error fetching transactions: {e}")
+        print(f"[LINK] Error fetching transactions: {e}")
     return AccountsResponse(**accounts_result)
 
 from pydantic import BaseModel
@@ -155,4 +161,65 @@ async def remove_plaid_item(request: RemoveItemRequest, authorization: Optional[
         raise
     except Exception as e:
         print(f"Error removing Plaid item: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.post("/webhook")
+async def plaid_webhook(request: Request):
+    """
+    Handle Plaid webhooks for transaction updates
+    """
+    try:
+        # Get the webhook payload
+        webhook_data = await request.json()
+        print(f"[WEBHOOK] Received webhook: {webhook_data}")
+        
+        webhook_code = webhook_data.get('webhook_code')
+        
+        if webhook_code == 'SYNC_UPDATES_AVAILABLE':
+            # Handle transaction sync updates
+            item_id = webhook_data.get('item_id')
+            initial_update_complete = webhook_data.get('initial_update_complete', False)
+            historical_update_complete = webhook_data.get('historical_update_complete', False)
+            
+            print(f"[WEBHOOK] SYNC_UPDATES_AVAILABLE for item {item_id}")
+            print(f"[WEBHOOK] initial_update_complete: {initial_update_complete}")
+            print(f"[WEBHOOK] historical_update_complete: {historical_update_complete}")
+            
+            # Get the user_id for this item_id from plaid_items table
+            supabase_service = get_supabase_service()
+            plaid_item_result = supabase_service.get_plaid_item_by_item_id(item_id)
+            
+            if plaid_item_result.get('success'):
+                plaid_item = plaid_item_result['plaid_item']
+                user_id = plaid_item['user_id']
+                access_token = plaid_item['access_token']
+                
+                print(f"[WEBHOOK] Found user {user_id} for item {item_id}")
+                
+                # Create item object for sync_transactions_for_item
+                item = {
+                    'item_id': item_id,
+                    'access_token': access_token,
+                    'transaction_cursor': plaid_item_result['plaid_item'].get('transaction_cursor', '')
+                }
+                
+                # Import and call sync_transactions_for_item
+                from api.sync_routes import sync_transactions_for_item
+                plaid_service = PlaidService()
+                
+                print(f"[WEBHOOK] Triggering sync for item {item_id}")
+                sync_result = sync_transactions_for_item(supabase_service, plaid_service, user_id, item)
+                print(f"[WEBHOOK] Sync result: {sync_result}")
+                
+                return {"success": True, "message": f"Webhook processed, sync result: {sync_result}"}
+            else:
+                print(f"[WEBHOOK] Could not find sync state for item {item_id}")
+                return {"success": False, "message": "Item not found"}
+        
+        else:
+            print(f"[WEBHOOK] Unhandled webhook code: {webhook_code}")
+            return {"success": True, "message": "Webhook received (unhandled)"}
+            
+    except Exception as e:
+        print(f"[WEBHOOK] Error processing webhook: {e}")
         raise HTTPException(status_code=500, detail="Internal server error") 

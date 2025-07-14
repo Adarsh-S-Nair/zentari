@@ -45,19 +45,23 @@ const CategoryDropdown = ({
     const query = searchQuery.toLowerCase().trim()
 
     categories.forEach(category => {
-      if (query && !category.name.toLowerCase().includes(query) && 
-          !category.primary_group?.toLowerCase().includes(query)) {
+      // Use group info from category_groups
+      const groupName = category.group_name || 'Other'
+      const groupId = category.group_id || 'other'
+      const groupColor = category.color // fallback to category color for now
+      // Search by category name or group name
+      if (query && !category.name.toLowerCase().includes(query) &&
+          !(groupName && groupName.toLowerCase().includes(query))) {
         return
       }
-      const group = category.primary_group || 'Other'
-      if (!grouped[group]) {
-        grouped[group] = {
-          name: group,
-          color: category.color,
+      if (!grouped[groupId]) {
+        grouped[groupId] = {
+          name: groupName,
+          color: groupColor,
           categories: []
         }
       }
-      grouped[group].categories.push(category)
+      grouped[groupId].categories.push(category)
     })
 
     return grouped
