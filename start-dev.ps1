@@ -3,7 +3,7 @@ Write-Host ""
 
 # Frontend
 Write-Host "Preparing frontend environment variables..." -ForegroundColor Cyan
-Copy-Item -Path "frontend\.env.development" -Destination "frontend\.env" -Force
+Copy-Item -Path "frontend\.env.dev-local" -Destination "frontend\.env" -Force
 
 Write-Host "Starting Frontend..." -ForegroundColor Yellow
 Set-Location frontend
@@ -16,7 +16,7 @@ Write-Host "Starting Backend..." -ForegroundColor Yellow
 Set-Location backend
 
 Write-Host "Preparing backend environment variables..." -ForegroundColor Cyan
-Copy-Item -Path ".env.development" -Destination ".env" -Force
+Copy-Item -Path ".env.dev-local" -Destination ".env" -Force
 
 Write-Host "Freeing port 8000 if in use..." -ForegroundColor Cyan
 try {

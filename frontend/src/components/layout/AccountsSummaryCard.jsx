@@ -4,8 +4,12 @@ import { IoMdCash } from 'react-icons/io';
 import { FiInfo } from 'react-icons/fi';
 import InfoBubble from '../ui/InfoBubble';
 import { formatCurrency } from '../../utils/formatters';
+import { getRawBalance } from './accountsUtils';
 
 const AccountsSummaryCard = ({ grouped }) => {
+  // Debug: Log credit and loan account balances
+  console.log('Credit accounts:', grouped.credit);
+  console.log('Loan accounts:', grouped.loan);
   const [showNetWorthInfo, setShowNetWorthInfo] = useState(false);
   const [showAssetsInfo, setShowAssetsInfo] = useState(false);
   const [showLiabilitiesInfo, setShowLiabilitiesInfo] = useState(false);
@@ -26,8 +30,8 @@ const AccountsSummaryCard = ({ grouped }) => {
 
   const assets = [...(grouped.cash || []), ...(grouped.investment || [])];
   const liabilities = [...(grouped.credit || []), ...(grouped.loan || [])];
-  const assetTotal = assets.reduce((sum, a) => sum + (a.balances?.current || 0), 0);
-  const liabilityTotal = liabilities.reduce((sum, a) => sum + (a.balances?.current || 0), 0);
+  const assetTotal = assets.reduce((sum, a) => sum + getRawBalance(a), 0);
+  const liabilityTotal = liabilities.reduce((sum, a) => sum + getRawBalance(a), 0);
   const totalBalance = assetTotal + liabilityTotal;
 
   return (
@@ -94,14 +98,14 @@ const AccountsSummaryCard = ({ grouped }) => {
             <div
               className="rounded-full"
               style={{
-                width: `${assetTotal > 0 ? (grouped.cash?.reduce((sum, a) => sum + (a.balances?.current || 0), 0) / assetTotal) * 100 : 0}%`,
+                width: `${assetTotal > 0 ? (grouped.cash?.reduce((sum, a) => sum + getRawBalance(a), 0) / assetTotal) * 100 : 0}%`,
                 background: 'rgba(255,255,255,0.65)',
               }}
             />
             <div
               className="rounded-full"
               style={{
-                width: `${assetTotal > 0 ? (grouped.investment?.reduce((sum, a) => sum + (a.balances?.current || 0), 0) / assetTotal) * 100 : 0}%`,
+                width: `${assetTotal > 0 ? (grouped.investment?.reduce((sum, a) => sum + getRawBalance(a), 0) / assetTotal) * 100 : 0}%`,
                 background: 'rgba(255,255,255,0.38)',
               }}
             />
@@ -144,14 +148,14 @@ const AccountsSummaryCard = ({ grouped }) => {
             <div
               className="rounded-full"
               style={{
-                width: `${liabilityTotal !== 0 ? (Math.abs(grouped.credit?.reduce((sum, a) => sum + (a.balances?.current || 0), 0)) / Math.abs(liabilityTotal)) * 100 : 0}%`,
+                width: `${liabilityTotal !== 0 ? (grouped.credit?.reduce((sum, a) => sum + getRawBalance(a), 0) / liabilityTotal) * 100 : 0}%`,
                 background: 'rgba(255,255,255,0.65)',
               }}
             />
             <div
               className="rounded-full"
               style={{
-                width: `${liabilityTotal !== 0 ? (Math.abs(grouped.loan?.reduce((sum, a) => sum + (a.balances?.current || 0), 0)) / Math.abs(liabilityTotal)) * 100 : 0}%`,
+                width: `${liabilityTotal !== 0 ? (grouped.loan?.reduce((sum, a) => sum + getRawBalance(a), 0) / liabilityTotal) * 100 : 0}%`,
                 background: 'rgba(255,255,255,0.38)',
               }}
             />

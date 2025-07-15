@@ -116,14 +116,14 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                   </div>
                   {/* Main info and category */}
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="text-[16px] truncate max-w-[120px] sm:max-w-[220px]" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
+                    <div className="text-[16px] truncate max-w-[220px] sm:max-w-[280px]" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[11px] font-normal" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(txn.datetime)}</span>
                     </div>
                     {txn.category_name && (
                       <div className="flex items-center gap-2 mt-1">
                         <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: txn.category_color || 'var(--color-primary)' }} />
-                        <span className="text-[10px] tracking-wide truncate max-w-[120px] sm:max-w-[180px]" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
+                        <span className="text-[10px] tracking-wide truncate max-w-[160px] sm:max-w-[240px]" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
                       </div>
                     )}
                   </div>

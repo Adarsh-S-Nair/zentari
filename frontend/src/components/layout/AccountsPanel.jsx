@@ -12,6 +12,7 @@ import {
   getTotal,
   getActiveTabAccounts,
   getActiveTabLabel,
+  getRawBalance,
 } from './accountsUtils';
 import noAccountsImage from '../../assets/no-accounts.png';
 import CircleUserToggle from './CircleUserToggle';
@@ -101,8 +102,8 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers, activeTab: propA
   // Calculate total balance (same as AccountsSummaryCard)
   const assets = [...(grouped.cash || []), ...(grouped.investment || [])];
   const liabilities = [...(grouped.credit || []), ...(grouped.loan || [])];
-  const assetTotal = getTotal(assets);
-  const liabilityTotal = getTotal(liabilities);
+  const assetTotal = assets.reduce((sum, a) => sum + getRawBalance(a), 0);
+  const liabilityTotal = liabilities.reduce((sum, a) => sum + getRawBalance(a), 0);
   const totalBalance = assetTotal + liabilityTotal;
 
   // Helper functions for hover with delay

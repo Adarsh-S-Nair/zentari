@@ -120,7 +120,6 @@ export default function LandingPage() {
   return (
     <div
       style={{
-        minHeight: '100dvh',
         minHeight: '100vh',
         width: '100%',
         display: 'flex',

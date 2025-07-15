@@ -8,6 +8,7 @@ import ContextMenu from '../ui/ContextMenu';
 import { formatCurrency, formatLastUpdated } from '../../utils/formatters';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useFinancial } from '../../contexts/FinancialContext';
+import { getDisplayBalance } from './accountsUtils';
 
 const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => {
   const [menuOpenId, setMenuOpenId] = useState(null);
@@ -55,7 +56,7 @@ const AccountsList = ({ accounts, activeTab, getAccountTypeIcon, getTotal }) => 
       {/* Card grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-5 w-full mx-auto">
         {sortedAccounts.map((acc) => {
-          const balance = acc.balances?.current || 0;
+          const balance = getDisplayBalance(acc);
           const isZero = balance === 0;
           const lastSync = acc.item_id && plaidItems[acc.item_id]?.last_transaction_sync;
           if (!triggerRefs.current[acc.account_id]) {

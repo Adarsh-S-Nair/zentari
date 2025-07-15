@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 .env
-.env.production
-.env.development
+.env.prod-local
+.env.dev-local
 
 __pycache__/
