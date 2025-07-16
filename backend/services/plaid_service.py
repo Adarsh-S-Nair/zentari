@@ -389,6 +389,41 @@ class PlaidService:
                 "error": str(e)
             }
     
+    def get_transactions_by_ids(self, access_token: str, transaction_ids: list):
+        """
+        Get full transaction data for specific transaction IDs
+        This is used to fetch modified transactions from the sync API
+        """
+        try:
+            if not transaction_ids:
+                return {"success": True, "transactions": []}
+            
+            # Use the regular get_transactions method with a wide date range
+            # and then filter by the specific transaction IDs
+            transactions_result = self.get_transactions(access_token, days_back=730)
+            
+            if not transactions_result.get('success'):
+                return transactions_result
+            
+            all_transactions = transactions_result.get('transactions', [])
+            
+            # Filter to only include the requested transaction IDs
+            filtered_transactions = [
+                txn for txn in all_transactions 
+                if txn.get('plaid_transaction_id') in transaction_ids
+            ]
+            
+            return {
+                "success": True,
+                "transactions": filtered_transactions,
+                "request_id": transactions_result.get('request_id')
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
     def get_account_balances(self, access_token: str, account_ids: list = None):
         """
         Get current balances for accounts

@@ -153,11 +153,41 @@ def sync_transactions_for_item(supabase_service, plaid_service, user_id, item):
             'success': False,
             'error': sync_result.get('error')
         }
-    # Store new/modified transactions
+    
+    # Store new transactions
     added = sync_result.get('added', [])
     print(f"[SYNC] {len(added)} transactions to add for item {item_id}")
     store_result = supabase_service.store_transactions(added)
     print(f"[SYNC] store_transactions result: {store_result}")
+    
+    # Handle modified transactions - fetch full transaction data for each modified ID
+    modified_ids = sync_result.get('modified', [])
+    modified_count = 0
+    if modified_ids:
+        print(f"[SYNC] {len(modified_ids)} modified transaction IDs for item {item_id}")
+        # Fetch full transaction data for modified transactions
+        modified_transactions = plaid_service.get_transactions_by_ids(access_token, modified_ids)
+        if modified_transactions.get('success'):
+            modified_count = len(modified_transactions.get('transactions', []))
+            print(f"[SYNC] Fetched {modified_count} modified transactions for item {item_id}")
+            # Update modified transactions using dedicated update method
+            modified_update_result = supabase_service.update_transactions(modified_transactions.get('transactions', []))
+            print(f"[SYNC] modified update_transactions result: {modified_update_result}")
+        else:
+            print(f"[SYNC] Failed to fetch modified transactions for item {item_id}: {modified_transactions.get('error')}")
+    
+    # Handle removed transactions - delete them from our database
+    removed_ids = sync_result.get('removed', [])
+    removed_count = 0
+    if removed_ids:
+        print(f"[SYNC] {len(removed_ids)} removed transaction IDs for item {item_id}")
+        # Delete removed transactions from our database
+        removed_result = supabase_service.delete_transactions_by_plaid_ids(removed_ids)
+        if removed_result.get('success'):
+            removed_count = removed_result.get('deleted_count', 0)
+            print(f"[SYNC] Deleted {removed_count} removed transactions for item {item_id}")
+        else:
+            print(f"[SYNC] Failed to delete removed transactions for item {item_id}: {removed_result.get('error')}")
     
     # Update account balances if they're included in the response
     balance_updates = 0
@@ -177,6 +207,8 @@ def sync_transactions_for_item(supabase_service, plaid_service, user_id, item):
         'item_id': item_id,
         'success': True,
         'added_count': len(added),
+        'modified_count': modified_count,
+        'removed_count': removed_count,
         'balance_updates': balance_updates,
         'error': store_result.get('error') if not store_result.get('success') else None
     }

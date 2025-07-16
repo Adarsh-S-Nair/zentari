@@ -411,7 +411,7 @@ class SupabaseService:
     
     # Transaction Methods (simplified)
     def store_transactions(self, transactions: list):
-        """Store transactions in the database"""
+        """Store new transactions in the database using upsert (insert or update if exists)"""
         try:
             if not transactions:
                 return {"success": True, "message": "No transactions to store"}
@@ -479,6 +479,77 @@ class SupabaseService:
             print(f"Error storing transactions: {e}")
             return {"success": False, "error": str(e)}
     
+    def update_transactions(self, transactions: list):
+        """Update existing transactions in the database (assumes transactions already exist)"""
+        try:
+            if not transactions:
+                return {"success": True, "message": "No transactions to update"}
+            
+            transaction_data = []
+            for transaction in transactions:
+                # Get account UUID from plaid account_id
+                account_response = self.client.table('accounts').select('id').eq('account_id', transaction['account_id']).execute()
+                
+                if account_response.data:
+                    account_uuid = account_response.data[0]['id']
+                    
+                    # Get or create category from personal_finance_category
+                    category_uuid = None
+                    if transaction.get('personal_finance_category'):
+                        # Use the detailed category from personal_finance_category
+                        personal_finance_category = transaction['personal_finance_category']
+                        if isinstance(personal_finance_category, dict) and personal_finance_category.get('detailed'):
+                            # Extract the label by removing the primary category prefix
+                            detailed = personal_finance_category['detailed']
+                            primary = personal_finance_category.get('primary', '')
+                            if primary and detailed.startswith(primary + '_'):
+                                # Remove the primary prefix and underscore
+                                label = detailed[len(primary) + 1:]  # +1 for the underscore
+                                category_uuid = self.get_or_create_category(label)
+                            else:
+                                # Fallback: use the detailed as-is
+                                category_uuid = self.get_or_create_category(detailed)
+                    elif transaction.get('category'):
+                        # Fallback to old category field if personal_finance_category is not available
+                        category_uuid = self.get_or_create_category(transaction['category'])
+                    
+                    transaction_data.append({
+                        'account_id': account_uuid,
+                        'plaid_transaction_id': transaction['plaid_transaction_id'],
+                        'datetime': transaction['datetime'],
+                        'description': transaction['description'],
+                        'category_id': category_uuid,
+                        'merchant_name': transaction.get('merchant_name'),
+                        'icon_url': transaction.get('icon_url'),
+                        'personal_finance_category': transaction.get('personal_finance_category'),
+                        'amount': -transaction['amount'],
+                        'currency_code': transaction['currency_code'],
+                        'pending': transaction['pending'],
+                        'location': transaction.get('location'),
+                        'payment_channel': transaction.get('payment_channel'),
+                        'website': transaction.get('website')
+                    })
+            
+            if transaction_data:
+                # Use update instead of upsert for modified transactions
+                updated_count = 0
+                for txn_data in transaction_data:
+                    response = self.client.table('transactions').update(txn_data).eq('plaid_transaction_id', txn_data['plaid_transaction_id']).execute()
+                    if response.data:
+                        updated_count += 1
+                
+                return {
+                    "success": True,
+                    "message": f"Updated {updated_count} transactions",
+                    "updated_count": updated_count
+                }
+            else:
+                return {"success": True, "message": "No valid transactions to update"}
+                
+        except Exception as e:
+            print(f"Error updating transactions: {e}")
+            return {"success": False, "error": str(e)}
+
     def get_user_transactions(self, user_id: str, limit: int = 100, offset: int = 0):
         """Get transactions for a user"""
         try:
@@ -509,6 +580,26 @@ class SupabaseService:
                 return {"success": True, "transactions": []}
         except Exception as e:
             print(f"Error getting user transactions: {e}")
+            return {"success": False, "error": str(e)}
+
+    def delete_transactions_by_plaid_ids(self, plaid_transaction_ids: list):
+        """Delete transactions from the database by their Plaid transaction IDs"""
+        try:
+            if not plaid_transaction_ids:
+                return {"success": True, "deleted_count": 0}
+            
+            # Delete transactions that match the provided Plaid transaction IDs
+            response = self.client.table('transactions').delete().in_('plaid_transaction_id', plaid_transaction_ids).execute()
+            
+            deleted_count = len(response.data) if response.data else 0
+            
+            return {
+                "success": True,
+                "deleted_count": deleted_count,
+                "message": f"Deleted {deleted_count} transactions"
+            }
+        except Exception as e:
+            print(f"Error deleting transactions by Plaid IDs: {e}")
             return {"success": False, "error": str(e)}
 
     # Category Methods (simplified)

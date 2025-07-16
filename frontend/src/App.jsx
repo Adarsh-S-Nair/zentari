@@ -114,7 +114,7 @@ function App() {
   const [circleUsers, setCircleUsers] = useState([]);
 
   const allTabs = [
-    { label: 'Accounts', icon: <IoFolderOpen size={18} />, route: '/accounts/cash', hasContent: false, requiresAuth: true },
+    { label: 'Accounts', icon: <IoFolderOpen size={18} />, route: '/accounts', hasContent: false, requiresAuth: true },
     { label: 'Transactions', icon: <FaReceipt size={18} />, route: '/transactions', hasContent: false, requiresAuth: true },
   ];
 

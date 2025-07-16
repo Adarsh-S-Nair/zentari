@@ -38,6 +38,8 @@ def sync_transactions_for_user(user_id):
                 if result.get("success"):
                     results = result.get("results", [])
                     total_added = 0
+                    total_modified = 0
+                    total_removed = 0
                     total_errors = 0
                     
                     print(f"✅ Sync successful for user {user_id}")
@@ -47,6 +49,8 @@ def sync_transactions_for_user(user_id):
                         item_id = item_result.get("item_id", "unknown")
                         success = item_result.get("success", False)
                         added_count = item_result.get("added_count", 0)
+                        modified_count = item_result.get("modified_count", 0)
+                        removed_count = item_result.get("removed_count", 0)
                         balance_updates = item_result.get("balance_updates", 0)
                         error = item_result.get("error")
                         skipped = item_result.get("skipped", False)
@@ -56,12 +60,14 @@ def sync_transactions_for_user(user_id):
                             print(f"   ⏭️  Item {item_id}: Skipped - {reason}")
                         elif success:
                             total_added += added_count
-                            print(f"   ✅ Item {item_id}: {added_count} transactions added, {balance_updates} balance updates")
+                            total_modified += modified_count
+                            total_removed += removed_count
+                            print(f"   ✅ Item {item_id}: {added_count} transactions added, {modified_count} modified, {removed_count} removed, {balance_updates} balance updates")
                         else:
                             total_errors += 1
                             print(f"   ❌ Item {item_id}: Failed - {error}")
                     
-                    print(f"📈 Summary: {total_added} total transactions added, {total_errors} errors")
+                    print(f"📈 Summary: {total_added} total transactions added, {total_modified} modified, {total_removed} removed, {total_errors} errors")
                 else:
                     print(f"❌ Sync failed for user {user_id}: {result.get('error', 'Unknown error')}")
             except ValueError:

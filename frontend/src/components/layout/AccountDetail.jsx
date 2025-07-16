@@ -140,7 +140,6 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                       src={account.institution_logo}
                       alt={account.institution_name || 'Bank'}
                       className="w-full h-full object-cover"
-                      style={{ filter: 'grayscale(1) brightness(2.2) contrast(0.7) opacity(0.5)' }}
                     />
                   )}
                 </div>
@@ -173,7 +172,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
                         className="flex items-center min-w-0 cursor-pointer group"
                         onClick={handleNameEditStart}
                       >
-                        <span className="text-[17px] font-semibold -tracking-[0.5px] overflow-hidden text-ellipsis whitespace-nowrap flex-shrink-0 group-hover:underline">
+                        <span className="text-[17px] font-semibold -tracking-[0.5px] overflow-hidden text-ellipsis whitespace-nowrap flex-shrink-0 group-hover:underline max-w-[200px] sm:max-w-[300px]">
                           {localName}
                         </span>
                         <IconButton className="ml-2 flex-shrink-0">

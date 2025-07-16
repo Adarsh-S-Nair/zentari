@@ -213,7 +213,6 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
                   >
                     {account?.institution_logo ? (
                       <img src={account.institution_logo} className="w-full h-full object-cover rounded-full"
-                        style={{ filter: 'grayscale(1) brightness(1.2) contrast(0.8)' }}
                         alt={account.institution_name || 'Bank'}
                       />
                     ) : (
