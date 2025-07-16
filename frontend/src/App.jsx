@@ -607,37 +607,52 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
   // Disable main page scroll when drawer is open on desktop
   useEffect(() => {
     if (!isMobile) {
+      // Force disable scroll immediately
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${window.scrollY}px`;
+      
       return () => {
-        document.body.style.overflow = 'auto';
+        // Restore scroll state
+        const scrollY = document.body.style.top;
+        document.body.style.position = '';
+        document.body.style.width = '';
+        document.body.style.top = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
       };
     }
-  }, [isMobile]);
+  }, [isMobile, transactionId]);
   
   // On mobile, show as full page instead of drawer
   if (isMobile) {
     return (
-      <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
-        <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
-          <Topbar 
-            user={user} 
-            onLoginClick={() => setLoginOpen(true)} 
-            currentPage={'Transaction'} 
-            maxWidth={maxWidth} 
-            isMobile={isMobile}
-            showBackArrow={true}
-            onBack={() => navigate('/transactions')}
-          />
-          <div className="flex-1 pb-[60px]">
+      <div className="flex min-h-screen w-full relative overflow-hidden" style={{ background: 'var(--color-bg-primary)' }}>
+        <div className="flex-1 flex flex-col sm:pb-0 ml-[0px] relative">
+          <div className="fixed top-0 left-0 right-0 z-50">
+            <Topbar 
+              user={user} 
+              onLoginClick={() => setLoginOpen(true)} 
+              currentPage={'Transaction'} 
+              maxWidth={maxWidth} 
+              isMobile={isMobile}
+              showBackArrow={true}
+              onBack={() => navigate('/transactions')}
+            />
+          </div>
+          <div className="flex-1 pb-[60px] pt-[60px] overflow-y-auto">
             <TransactionDetail maxWidth={maxWidth} transaction={transaction} />
           </div>
-          <MobileBottomBar
-            user={user}
-            onLoginClick={() => setLoginOpen(true)}
-            setLogoutOpen={() => {}}
-            visibleTabs={visibleTabs}
-            currentTab={'/transactions'}
-          />
+          <div className="fixed bottom-0 left-0 right-0 z-50">
+            <MobileBottomBar
+              user={user}
+              onLoginClick={() => setLoginOpen(true)}
+              setLogoutOpen={() => {}}
+              visibleTabs={visibleTabs}
+              currentTab={'/transactions'}
+            />
+          </div>
         </div>
       </div>
     );
@@ -693,37 +708,52 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
   // Disable main page scroll when drawer is open on desktop
   useEffect(() => {
     if (!isMobile) {
+      // Force disable scroll immediately
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${window.scrollY}px`;
+      
       return () => {
-        document.body.style.overflow = 'auto';
+        // Restore scroll state
+        const scrollY = document.body.style.top;
+        document.body.style.position = '';
+        document.body.style.width = '';
+        document.body.style.top = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
       };
     }
-  }, [isMobile]);
+  }, [isMobile, accountId]);
   
   // On mobile, show as full page instead of drawer
   if (isMobile) {
     return (
-      <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
-        <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
-          <Topbar 
-            user={user} 
-            onLoginClick={() => setLoginOpen(true)} 
-            currentPage={'Accounts'} 
-            maxWidth={maxWidth} 
-            isMobile={isMobile}
-            showBackArrow={true}
-            onBack={() => navigate(getBackPath())}
-          />
-          <div className="flex-1 pb-[60px]">
+      <div className="flex min-h-screen w-full relative overflow-hidden" style={{ background: 'var(--color-bg-primary)' }}>
+        <div className="flex-1 flex flex-col sm:pb-0 ml-[0px] relative">
+          <div className="fixed top-0 left-0 right-0 z-50">
+            <Topbar 
+              user={user} 
+              onLoginClick={() => setLoginOpen(true)} 
+              currentPage={'Accounts'} 
+              maxWidth={maxWidth} 
+              isMobile={isMobile}
+              showBackArrow={true}
+              onBack={() => navigate(getBackPath())}
+            />
+          </div>
+          <div className="flex-1 pb-[60px] pt-[60px] overflow-y-auto">
             <AccountDetail account={account} />
           </div>
-          <MobileBottomBar
-            user={user}
-            onLoginClick={() => setLoginOpen(true)}
-            setLogoutOpen={() => {}}
-            visibleTabs={visibleTabs}
-            currentTab={'/accounts'}
-          />
+          <div className="fixed bottom-0 left-0 right-0 z-50">
+            <MobileBottomBar
+              user={user}
+              onLoginClick={() => setLoginOpen(true)}
+              setLogoutOpen={() => {}}
+              visibleTabs={visibleTabs}
+              currentTab={'/accounts'}
+            />
+          </div>
         </div>
       </div>
     );
