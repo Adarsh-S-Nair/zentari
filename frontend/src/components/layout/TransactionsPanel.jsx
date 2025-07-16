@@ -29,6 +29,18 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
       txn.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Group transactions by date
+  const groupedTransactions = React.useMemo(() => {
+    const grouped = {};
+    filteredTransactions.forEach(txn => {
+      const date = formatDate(txn.datetime);
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(txn);
+    });
+    return grouped;
+  }, [filteredTransactions]);
 
 
   return (
@@ -91,49 +103,57 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                 : 'No transactions match your filters.'}
             </div>
           ) : (
-            filteredTransactions.map((txn, i) => {
-              const isPositive = txn.amount > 0;
-              const amountColor = isPositive ? 'var(--color-success)' : 'var(--color-text-secondary)';
-              const amountPrefix = isPositive ? '+' : '';
-              return (
-                <div
-                  key={i}
-                  className="flex items-center px-2 py-4 min-h-[80px] box-border border-b transition-colors duration-150 cursor-pointer w-full max-w-full overflow-x-hidden"
-                  style={{ background: 'var(--color-bg-primary)', borderColor: 'var(--color-border-primary)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-hover)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-bg-primary)'}
-                  onClick={() => navigate(`/transaction/${txn.id}`)}
-                >
-                  {/* Icon/avatar */}
-                  <div className="flex-shrink-0 mr-3 sm:mr-4 w-12 h-12 rounded-full flex items-center justify-center overflow-hidden self-center" style={{ background: txn.icon_url ? 'transparent' : 'var(--color-bg-primary)', border: 'none' }}>
-                    {txn.icon_url ? (
-                      <img src={txn.icon_url} alt="icon" className="w-full h-full rounded-full object-cover block" />
-                    ) : txn.category_icon_lib && txn.category_icon_name ? (
-                      <CategoryIcon lib={txn.category_icon_lib} name={txn.category_icon_name} size={22} color={'var(--color-text-muted)'} />
-                    ) : (
-                      <FaChevronRight size={20} style={{ color: 'var(--color-text-muted)' }} />
-                    )}
-                  </div>
-                  {/* Main info and category */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="text-[16px] truncate max-w-[140px] sm:max-w-[220px]" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[11px] font-normal" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(txn.datetime)}</span>
-                    </div>
-                    {txn.category_name && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: txn.category_color || 'var(--color-primary)' }} />
-                        <span className="text-[10px] tracking-wide truncate max-w-[80px] sm:max-w-[160px]" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
-                      </div>
-                    )}
-                  </div>
-                  {/* Amount */}
-                  <div className="flex-shrink-0 text-right text-[14px] min-w-[56px] sm:min-w-[70px] ml-2 sm:ml-3 whitespace-nowrap transition-colors duration-150 flex items-center justify-center self-center" style={{ color: amountColor }}>
-                    {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
-                  </div>
+            Object.entries(groupedTransactions).map(([date, transactionsForDate], dateIndex) => (
+              <div key={date}>
+                {/* Date divider */}
+                <div className="px-2 py-3 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
+                  <span className="text-[12px] font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                    {date}
+                  </span>
                 </div>
-              );
-            })
+                {/* Transactions for this date */}
+                {transactionsForDate.map((txn, i) => {
+                  const isPositive = txn.amount > 0;
+                  const amountColor = isPositive ? 'var(--color-success)' : 'var(--color-text-secondary)';
+                  const amountPrefix = isPositive ? '+' : '';
+                  return (
+                    <div
+                      key={txn.id || i}
+                      className="flex items-center px-2 py-4 min-h-[70px] box-border border-b transition-colors duration-150 cursor-pointer w-full max-w-full overflow-x-hidden"
+                      style={{ background: 'var(--color-bg-primary)', borderColor: 'var(--color-border-primary)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-bg-primary)'}
+                      onClick={() => navigate(`/transaction/${txn.id}`)}
+                    >
+                      {/* Icon/avatar - made smaller */}
+                      <div className="flex-shrink-0 mr-3 sm:mr-4 w-10 h-10 rounded-full flex items-center justify-center overflow-hidden self-center" style={{ background: txn.icon_url ? 'transparent' : 'var(--color-bg-primary)', border: 'none' }}>
+                        {txn.icon_url ? (
+                          <img src={txn.icon_url} alt="icon" className="w-full h-full rounded-full object-cover block" />
+                        ) : txn.category_icon_lib && txn.category_icon_name ? (
+                          <CategoryIcon lib={txn.category_icon_lib} name={txn.category_icon_name} size={18} color={'var(--color-text-muted)'} />
+                        ) : (
+                          <FaChevronRight size={16} style={{ color: 'var(--color-text-muted)' }} />
+                        )}
+                      </div>
+                      {/* Main info and category */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="text-[16px] truncate max-w-[140px] sm:max-w-[220px]" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
+                        {txn.category_name && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: txn.category_color || 'var(--color-primary)' }} />
+                            <span className="text-[10px] tracking-wide truncate max-w-[80px] sm:max-w-[160px]" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Amount */}
+                      <div className="flex-shrink-0 text-right text-[14px] min-w-[56px] sm:min-w-[70px] ml-2 sm:ml-3 whitespace-nowrap transition-colors duration-150 flex items-center justify-center self-center" style={{ color: amountColor }}>
+                        {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))
           )}
         </div>
       </main>
