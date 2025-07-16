@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useFinancial } from '../../contexts/FinancialContext'
+import Button from './Button'
+import { FaWrench } from 'react-icons/fa'
 
 const categoryListStyles = `
   @keyframes slideInUp {
     from {
       opacity: 0;
-      transform: translateY(6px);
+      transform: translateY(4px);
     }
     to {
       opacity: 1;
@@ -14,18 +16,18 @@ const categoryListStyles = `
   }
   
   .category-group-content {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s ease-out;
     overflow: hidden;
   }
   
   .category-group-content.expanded {
-    max-height: 1000px;
+    max-height: 500px;
     transform: translateY(0);
   }
   
   .category-group-content.collapsed {
     max-height: 0;
-    transform: translateY(-4px);
+    transform: translateY(-2px);
   }
 `
 
@@ -33,7 +35,8 @@ const CategoryDropdown = ({
   isOpen, 
   onClose, 
   selectedCategory, 
-  onCategorySelect 
+  onCategorySelect,
+  onCreateRule
 }) => {
   const { categories } = useFinancial()
   const [expandedGroup, setExpandedGroup] = useState(null)
@@ -103,32 +106,44 @@ const CategoryDropdown = ({
       <style>{categoryListStyles}</style>
       <div className="overflow-hidden max-h-none opacity-100 px-4 pt-3 pb-5">
         <div className="grid grid-cols-1">
-          {/* Search */}
-          <div className="flex items-center gap-2 pb-4 relative">
-            <input
-              type="text"
-              placeholder="Search categories..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full p-3 pr-10 border text-[13px] bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          {/* Search and Create Rule */}
+          <div className="flex items-center gap-2 pb-4">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="Search categories..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full p-3 pr-10 border text-[13px] bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  borderColor: 'var(--color-border-primary)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'inherit',
+                  background: 'var(--color-bg-primary)'
+                }}
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center h-full">
+                <svg 
+                  className="w-4 h-4 pointer-events-none"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+            </div>
+            <button
+              onClick={onCreateRule}
+              className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:scale-105"
               style={{
-                borderColor: 'var(--color-border-primary)',
-                color: 'var(--color-text-primary)',
-                fontFamily: 'inherit',
-                background: 'var(--color-bg-primary)'
+                color: 'var(--color-text-white)',
+                background: 'var(--color-gradient-primary)'
               }}
-            />
-            <span className="-ml-8 flex items-center h-full">
-              <svg 
-                className="w-4 h-4 pointer-events-none"
-                style={{ color: 'var(--color-text-secondary)' }}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </span>
+            >
+              <FaWrench size={16} />
+            </button>
           </div>
 
           {/* Category Groups */}
@@ -136,7 +151,7 @@ const CategoryDropdown = ({
             <div key={groupName}>
               <button
                 onClick={() => toggleGroup(groupName)}
-                className="w-full flex items-center gap-3 px-2 py-3 rounded-md transition-colors duration-150 text-left cursor-pointer"
+                className="w-full flex items-center gap-3 px-2 py-3 rounded-md transition-colors duration-100 text-left cursor-pointer"
                 style={{ 
                   backgroundColor: 'transparent',
                   color: 'var(--color-text-primary)'
@@ -150,7 +165,7 @@ const CategoryDropdown = ({
                 />
                 <span className="text-[13px] flex-1">{group.name}</span>
                 <svg 
-                  className={`w-4 h-4 transition-transform ${expandedGroup === groupName ? 'rotate-180' : ''}`}
+                  className={`w-4 h-4 transition-transform duration-100 ${expandedGroup === groupName ? 'rotate-180' : ''}`}
                   style={{ color: 'var(--color-text-secondary)' }}
                   fill="none" 
                   stroke="currentColor" 
@@ -173,7 +188,7 @@ const CategoryDropdown = ({
                       <button
                         key={category.id}
                         onClick={() => handleCategorySelect(category)}
-                        className="w-full px-3 py-2 text-left rounded-md text-[13px] transition-colors duration-100 cursor-pointer"
+                        className="w-full px-3 py-2 text-left rounded-md text-[13px] transition-colors duration-75 cursor-pointer"
                         style={{
                           backgroundColor: isSelected ? 'var(--color-bg-primary)' : 'transparent',
                           color: 'var(--color-text-primary)'

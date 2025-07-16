@@ -152,7 +152,7 @@ function Button({
       onFocus={() => setIsHovering(true)}
       onBlur={() => setIsHovering(false)}
       style={{ 
-        color: 'var(--color-text-white)',
+        color: darkText ? 'var(--color-text-secondary)' : 'var(--color-text-white)',
         background: color === 'networth' ? 'var(--color-gradient-primary)' : undefined,
         ...(color === 'networth' && isHovering && !isInactive && { background: 'var(--color-gradient-primary-hover)' }),
         ...(color === 'networth' && isInactive && { background: 'var(--color-gradient-primary-active)' })

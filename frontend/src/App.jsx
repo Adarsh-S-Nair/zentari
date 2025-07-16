@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useMemo, createContext } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -27,11 +27,77 @@ import { IoFolderOpen } from 'react-icons/io5';
 import { FaReceipt } from 'react-icons/fa';
 import { FiArrowLeft } from 'react-icons/fi';
 import { FinancialContext } from './contexts/FinancialContext';
-import { RightDrawer } from './components/ui';
+import { RightDrawer, Modal } from './components/ui';
 import AccountDetail from './components/layout/AccountDetail';
 
 import LandingPage from './components/layout/LandingPage';
 import TransactionDetail from './components/layout/TransactionDetail';
+
+// Modal Context
+const ModalContext = createContext();
+
+export function ModalProvider({ children }) {
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    header: '',
+    description: '',
+    headerIcon: null,
+    buttons: [
+      { 
+        text: 'Cancel', 
+        color: 'gray', 
+        onClick: null,
+        icon: null
+      },
+      { 
+        text: 'Confirm', 
+        color: 'networth', 
+        onClick: null,
+        icon: null
+      }
+    ]
+  });
+
+  const showModal = (config) => {
+    setModalConfig({
+      ...config,
+      isOpen: true,
+    });
+  };
+
+  const hideModal = () => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleButtonClick = (button) => {
+    if (button.onClick) {
+      button.onClick();
+    }
+    hideModal();
+  };
+
+  return (
+    <ModalContext.Provider value={{ showModal, hideModal }}>
+      {children}
+      <Modal
+        isOpen={modalConfig.isOpen}
+        onClose={hideModal}
+        header={modalConfig.header}
+        description={modalConfig.description}
+        headerIcon={modalConfig.headerIcon}
+        buttons={modalConfig.buttons}
+      />
+    </ModalContext.Provider>
+  );
+}
+
+export const useModal = () => {
+  const context = useContext(ModalContext);
+  if (!context) {
+    throw new Error('useModal must be used within a ModalProvider');
+  }
+  return context;
+}
 
 function App() {
   const [loading, setLoading] = useState(false);
@@ -208,39 +274,41 @@ function App() {
 
   return (
     <FinancialProvider setToast={setToast}>
-      <LoginModal
-        isOpen={loginOpen}
-        onClose={() => setLoginOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
-      <Router>
-        <AppContent
-          loading={loading}
-          loadingPhase={loadingPhase}
-          loginOpen={loginOpen}
-          setLoginOpen={setLoginOpen}
-          user={user}
-          userChecked={userChecked}
-          setUser={setUser}
-          result={result}
-          setResult={setResult}
-          toast={toast}
-          setToast={setToast}
-          currentSimDate={currentSimDate}
-          setCurrentSimDate={setCurrentSimDate}
-          logoutOpen={logoutOpen}
-          setLogoutOpen={setLogoutOpen}
-          isTablet={isTablet}
-          isMobile={isMobile}
-          allTabs={allTabs}
-          visibleTabs={visibleTabs}
-          form={form}
-          setForm={setForm}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          circleUsers={circleUsers}
+      <ModalProvider>
+        <LoginModal
+          isOpen={loginOpen}
+          onClose={() => setLoginOpen(false)}
+          onLoginSuccess={handleLoginSuccess}
         />
-      </Router>
+        <Router>
+          <AppContent
+            loading={loading}
+            loadingPhase={loadingPhase}
+            loginOpen={loginOpen}
+            setLoginOpen={setLoginOpen}
+            user={user}
+            userChecked={userChecked}
+            setUser={setUser}
+            result={result}
+            setResult={setResult}
+            toast={toast}
+            setToast={setToast}
+            currentSimDate={currentSimDate}
+            setCurrentSimDate={setCurrentSimDate}
+            logoutOpen={logoutOpen}
+            setLogoutOpen={setLogoutOpen}
+            isTablet={isTablet}
+            isMobile={isMobile}
+            allTabs={allTabs}
+            visibleTabs={visibleTabs}
+            form={form}
+            setForm={setForm}
+            handleChange={handleChange}
+            handleSubmit={handleSubmit}
+            circleUsers={circleUsers}
+          />
+        </Router>
+      </ModalProvider>
     </FinancialProvider>
   );
 }

@@ -4,6 +4,8 @@ import { useFinancial } from '../../contexts/FinancialContext'
 import { useNavigate } from 'react-router-dom'
 import CategoryDropdown from '../ui/CategoryDropdown'
 import CategoryIcon from '../ui/CategoryIcon'
+import { useModal } from '../../App'
+import { FaPencilRuler } from 'react-icons/fa'
 
 const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColor }) => (
   <div
@@ -26,6 +28,7 @@ const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColo
 const TransactionDetail = ({ maxWidth = 700, transaction }) => {
   const { accounts, updateTransactionCategory, setToast } = useFinancial()
   const navigate = useNavigate()
+  const { showModal } = useModal()
   const [note, setNote] = useState(transaction?.notes || '')
   const [showCategories, setShowCategories] = useState(false)
   const dropdownRef = useRef(null)
@@ -155,7 +158,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
                     style={{ backgroundColor: localCategory.color }}
                   />
                 )}
-                <span className="text-[14px] truncate max-w-[120px] sm:max-w-[180px]" style={{ color: 'var(--color-text-secondary)' }}>
+                <span className="text-[14px] truncate max-w-[80px] sm:max-w-[120px]" style={{ color: 'var(--color-text-secondary)' }}>
                   {localCategory.name || 'Uncategorized'}
                 </span>
                 <svg 
@@ -187,6 +190,10 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
                 onClose={() => setShowCategories(false)}
                 selectedCategory={localCategory}
                 onCategorySelect={handleCategorySelect}
+                onCreateRule={() => {
+                  console.log("Create Rule button clicked")
+                  // This could open a modal or navigate to rule creation
+                }}
                 setToast={setToast}
               />
             </div>
