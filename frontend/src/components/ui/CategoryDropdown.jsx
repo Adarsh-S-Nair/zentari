@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useFinancial } from '../../contexts/FinancialContext'
+import { useModal } from '../../App'
 import Button from './Button'
 import { FaWrench } from 'react-icons/fa'
+import CategoryRuleForm from './CategoryRuleForm'
 
 const categoryListStyles = `
   @keyframes slideInUp {
@@ -39,24 +41,38 @@ const CategoryDropdown = ({
   onCreateRule
 }) => {
   const { categories } = useFinancial()
+  const { showModal } = useModal()
   const [expandedGroup, setExpandedGroup] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isFormValid, setIsFormValid] = useState(false)
+  const formRef = React.useRef(null)
 
   const groupedCategories = React.useMemo(() => {
-    if (!categories) return {}
+    console.log('[CATEGORY-DROPDOWN] Categories received:', categories?.length || 0)
+    if (!categories) {
+      console.log('[CATEGORY-DROPDOWN] No categories available')
+      return {}
+    }
+    
     const grouped = {}
     const query = searchQuery.toLowerCase().trim()
 
-    categories.forEach(category => {
+    categories.forEach((category, index) => {
+      if (index < 3) {
+        console.log(`[CATEGORY-DROPDOWN] Category ${index}:`, category)
+      }
+      
       // Use group info from category_groups
       const groupName = category.group_name || 'Other'
       const groupId = category.group_id || 'other'
       const groupColor = category.color // fallback to category color for now
+      
       // Search by category name or group name
       if (query && !category.name.toLowerCase().includes(query) &&
           !(groupName && groupName.toLowerCase().includes(query))) {
         return
       }
+      
       if (!grouped[groupId]) {
         grouped[groupId] = {
           name: groupName,
@@ -67,6 +83,9 @@ const CategoryDropdown = ({
       grouped[groupId].categories.push(category)
     })
 
+    console.log('[CATEGORY-DROPDOWN] Grouped categories:', Object.keys(grouped).length, 'groups')
+    console.log('[CATEGORY-DROPDOWN] Group names:', Object.values(grouped).map(g => g.name))
+    
     return grouped
   }, [categories, searchQuery])
 
@@ -78,6 +97,43 @@ const CategoryDropdown = ({
     setSearchQuery('')
     setExpandedGroup(null)
     onCategorySelect(category)
+  }
+
+  const handleCreateRule = () => {
+    showModal({
+      header: 'Create a Category Rule',
+      description: (
+        <CategoryRuleForm
+          categories={categories}
+          onSave={(rule) => {
+            console.log('Rule created:', rule)
+            // TODO: Save rule to backend
+          }}
+          onCancel={() => {
+            // Modal will close automatically
+          }}
+          onSubmitRef={formRef}
+          onValidityChange={setIsFormValid}
+        />
+      ),
+      buttons: [
+        { 
+          text: 'Cancel', 
+          color: 'gray', 
+          onClick: null
+        },
+        { 
+          text: 'Create Rule', 
+          color: 'networth', 
+          onClick: () => {
+            if (formRef.current?.isValid) {
+              formRef.current.submit()
+            }
+          },
+          disabled: !isFormValid
+        }
+      ]
+    })
   }
 
   useEffect(() => {
@@ -135,7 +191,7 @@ const CategoryDropdown = ({
               </span>
             </div>
             <button
-              onClick={onCreateRule}
+              onClick={handleCreateRule}
               className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:scale-105"
               style={{
                 color: 'var(--color-text-white)',

@@ -95,9 +95,15 @@ export default function Modal({
         
         {/* Content */}
         <div className="px-6 py-4">
-          <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-            {description}
-          </p>
+          {typeof description === 'string' ? (
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+              {description}
+            </p>
+          ) : (
+            <div className="text-sm leading-relaxed">
+              {description}
+            </div>
+          )}
         </div>
 
         {/* Buttons */}
@@ -119,6 +125,7 @@ export default function Modal({
               width="flex-1"
               darkText={button.color === 'gray'}
               icon={button.icon}
+              disabled={button.disabled}
             />
           ))}
         </div>

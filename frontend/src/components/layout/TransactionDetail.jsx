@@ -190,10 +190,6 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
                 onClose={() => setShowCategories(false)}
                 selectedCategory={localCategory}
                 onCategorySelect={handleCategorySelect}
-                onCreateRule={() => {
-                  console.log("Create Rule button clicked")
-                  // This could open a modal or navigate to rule creation
-                }}
                 setToast={setToast}
               />
             </div>

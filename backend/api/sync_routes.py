@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from typing import Optional
-from services.plaid_service import PlaidService
-from services.supabase_service import get_supabase_service
+from plaid_services import get_transactions
+from supabase_services import get_transactions as get_supabase_transactions, get_accounts, get_sync
 import os
 
 router = APIRouter(prefix="/sync", tags=["Account Synchronization"])
@@ -18,191 +18,65 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid authorization token")
 
-@router.post("/balances")
-async def sync_account_balances(user_id: str = Depends(get_current_user)):
-    """
-    Sync account balances for the current user using Plaid API
-    """
-    try:
-        supabase_service = get_supabase_service()
-        plaid_service = PlaidService()
-
-        # Fetch all accounts for the user
-        accounts_result = supabase_service.get_user_accounts(user_id)
-        if not accounts_result.get('success'):
-            raise HTTPException(status_code=500, detail="Failed to get accounts")
-
-        accounts = accounts_result.get('accounts', [])
-        token_to_account_ids = {}
-
-        # Group account IDs by access_token, only if auto_sync is True
-        for account in accounts:
-            # Skip if auto_sync is not True
-            if not account.get('auto_sync'):
-                continue
-
-            token = account.get('access_token')
-            account_id = account.get('account_id')
-
-            # Skip if missing token or account_id
-            if not token or not account_id:
-                continue
-
-            # Add account_id to the list for this access_token
-            token_to_account_ids.setdefault(token, []).append(account_id)
-
-        all_balances = []
-
-        # For each access_token, fetch balances for the filtered account_ids
-        for access_token, account_ids in token_to_account_ids.items():
-            print(f"Calling Plaid with access_token: {access_token}, account_ids: {account_ids}")
-            balances_result = plaid_service.get_account_balances(access_token, account_ids)
-            print(f"Plaid response for token {access_token}: {balances_result}")
-            if not balances_result.get('success'):
-                continue
-            all_balances.extend(balances_result.get('accounts', []))
-
-        # Prepare list of dicts with account_id, balances, and item_id for DB update
-        db_balances = []
-        for acct in all_balances:
-            db_bal = {
-                'account_id': acct.get('account_id'),
-                'balances': acct.get('balances'),
-                'item_id': acct.get('item_id') if 'item_id' in acct else None
-            }
-            db_balances.append(db_bal)
-        supabase_service.update_balances_and_snapshots(user_id, db_balances)
-
-        result = {"success": True, "accounts": all_balances}
-        print("/sync/balances result:", result)
-        return result
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Error in sync_account_balances: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-def update_account_balances_from_sync(supabase_service, user_id: str, accounts_with_balances: list) -> int:
-    """
-    Update account balances and create snapshots from sync response
-    """
-    try:
-        balance_updates = 0
-        
-        for account_data in accounts_with_balances:
-            account_id = account_data['account_id']
-            balances = account_data.get('balances')
-            
-            if balances:
-                # Get account UUID from our database
-                account_response = supabase_service.client.table('accounts').select('id').eq('account_id', account_id).eq('user_id', user_id).execute()
-                
-                if account_response.data:
-                    account_uuid = account_response.data[0]['id']
-                    
-                    # Update account balances in accounts table
-                    from datetime import datetime
-                    now = datetime.utcnow().isoformat()
-                    
-                    supabase_service.client.table('accounts').update({
-                        'balances': balances,
-                        'updated_at': now
-                    }).eq('id', account_uuid).execute()
-                    
-                    # Store balance snapshot
-                    snapshot_data = {
-                        'account_id': account_uuid,
-                        'available_balance': balances.get('available'),
-                        'current_balance': balances.get('current'),
-                        'limit_balance': balances.get('limit'),
-                        'currency_code': balances.get('iso_currency_code', 'USD'),
-                        'recorded_at': now
-                    }
-                    
-                    supabase_service.client.table('account_snapshots').insert(snapshot_data).execute()
-                    balance_updates += 1
-        
-        return balance_updates
-        
-    except Exception as e:
-        print(f"Error updating account balances from sync: {e}")
-        return 0
-
-def sync_transactions_for_item(supabase_service, plaid_service, user_id, item):
+def sync_transactions_for_item(supabase_transactions, plaid_transactions, supabase_accounts, sync_service, user_id, item):
     """Sync transactions for a single plaid_item if any associated account has auto_sync=True."""
     item_id = item.get('item_id')
     access_token = item.get('access_token')
     cursor = item.get('transaction_cursor')
+    
     if not item_id or not access_token:
         print(f"[SYNC] Skipping item {item_id}: missing item_id or access_token")
         return {'item_id': item_id, 'success': False, 'error': 'Missing item_id or access_token'}
+    
     # Only sync if at least one account for this item has auto_sync = True
-    accounts = supabase_service.get_accounts_for_item_with_auto_sync(user_id, item_id)
+    accounts = supabase_accounts.get_auto_sync(user_id, item_id)
     if not accounts:
         print(f"[SYNC] Skipping item {item_id}: no accounts with auto_sync")
         return {'item_id': item_id, 'success': False, 'skipped': True, 'reason': 'No accounts with auto_sync'}
+    
     # Sync transactions for this item
-    print(f"[SYNC] Syncing transactions for item {item_id} (access_token: {access_token}) with cursor: {cursor}")
-    sync_result = plaid_service.sync_transactions(access_token, cursor)
-    print(f"[SYNC] Plaid sync_result for item {item_id}: {sync_result}")
+    print(f"[SYNC] Syncing transactions for item {item_id} with cursor: {cursor}")
+    sync_result = plaid_transactions.sync(access_token, cursor)
+    
     if not sync_result.get('success'):
         print(f"[SYNC] Error syncing transactions for item {item_id}: {sync_result.get('error')}")
-        return {
-            'item_id': item_id,
-            'success': False,
-            'error': sync_result.get('error')
-        }
+        return {'item_id': item_id, 'success': False, 'error': sync_result.get('error')}
     
     # Store new transactions
     added = sync_result.get('added', [])
     print(f"[SYNC] {len(added)} transactions to add for item {item_id}")
-    store_result = supabase_service.store_transactions(added)
-    print(f"[SYNC] store_transactions result: {store_result}")
+    store_result = supabase_transactions.store(added)
     
-    # Handle modified transactions - fetch full transaction data for each modified ID
+    # Handle modified transactions
     modified_ids = sync_result.get('modified', [])
     modified_count = 0
     if modified_ids:
         print(f"[SYNC] {len(modified_ids)} modified transaction IDs for item {item_id}")
-        # Fetch full transaction data for modified transactions
-        modified_transactions = plaid_service.get_transactions_by_ids(access_token, modified_ids)
+        modified_transactions = plaid_transactions.get_by_ids(access_token, modified_ids)
         if modified_transactions.get('success'):
             modified_count = len(modified_transactions.get('transactions', []))
-            print(f"[SYNC] Fetched {modified_count} modified transactions for item {item_id}")
-            # Update modified transactions using dedicated update method
-            modified_update_result = supabase_service.update_transactions(modified_transactions.get('transactions', []))
-            print(f"[SYNC] modified update_transactions result: {modified_update_result}")
-        else:
-            print(f"[SYNC] Failed to fetch modified transactions for item {item_id}: {modified_transactions.get('error')}")
+            supabase_transactions.update(modified_transactions.get('transactions', []))
     
-    # Handle removed transactions - delete them from our database
+    # Handle removed transactions
     removed_ids = sync_result.get('removed', [])
     removed_count = 0
     if removed_ids:
         print(f"[SYNC] {len(removed_ids)} removed transaction IDs for item {item_id}")
-        # Delete removed transactions from our database
-        removed_result = supabase_service.delete_transactions_by_plaid_ids(removed_ids)
-        if removed_result.get('success'):
-            removed_count = removed_result.get('deleted_count', 0)
-            print(f"[SYNC] Deleted {removed_count} removed transactions for item {item_id}")
-        else:
-            print(f"[SYNC] Failed to delete removed transactions for item {item_id}: {removed_result.get('error')}")
+        removed_result = supabase_transactions.delete_by_plaid_ids(removed_ids)
+        removed_count = removed_result.get('deleted_count', 0) if removed_result.get('success') else 0
     
-    # Update account balances if they're included in the response
+    # Update account balances if included in response
     balance_updates = 0
     accounts_with_balances = sync_result.get('accounts', [])
     if accounts_with_balances:
-        balance_updates = update_account_balances_from_sync(supabase_service, user_id, accounts_with_balances)
+        supabase_accounts.update_balances(user_id, accounts_with_balances)
+        balance_updates = len(accounts_with_balances)
     
     # Update the cursor
     next_cursor = sync_result.get('next_cursor')
-    print(f"[SYNC] next_cursor for item {item_id}: {next_cursor}")
-    if next_cursor is not None:  # Handle empty string cursor from Plaid
-        print(f"[SYNC] Updating sync cursor for item {item_id}")
-        supabase_service.update_sync_cursor(user_id, item_id, next_cursor)
-    else:
-        print(f"[SYNC] No next_cursor returned for item {item_id}")
+    if next_cursor is not None:
+        sync_service.update_cursor(user_id, item_id, next_cursor)
+    
     return {
         'item_id': item_id,
         'success': True,
@@ -215,21 +89,21 @@ def sync_transactions_for_item(supabase_service, plaid_service, user_id, item):
 
 @router.post("/transactions")
 async def sync_account_transactions(user_id: str = Depends(get_current_user)):
-    """
-    Sync transactions for all plaid items for the current user using Plaid's incremental sync API.
-    Only syncs plaid_items with at least one account where auto_sync is True.
-    """
+    """Sync transactions for all plaid items for the current user using Plaid's incremental sync API."""
     try:
-        supabase_service = get_supabase_service()
-        plaid_service = PlaidService()
+        supabase_transactions = get_supabase_transactions()
+        plaid_transactions = get_transactions()
+        supabase_accounts = get_accounts()
+        sync_service = get_sync()
 
         # Get all plaid_items for the user
-        sync_states_result = supabase_service.get_user_sync_states(user_id)
+        sync_states_result = sync_service.get_by_user(user_id)
         if not sync_states_result.get('success'):
             raise HTTPException(status_code=500, detail="Failed to get plaid items")
-        plaid_items = sync_states_result.get('sync_states', [])
-
-        results = [sync_transactions_for_item(supabase_service, plaid_service, user_id, item) for item in plaid_items]
+        
+        plaid_items = sync_states_result.get('data', [])
+        results = [sync_transactions_for_item(supabase_transactions, plaid_transactions, supabase_accounts, sync_service, user_id, item) for item in plaid_items]
+        
         return {'success': True, 'results': results}
     except HTTPException:
         raise

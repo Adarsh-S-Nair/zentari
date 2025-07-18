@@ -7,9 +7,6 @@ import { formatCurrency } from '../../utils/formatters';
 import { getRawBalance } from './accountsUtils';
 
 const AccountsSummaryCard = ({ grouped }) => {
-  // Debug: Log credit and loan account balances
-  console.log('Credit accounts:', grouped.credit);
-  console.log('Loan accounts:', grouped.loan);
   const [showNetWorthInfo, setShowNetWorthInfo] = useState(false);
   const [showAssetsInfo, setShowAssetsInfo] = useState(false);
   const [showLiabilitiesInfo, setShowLiabilitiesInfo] = useState(false);

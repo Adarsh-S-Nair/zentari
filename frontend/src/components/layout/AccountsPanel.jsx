@@ -75,8 +75,11 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers, activeTab: propA
   const handlePlaidSuccess = () => {
     refreshAccounts();
     // Also refresh transactions since new accounts will have new transactions
+    // Add a small delay to ensure the backend sync completes
     if (user) {
-      fetchTransactions(user.id);
+      setTimeout(() => {
+        fetchTransactions(user.id);
+      }, 2000); // 2 second delay
     }
     setPlaidModalOpen(false);
     setPlaidLoading(false);

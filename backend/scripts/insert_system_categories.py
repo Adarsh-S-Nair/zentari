@@ -9,20 +9,20 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Load environment variables from .env
 load_dotenv()
 
-from services.supabase_service import get_supabase_service
+from supabase_services import get_client
 from utils.category_utils import format_category_name
 import uuid
 
 def populate_system_categories_and_groups():
     """Populate category_groups and system_categories tables from CSV"""
     try:
-        supabase = get_supabase_service()
+        client = get_client()
         csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'transactions-personal-finance-category-taxonomy.csv')
 
         # Clear existing system categories and category groups
         print("Clearing existing system categories and category groups...")
-        supabase.client.table('system_categories').delete().neq('id', '00000000-0000-0000-0000-000000000000').execute()
-        supabase.client.table('category_groups').delete().neq('id', '00000000-0000-0000-0000-000000000000').execute()
+        client.client.table('system_categories').delete().neq('id', '00000000-0000-0000-0000-000000000000').execute()
+        client.client.table('category_groups').delete().neq('id', '00000000-0000-0000-0000-000000000000').execute()
 
         # Read categories from CSV and build group/category data
         group_map = {}  # {group_name: group_id}
@@ -64,14 +64,14 @@ def populate_system_categories_and_groups():
         batch_size = 50
         for i in range(0, len(group_inserts), batch_size):
             batch = group_inserts[i:i + batch_size]
-            response = supabase.client.table('category_groups').insert(batch).execute()
+            response = client.client.table('category_groups').insert(batch).execute()
             print(f"✅ Inserted group batch {i//batch_size + 1}: {len(batch)} groups")
 
         # Insert all categories in batches
         print(f"Inserting {len(categories_to_insert)} categories...")
         for i in range(0, len(categories_to_insert), batch_size):
             batch = categories_to_insert[i:i + batch_size]
-            response = supabase.client.table('system_categories').insert(batch).execute()
+            response = client.client.table('system_categories').insert(batch).execute()
             print(f"✅ Inserted category batch {i//batch_size + 1}: {len(batch)} categories")
 
         print(f"🎉 Successfully inserted all {len(categories_to_insert)} categories and {len(group_inserts)} groups!")

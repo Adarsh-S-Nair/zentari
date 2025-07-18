@@ -35,20 +35,14 @@ export const getTotal = (accs) => accs.reduce((sum, acc) => sum + (acc.balances?
 // Extract raw balance from a single account
 export const getRawBalance = (account) => {
   const balance = account?.balances?.current || 0;
-  // Negate credit and loan accounts since they represent debt
-  if (account?.type?.toLowerCase() === 'credit' || account?.type?.toLowerCase() === 'loan') {
-    return -balance;
-  }
+  // Display balances as-is without negation
   return balance;
 }
 
 // Get balance for display purposes
 export const getDisplayBalance = (account) => {
   const balance = account?.balances?.current || 0;
-  // Negate credit and loan accounts since they represent debt
-  if (account?.type?.toLowerCase() === 'credit' || account?.type?.toLowerCase() === 'loan') {
-    return -balance;
-  }
+  // Display balances as-is without negation
   return balance;
 }
 
