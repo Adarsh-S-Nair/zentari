@@ -44,7 +44,6 @@ class CategoryService:
             if response.data:
                 categories = []
                 for i, category in enumerate(response.data):
-                    print(f"[CATEGORIES] Processing category {i+1}: {category.get('label', 'No label')}")
                     
                     category_data = {
                         'id': category['id'],
@@ -60,7 +59,6 @@ class CategoryService:
                         category_data['group_name'] = group.get('name')
                         category_data['icon_lib'] = group.get('icon_lib')
                         category_data['icon_name'] = group.get('icon_name')
-                        print(f"[CATEGORIES] Category {category['label']} has group: {group.get('name')}")
                     else:
                         print(f"[CATEGORIES] Category {category['label']} has NO group info")
                     

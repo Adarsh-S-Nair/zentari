@@ -91,16 +91,6 @@ class AccountService:
         })
         return result.get('data', []) if result.get('success') else []
     
-    def get_accounts_needing_sync(self, user_id: str, item_id: str) -> List[Dict[str, Any]]:
-        """Get accounts that need transaction syncing (auto_sync=True and update_success=True)"""
-        result = self.client.select('accounts', filters={
-            'user_id': user_id, 
-            'item_id': item_id, 
-            'auto_sync': True,
-            'update_success': True
-        })
-        return result.get('data', []) if result.get('success') else []
-    
     def update_balances(self, user_id: str, balances: List[Dict[str, Any]]) -> None:
         """Update account balances and create snapshots only when balances change"""
         from datetime import datetime
