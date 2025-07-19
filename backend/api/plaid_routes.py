@@ -205,6 +205,8 @@ async def plaid_webhook(request: Request):
             sync_service = get_sync()
             plaid_item_result = sync_service.get_by_item_id(item_id)
             
+            print(f"[WEBHOOK] Sync service result: {plaid_item_result}")
+            
             if plaid_item_result.get('success'):
                 plaid_item = plaid_item_result['plaid_item']
                 user_id = plaid_item['user_id']
@@ -238,7 +240,52 @@ async def plaid_webhook(request: Request):
                 return {"success": True, "message": f"Webhook processed, sync result: {sync_result}"}
             else:
                 print(f"[WEBHOOK] Could not find sync state for item {item_id}")
-                return {"success": False, "message": "Item not found"}
+                print(f"[WEBHOOK] Attempting to find item by searching all sync states...")
+                
+                # Try to find the item by searching all sync states
+                all_sync_states = sync_service.get_all()
+                if all_sync_states.get('success'):
+                    found_item = None
+                    for sync_state in all_sync_states.get('data', []):
+                        if sync_state.get('item_id') == item_id:
+                            found_item = sync_state
+                            break
+                    
+                    if found_item:
+                        print(f"[WEBHOOK] Found item in sync states: {found_item}")
+                        user_id = found_item['user_id']
+                        access_token = found_item['access_token']
+                        
+                        # Create item object for sync_transactions_for_item
+                        item = {
+                            'item_id': item_id,
+                            'access_token': access_token,
+                            'transaction_cursor': found_item.get('transaction_cursor', '')
+                        }
+                        
+                        # Trigger sync
+                        print(f"[WEBHOOK] Importing services...")
+                        from api.sync_routes import sync_transactions_for_item
+                        from plaid_services import get_transactions
+                        from supabase_services import get_transactions as get_supabase_transactions, get_accounts as get_supabase_accounts
+                        
+                        print(f"[WEBHOOK] Getting service instances...")
+                        supabase_transactions = get_supabase_transactions()
+                        plaid_transactions = get_transactions()
+                        supabase_accounts = get_supabase_accounts()
+                        
+                        print(f"[WEBHOOK] All services initialized successfully")
+                        print(f"[WEBHOOK] Triggering sync for item {item_id}")
+                        sync_result = sync_transactions_for_item(supabase_transactions, plaid_transactions, supabase_accounts, sync_service, user_id, item)
+                        print(f"[WEBHOOK] Sync result: {sync_result}")
+                        
+                        return {"success": True, "message": f"Webhook processed (recovered), sync result: {sync_result}"}
+                    else:
+                        print(f"[WEBHOOK] Item {item_id} not found in any sync states")
+                        return {"success": False, "message": "Item not found in sync states"}
+                else:
+                    print(f"[WEBHOOK] Failed to get all sync states: {all_sync_states.get('error')}")
+                    return {"success": False, "message": "Failed to search sync states"}
         
         elif webhook_code == 'INITIAL_UPDATE':
             # Initial update completed - transactions are now available for sync

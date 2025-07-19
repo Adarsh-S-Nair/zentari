@@ -82,6 +82,10 @@ class AccountService:
         """Get all accounts for a specific Plaid item"""
         return self.client.select('accounts', filters={'item_id': item_id})
     
+    def get_all(self) -> Dict[str, Any]:
+        """Get all accounts (for debugging)"""
+        return self.client.select('accounts')
+    
     def get_auto_sync(self, user_id: str, item_id: str) -> List[Dict[str, Any]]:
         """Get accounts with auto_sync=True for item"""
         result = self.client.select('accounts', filters={

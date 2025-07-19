@@ -76,6 +76,10 @@ class SyncService:
         """Get all sync states for user"""
         return self.client.select('plaid_items', filters={'user_id': user_id})
     
+    def get_all(self) -> Dict[str, Any]:
+        """Get all sync states (for debugging)"""
+        return self.client.select('plaid_items')
+    
     def get_by_institution(self, user_id: str, institution_id: str) -> Dict[str, Any]:
         """Get plaid_item by institution_id for a user"""
         try:
