@@ -48,20 +48,14 @@ const CategoryDropdown = ({
   const formRef = React.useRef(null)
 
   const groupedCategories = React.useMemo(() => {
-    console.log('[CATEGORY-DROPDOWN] Categories received:', categories?.length || 0)
     if (!categories) {
-      console.log('[CATEGORY-DROPDOWN] No categories available')
       return {}
     }
     
     const grouped = {}
     const query = searchQuery.toLowerCase().trim()
 
-    categories.forEach((category, index) => {
-      if (index < 3) {
-        console.log(`[CATEGORY-DROPDOWN] Category ${index}:`, category)
-      }
-      
+    categories.forEach((category) => {
       // Use group info from category_groups
       const groupName = category.group_name || 'Other'
       const groupId = category.group_id || 'other'
@@ -82,9 +76,6 @@ const CategoryDropdown = ({
       }
       grouped[groupId].categories.push(category)
     })
-
-    console.log('[CATEGORY-DROPDOWN] Grouped categories:', Object.keys(grouped).length, 'groups')
-    console.log('[CATEGORY-DROPDOWN] Group names:', Object.values(grouped).map(g => g.name))
     
     return grouped
   }, [categories, searchQuery])
@@ -106,7 +97,6 @@ const CategoryDropdown = ({
         <CategoryRuleForm
           categories={categories}
           onSave={(rule) => {
-            console.log('Rule created:', rule)
             // TODO: Save rule to backend
           }}
           onCancel={() => {

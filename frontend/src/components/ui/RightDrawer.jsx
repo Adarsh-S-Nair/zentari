@@ -46,23 +46,6 @@ export default function RightDrawer({ isOpen, onClose, children, header }) {
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
         }}
       >
-        {/* Header with close button */}
-        <div className="flex items-center justify-between px-6 py-4 border-b rounded-t-2xl" 
-             style={{ borderColor: 'var(--color-border-primary)' }}>
-          {header && (
-            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-              {header}
-            </h2>
-          )}
-          <button
-            onClick={closeWithDelay}
-            className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200 cursor-pointer"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            <FiX size={20} />
-          </button>
-        </div>
-        
         {/* Content area */}
         <div className="flex-1 overflow-y-auto py-4">
           {children}

@@ -104,7 +104,6 @@ export const FinancialProvider = ({ children, setToast }) => {
       const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
       const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?limit=1000`
       
-      console.log('[FRONTEND] Fetching transactions from:', fullUrl)
       const response = await fetch(fullUrl)
       
       if (!response.ok) {
@@ -113,13 +112,8 @@ export const FinancialProvider = ({ children, setToast }) => {
       }
       
       const result = await response.json()
-      console.log('[FRONTEND] Transaction response:', result)
       
       if (result.success) {
-        console.log('[FRONTEND] Received transactions:', result.transactions?.length || 0)
-        if (result.transactions && result.transactions.length > 0) {
-          console.log('[FRONTEND] First transaction:', result.transactions[0])
-        }
         setTransactions(result.transactions || [])
       } else {
         throw new Error(result.error || 'Failed to fetch transactions')
@@ -134,7 +128,6 @@ export const FinancialProvider = ({ children, setToast }) => {
 
   const fetchCategories = async () => {
     try {
-      console.log('[FRONTEND] Starting fetchCategories')
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
       const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
       
@@ -142,10 +135,7 @@ export const FinancialProvider = ({ children, setToast }) => {
       const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
       const fullUrl = `${protocol}://${cleanBaseUrl}/database/categories`
       
-      console.log('[FRONTEND] Fetching categories from:', fullUrl)
       const response = await fetch(fullUrl)
-      
-      console.log('[FRONTEND] Categories response status:', response.status)
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -153,14 +143,8 @@ export const FinancialProvider = ({ children, setToast }) => {
       }
       
       const result = await response.json()
-      console.log('[FRONTEND] Categories response:', result)
       
       if (result.success) {
-        console.log('[FRONTEND] Setting categories:', result.categories?.length || 0)
-        if (result.categories && result.categories.length > 0) {
-          console.log('[FRONTEND] First category:', result.categories[0])
-          console.log('[FRONTEND] Categories with groups:', result.categories.filter(c => c.group_name).length)
-        }
         setCategories(result.categories || [])
       } else {
         throw new Error(result.error || 'Failed to fetch categories')

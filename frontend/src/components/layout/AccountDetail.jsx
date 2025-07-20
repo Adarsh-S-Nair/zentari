@@ -1,14 +1,163 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MdEdit } from 'react-icons/md';
+import { FaChevronRight } from 'react-icons/fa';
 import IconButton from '../ui/IconButton';
+import CategoryIcon from '../ui/CategoryIcon';
 import { FinancialContext } from '../../contexts/FinancialContext';
 import { formatCurrency, capitalizeWords, formatDate } from '../../utils/formatters';
 import Spinner from '../ui/Spinner';
 import BalanceTabs from '../ui/BalanceTabs';
 import { getApiBaseUrl } from '../../utils/api';
 
-const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
+// Function to get brand color from institution name
+const getBrandColor = (institutionName) => {
+  if (!institutionName) return null;
+  
+  const name = institutionName.toLowerCase();
+  
+  // Bank of America - Red
+  if (name.includes('bank of america') || name.includes('bofa')) {
+    return 'linear-gradient(135deg, #E31837 0%, #C41230 100%)';
+  }
+  
+  // Chase - Blue
+  if (name.includes('chase') || name.includes('jpmorgan')) {
+    return 'linear-gradient(135deg, #117ACA 0%, #0E5FA3 100%)';
+  }
+  
+  // Wells Fargo - Red
+  if (name.includes('wells fargo')) {
+    return 'linear-gradient(135deg, #D71E28 0%, #B71C1C 100%)';
+  }
+  
+  // Citibank - Blue
+  if (name.includes('citi') || name.includes('citibank')) {
+    return 'linear-gradient(135deg, #0066CC 0%, #004499 100%)';
+  }
+  
+  // Capital One - Orange
+  if (name.includes('capital one')) {
+    return 'linear-gradient(135deg, #FF6600 0%, #E55A00 100%)';
+  }
+  
+  // American Express - Blue
+  if (name.includes('american express') || name.includes('amex')) {
+    return 'linear-gradient(135deg, #006FCF 0%, #0056A3 100%)';
+  }
+  
+  // Discover - Orange
+  if (name.includes('discover')) {
+    return 'linear-gradient(135deg, #FF6000 0%, #E55A00 100%)';
+  }
+  
+  // US Bank - Green
+  if (name.includes('us bank') || name.includes('usbank')) {
+    return 'linear-gradient(135deg, #006633 0%, #004D26 100%)';
+  }
+  
+  // PNC - Yellow/Orange
+  if (name.includes('pnc')) {
+    return 'linear-gradient(135deg, #FFB81C 0%, #E6A600 100%)';
+  }
+  
+  // TD Bank - Green
+  if (name.includes('td bank') || name.includes('tdbank')) {
+    return 'linear-gradient(135deg, #53A318 0%, #3F7A12 100%)';
+  }
+  
+  // Ally Bank - Blue
+  if (name.includes('ally')) {
+    return 'linear-gradient(135deg, #0066CC 0%, #004499 100%)';
+  }
+  
+  // Charles Schwab - Blue
+  if (name.includes('schwab') || name.includes('charles schwab')) {
+    return 'linear-gradient(135deg, #004D99 0%, #003366 100%)';
+  }
+  
+  // Fidelity - Green
+  if (name.includes('fidelity')) {
+    return 'linear-gradient(135deg, #00A651 0%, #007A3D 100%)';
+  }
+  
+  // Vanguard - Blue
+  if (name.includes('vanguard')) {
+    return 'linear-gradient(135deg, #0066CC 0%, #004499 100%)';
+  }
+  
+  // Robinhood - Green
+  if (name.includes('robinhood')) {
+    return 'linear-gradient(135deg, #00C805 0%, #00A004 100%)';
+  }
+  
+  return null;
+};
+
+// Function to extract dominant color from an image
+const extractDominantColor = (imageUrl) => {
+  console.log('[COLOR] Starting color extraction for:', imageUrl);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      console.log('[COLOR] Image loaded successfully, dimensions:', img.width, 'x', img.height);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      
+      try {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const colorCounts = {};
+        
+        console.log('[COLOR] Analyzing', imageData.length / 4, 'pixels');
+        
+        // Sample pixels and count colors
+        for (let i = 0; i < imageData.length; i += 4) {
+          const r = imageData[i];
+          const g = imageData[i + 1];
+          const b = imageData[i + 2];
+          const rgb = `${r},${g},${b}`;
+          colorCounts[rgb] = (colorCounts[rgb] || 0) + 1;
+        }
+        
+        console.log('[COLOR] Found', Object.keys(colorCounts).length, 'unique colors');
+        
+        // Find the most common color
+        let dominantColor = 'var(--color-gradient-primary)'; // fallback
+        let maxCount = 0;
+        
+        for (const [rgb, count] of Object.entries(colorCounts)) {
+          if (count > maxCount) {
+            const [r, g, b] = rgb.split(',').map(Number);
+            // Skip very light or very dark colors
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            if (brightness > 50 && brightness < 200) {
+              dominantColor = `rgb(${r}, ${g}, ${b})`;
+              maxCount = count;
+              console.log('[COLOR] New dominant color:', dominantColor, 'count:', count, 'brightness:', brightness);
+            }
+          }
+        }
+        
+        console.log('[COLOR] Final dominant color:', dominantColor);
+        resolve(dominantColor);
+      } catch (error) {
+        console.warn('[COLOR] Could not extract color from image:', error);
+        resolve('var(--color-gradient-primary)');
+      }
+    };
+    img.onerror = (error) => {
+      console.error('[COLOR] Failed to load image:', error);
+      resolve('var(--color-gradient-primary)');
+    };
+    img.src = imageUrl;
+  });
+};
+
+const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = false }) => {
   const { accountId } = useParams();
   const navigate = useNavigate();
   const { accounts, transactions = [], loading, plaidItems, refreshAccounts } = useContext(FinancialContext) || {};
@@ -18,6 +167,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   const [editedName, setEditedName] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [localName, setLocalName] = useState(account?.name || '');
+  const [cardColor, setCardColor] = useState('var(--color-gradient-primary)');
   const submitRef = useRef(false);
 
   const plaidItem = account?.item_id ? plaidItems?.[account.item_id] : null;
@@ -28,6 +178,41 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
       setLocalName(account.name);
     }
   }, [account?.name, localName]);
+
+  // Extract color from institution logo when account changes
+  useEffect(() => {
+    console.log('[ACCOUNT] Account changed, institution_logo:', account?.institution_logo, 'type:', account?.type, 'institution_name:', account?.institution_name);
+    
+    // First try to get brand color from institution name
+    const brandColor = getBrandColor(account?.institution_name);
+    if (brandColor) {
+      console.log('[ACCOUNT] Using brand color for institution:', account?.institution_name, 'color:', brandColor);
+      setCardColor(brandColor);
+      return;
+    }
+    
+    // If no brand color, try image extraction
+    if (account?.institution_logo) {
+      console.log('[ACCOUNT] Extracting color from logo:', account.institution_logo);
+      extractDominantColor(account.institution_logo).then(color => {
+        console.log('[ACCOUNT] Color extraction completed, setting card color to:', color);
+        setCardColor(color);
+      });
+    } else {
+      console.log('[ACCOUNT] No institution logo, using default color based on type:', account?.type);
+      // Use default gradient based on account type
+      const type = (account?.type || '').toLowerCase();
+      if (type === 'depository') {
+        setCardColor('var(--color-gradient-success)');
+      } else if (type === 'credit') {
+        setCardColor('linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-light) 100%)');
+      } else if (type === 'loan') {
+        setCardColor('linear-gradient(135deg, var(--color-warning) 0%, var(--color-warning-light) 100%)');
+      } else {
+        setCardColor('var(--color-gradient-primary)');
+      }
+    }
+  }, [account?.institution_logo, account?.type, account?.institution_name]);
 
   if (loading || (!accounts && !account)) {
     return (
@@ -48,10 +233,14 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   ).slice(0, 8);
 
   const type = (account?.type || '').toLowerCase();
-  let gradientStyle = { background: 'var(--color-gradient-primary)' };
-  if (type === 'depository') gradientStyle = { background: 'var(--color-gradient-success)' };
-  else if (type === 'credit') gradientStyle = { background: 'linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-light) 100%)' };
-  else if (type === 'loan') gradientStyle = { background: 'linear-gradient(135deg, var(--color-warning) 0%, var(--color-warning-light) 100%)' };
+  let gradientStyle = { background: cardColor };
+  
+  // If we have a solid color from logo, create a gradient with it
+  if (cardColor.startsWith('rgb(') && !cardColor.includes('gradient')) {
+    gradientStyle = { 
+      background: `linear-gradient(135deg, ${cardColor} 0%, ${cardColor}dd 100%)`
+    };
+  }
 
   function handleNameEditStart() {
     setEditedName(localName);
@@ -118,7 +307,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
   }
 
   return (
-    <main className="w-full max-w-[700px] mx-auto px-4 sm:px-6 box-border pb-0 mb-0 overflow-hidden">
+    <main className={`w-full max-w-[700px] mx-auto box-border pb-0 mb-0 overflow-hidden ${inBottomSheet ? 'px-4' : 'px-4 sm:px-6'}`}>
       <div className="w-full m-0">
         <div className="flex flex-col items-center pt-5 pb-2">
           <div className="w-full flex flex-wrap gap-4 mb-7">
@@ -203,43 +392,58 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount }) => {
             <div className="flex flex-col gap-0 w-full">
               {accountTransactions.length === 0 ? (
                 <div className="text-center py-3 text-[13px]" style={{ color: 'var(--color-text-muted)' }}>No recent transactions</div>
-              ) : accountTransactions.map(txn => {
+              ) : accountTransactions.map((txn, i) => {
                 const isPositive = txn.amount > 0;
+                const amountColor = isPositive ? 'var(--color-success)' : 'var(--color-text-secondary)';
                 const amountPrefix = isPositive ? '+' : '';
                 return (
                   <div
-                    key={txn.id}
-                    className="flex items-center justify-between px-4 py-6 min-h-[80px] transition-colors cursor-pointer border-b"
-                    style={{ borderColor: 'var(--color-border-primary)' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-hover)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <div className="flex-shrink-0 mr-4 w-11 h-11 rounded-full flex items-center justify-center overflow-hidden" style={{ background: txn.icon_url ? 'transparent' : 'var(--color-gray-300)' }}>
+                    key={txn.id || i}
+                    className="flex items-center px-2 py-4 min-h-[70px] box-border border-b transition-all duration-200 cursor-pointer w-full max-w-full overflow-x-hidden transform hover:scale-[1.01] hover:shadow-md"
+                    style={{ 
+                      background: 'var(--color-bg-primary)', 
+                      borderColor: 'var(--color-border-primary)',
+                      borderRadius: '8px',
+                      margin: '4px 0'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--color-bg-hover)';
+                      e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--color-bg-primary)';
+                      e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                    }}
+                    onClick={() => navigate(`/transaction/${txn.id}`)}
+                  >
+                    {/* Icon/avatar - made smaller */}
+                    <div className="flex-shrink-0 mr-2 sm:mr-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center overflow-hidden self-center transition-all duration-200 transform hover:scale-110" style={{ 
+                      background: txn.icon_url ? 'transparent' : (txn.category_color || 'var(--color-bg-primary)'), 
+                      border: 'none',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                      filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))'
+                    }}>
                       {txn.icon_url ? (
-                        <img src={txn.icon_url} alt="icon" className="w-full h-full rounded-full object-cover" />
+                        <img src={txn.icon_url} alt="icon" className="w-full h-full rounded-full object-cover block" />
+                      ) : txn.category_icon_lib && txn.category_icon_name ? (
+                        <CategoryIcon lib={txn.category_icon_lib} name={txn.category_icon_name} size={16} color={'var(--color-text-white)'} />
                       ) : (
-                        <div className="w-5 h-5 rounded-full bg-gray-400" />
+                        <FaChevronRight size={14} style={{ color: 'var(--color-text-white)' }} />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[15px] -tracking-[0.5px] truncate max-w-[120px] sm:max-w-[220px]" style={{ color: 'var(--color-text-primary)' }}>
-                        {txn.description}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] -tracking-[0.3px]" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(txn.datetime)}</span>
-                        {txn.category_name && (
-                          <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full" style={{ background: txn.category_color || 'var(--color-gray-500)' }} />
-                            <span className="text-[9px] font-medium -tracking-[0.2px]" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
-                          </span>
-                        )}
-                      </div>
+                    {/* Main info and category */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center px-2">
+                      <div className="text-[14px] sm:text-[16px] truncate max-w-[180px] sm:max-w-none" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
+                      {txn.category_name && (
+                        <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                          <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0" style={{ background: txn.category_color || 'var(--color-primary)' }} />
+                          <span className="text-[9px] sm:text-[10px] tracking-wide truncate max-w-[100px] sm:max-w-none" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-shrink-0 min-w-[80px] text-right">
-                      <span className="text-[14px] font-semibold -tracking-[0.2px]" style={{ 
-                        color: isPositive ? 'var(--color-success)' : 'var(--color-text-secondary)'
-                      }}>
-                        {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
-                      </span>
+                    {/* Amount */}
+                    <div className="flex-shrink-0 text-right text-[12px] sm:text-[14px] min-w-[60px] sm:min-w-[80px] ml-2 sm:ml-3 whitespace-nowrap transition-colors duration-150 flex items-center justify-center self-center" style={{ color: amountColor }}>
+                      {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
                     </div>
                   </div>
                 );

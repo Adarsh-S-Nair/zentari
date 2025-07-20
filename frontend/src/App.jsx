@@ -27,7 +27,7 @@ import { IoFolderOpen } from 'react-icons/io5';
 import { FaReceipt } from 'react-icons/fa';
 import { FiArrowLeft } from 'react-icons/fi';
 import { FinancialContext } from './contexts/FinancialContext';
-import { RightDrawer, Modal } from './components/ui';
+import { RightDrawer, BottomSheet, Modal } from './components/ui';
 import AccountDetail from './components/layout/AccountDetail';
 
 import LandingPage from './components/layout/LandingPage';
@@ -150,13 +150,11 @@ function App() {
     const socket = new WebSocket(`${protocol}://${baseUrl.replace(/^https?:\/\//, '')}/simulate/ws`);
 
     socket.onopen = () => {
-      console.log('[WebSocket] Connected');
       socket.send(JSON.stringify(form));
     };
 
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data);
-      console.log(msg);
 
       switch (msg.type) {
         case 'status':
@@ -199,7 +197,8 @@ function App() {
           break;
 
         default:
-          console.log('[UNKNOWN MESSAGE]', msg);
+          // Unknown message type - ignore
+          break;
       }
     };
 
@@ -210,7 +209,7 @@ function App() {
     };
 
     socket.onclose = () => {
-      console.log('[WebSocket] Disconnected');
+      // WebSocket disconnected
     };
   };
 
@@ -625,26 +624,16 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
     }
   }, [isMobile, transactionId]);
   
-  // On mobile, show as full page instead of drawer
+  // On mobile, show as bottom sheet
   if (isMobile) {
     return (
-      <div className="flex min-h-screen w-full relative overflow-hidden" style={{ background: 'var(--color-bg-primary)' }}>
-        <div className="flex-1 flex flex-col sm:pb-0 ml-[0px] relative">
-          <div className="fixed top-0 left-0 right-0 z-50">
-            <Topbar 
-              user={user} 
-              onLoginClick={() => setLoginOpen(true)} 
-              currentPage={'Transaction'} 
-              maxWidth={maxWidth} 
-              isMobile={isMobile}
-              showBackArrow={true}
-              onBack={() => navigate('/transactions')}
-            />
-          </div>
-          <div className="flex-1 pb-[60px] pt-[60px] overflow-y-auto">
-            <TransactionDetail maxWidth={maxWidth} transaction={transaction} />
-          </div>
-          <div className="fixed bottom-0 left-0 right-0 z-50">
+      <>
+        <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+          <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
+            <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} isMobile={isMobile} />
+            <div className="flex-1 pb-[60px]">
+              <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
+            </div>
             <MobileBottomBar
               user={user}
               onLoginClick={() => setLoginOpen(true)}
@@ -654,7 +643,15 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
             />
           </div>
         </div>
-      </div>
+        
+                <BottomSheet 
+          isOpen={true} 
+          onClose={() => navigate('/transactions')}
+          maxHeight="80vh"
+        >
+          <TransactionDetail maxWidth={maxWidth} transaction={transaction} inBottomSheet={true} />
+        </BottomSheet>
+      </>
     );
   }
   
@@ -684,7 +681,6 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
       <RightDrawer 
         isOpen={true} 
         onClose={() => navigate('/transactions')}
-        header={transaction?.description || 'Transaction Details'}
       >
         <TransactionDetail maxWidth={maxWidth} transaction={transaction} />
       </RightDrawer>
@@ -726,26 +722,16 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
     }
   }, [isMobile, accountId]);
   
-  // On mobile, show as full page instead of drawer
+  // On mobile, show as bottom sheet
   if (isMobile) {
     return (
-      <div className="flex min-h-screen w-full relative overflow-hidden" style={{ background: 'var(--color-bg-primary)' }}>
-        <div className="flex-1 flex flex-col sm:pb-0 ml-[0px] relative">
-          <div className="fixed top-0 left-0 right-0 z-50">
-            <Topbar 
-              user={user} 
-              onLoginClick={() => setLoginOpen(true)} 
-              currentPage={'Accounts'} 
-              maxWidth={maxWidth} 
-              isMobile={isMobile}
-              showBackArrow={true}
-              onBack={() => navigate(getBackPath())}
-            />
-          </div>
-          <div className="flex-1 pb-[60px] pt-[60px] overflow-y-auto">
-            <AccountDetail account={account} />
-          </div>
-          <div className="fixed bottom-0 left-0 right-0 z-50">
+      <>
+        <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+          <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
+            <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
+            <div className="flex-1 pb-[60px]">
+              <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} activeTab={tab || 'cash'} />
+            </div>
             <MobileBottomBar
               user={user}
               onLoginClick={() => setLoginOpen(true)}
@@ -755,7 +741,16 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
             />
           </div>
         </div>
-      </div>
+        
+        <BottomSheet 
+          isOpen={true} 
+          onClose={() => navigate(getBackPath())}
+          header={account?.name || 'Account Details'}
+          maxHeight="90vh"
+        >
+          <AccountDetail account={account} inBottomSheet={true} />
+        </BottomSheet>
+      </>
     );
   }
   

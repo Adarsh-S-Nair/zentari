@@ -3,15 +3,14 @@ import { formatCurrency, formatDate, toTitleCase } from '../../utils/formatters'
 import { useFinancial } from '../../contexts/FinancialContext'
 import { useNavigate } from 'react-router-dom'
 import CategoryDropdown from '../ui/CategoryDropdown'
-import CategoryIcon from '../ui/CategoryIcon'
 import { useModal } from '../../App'
 import { FaPencilRuler } from 'react-icons/fa'
 
-const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColor }) => (
+const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColor, isFirst = false }) => (
   <div
-    className={`flex justify-between items-center border-t py-4 px-4 text-sm transition-colors ${
+    className={`flex justify-between items-center py-4 px-4 text-sm transition-colors ${
       hoverable ? 'cursor-pointer' : ''
-    }`}
+    } ${!isFirst ? 'border-t' : ''}`}
     style={{ 
       borderColor: 'var(--color-border-primary)',
       background: backgroundColor || 'transparent'
@@ -25,7 +24,7 @@ const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColo
   </div>
 )
 
-const TransactionDetail = ({ maxWidth = 700, transaction }) => {
+const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false }) => {
   const { accounts, updateTransactionCategory, setToast } = useFinancial()
   const navigate = useNavigate()
   const { showModal } = useModal()
@@ -60,12 +59,6 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
   }
 
   const account = accounts?.find(a => a.account_id === transaction.accounts?.account_id)
-  const isPositive = transaction.amount > 0
-  const amountColor = isPositive ? 'var(--color-success)' : 'var(--color-text-secondary)'
-  const amountPrefix = isPositive ? '+' : ''
-  const logoStyle = transaction.icon_url
-    ? {}
-    : { background: 'var(--color-bg-secondary)', border: 'none' }
 
   const handleCategorySelect = async (category) => {
     const categoryId = category?.id || null
@@ -87,43 +80,28 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
   }
 
   return (
-    <main className="w-full max-w-[700px] mx-auto px-4 sm:px-6 overflow-hidden">
-      <div className="flex flex-col gap-6 pt-6">
+    <main className={`w-full max-w-[700px] mx-auto overflow-hidden h-full flex flex-col ${inBottomSheet ? 'px-4' : 'px-4 sm:px-6'}`}>
+      <div className="flex flex-col gap-6 pt-6 pb-6 flex-1 overflow-y-auto">
+        {/* Transaction amount and description above main card */}
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-2xl font-semibold" style={{ color: transaction.amount > 0 ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>
+            {transaction.amount > 0 ? '+' : ''}{formatCurrency(Math.abs(transaction.amount))}
+          </span>
+          <div className="text-sm text-center" style={{ color: 'var(--color-text-secondary)' }}>
+            {transaction.description}
+          </div>
+        </div>
+        
         <div
-          className="w-full rounded-2xl px-4 py-6 sm:px-6 shadow-xl"
+          className="w-full rounded-2xl px-4 py-3 sm:px-6 flex-shrink-0"
           style={{
             background: 'var(--color-bg-secondary)',
             border: '1px solid var(--color-border-primary)'
           }}
         >
-          {/* Header */}
-          <div className="flex justify-between px-4 items-center">
-            <div className="flex gap-4 items-center flex-1 min-w-0">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0" style={logoStyle}>
-                {transaction.icon_url ? (
-                  <img src={transaction.icon_url} alt="icon" className="w-full h-full object-cover rounded-full" />
-                ) : transaction.category_icon_lib && transaction.category_icon_name ? (
-                  <CategoryIcon lib={transaction.category_icon_lib} name={transaction.category_icon_name} size={24} color={'var(--color-text-muted)'} />
-                ) : (
-                  <div className="w-5 h-5 rounded-full bg-gray-400" />
-                )}
-              </div>
-              <div className="flex flex-col justify-center min-w-0 flex-1">
-                <div className="text-[16px] font-semibold -tracking-[0.5px] truncate max-w-[120px] sm:max-w-[220px]" style={{ color: 'var(--color-text-primary)' }}>
-                  {transaction.description}
-                </div>
-              </div>
-            </div>
-            <div className="flex-shrink-0 min-w-[80px] text-right">
-              <span className="text-[18px] font-semibold -tracking-[0.2px]" style={{ color: amountColor }}>
-                {amountPrefix}{formatCurrency(Math.abs(transaction.amount))}
-              </span>
-            </div>
-          </div>
-
           {/* Rows */}
-          <div className="mt-6 text-sm flex flex-col">
-            <DetailRow label="Status">
+          <div className="text-sm flex flex-col">
+            <DetailRow label="Status" isFirst={true}>
               <span
                 className="text-[12px] px-2 py-1 rounded-md font-normal"
                 style={{
@@ -158,7 +136,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
                     style={{ backgroundColor: localCategory.color }}
                   />
                 )}
-                <span className="text-[14px] truncate max-w-[80px] sm:max-w-[120px]" style={{ color: 'var(--color-text-secondary)' }}>
+                <span className="text-[14px] truncate max-w-[120px] sm:max-w-[180px]" style={{ color: 'var(--color-text-secondary)' }}>
                   {localCategory.name || 'Uncategorized'}
                 </span>
                 <svg 
@@ -201,7 +179,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
                 onClick={() => navigate(`/accounts/${account?.type}/${account?.id}`)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center"
+                  <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center"
                     style={account?.institution_logo ? {} : {
                       background: 'var(--color-gray-200)',
                       border: '1px solid var(--color-border-primary)'
@@ -212,11 +190,11 @@ const TransactionDetail = ({ maxWidth = 700, transaction }) => {
                         alt={account.institution_name || 'Bank'}
                       />
                     ) : (
-                      <div className="w-4 h-4 rounded-full bg-gray-400" />
+                      <div className="w-3 h-3 rounded-full bg-gray-400" />
                     )}
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
+                    <span className="text-[14px] truncate max-w-[120px] sm:max-w-[180px]" style={{ color: 'var(--color-text-secondary)' }}>
                       {transaction.accounts.name}
                     </span>
                     {transaction.accounts.mask && (

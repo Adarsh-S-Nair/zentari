@@ -29,7 +29,7 @@ const AccountsSummaryCard = ({ grouped }) => {
   const liabilities = [...(grouped.credit || []), ...(grouped.loan || [])];
   const assetTotal = assets.reduce((sum, a) => sum + getRawBalance(a), 0);
   const liabilityTotal = liabilities.reduce((sum, a) => sum + getRawBalance(a), 0);
-  const totalBalance = assetTotal + liabilityTotal;
+  const netWorth = assetTotal - liabilityTotal;
 
   return (
     <div className="w-full max-w-[700px] mx-auto rounded-xl text-white border-none px-5 py-6 flex flex-col items-start justify-center box-border overflow-hidden shadow-lg transition-transform duration-200 hover:scale-102 hover:shadow-xl mb-6 mt-2" style={{ background: 'var(--color-gradient-primary)' }}>
@@ -58,7 +58,7 @@ const AccountsSummaryCard = ({ grouped }) => {
             Net Worth = Assets + Liabilities. This is your total financial position.
           </InfoBubble>
         </div>
-        <span className="text-[20px] font-medium -tracking-[0.5px] text-right" style={{ color: 'var(--color-text-white)', opacity: 0.92 }}>{formatCurrency(totalBalance)}</span>
+        <span className="text-[20px] font-medium -tracking-[0.5px] text-right" style={{ color: 'var(--color-text-white)', opacity: 0.92 }}>{formatCurrency(netWorth)}</span>
       </div>
       {/* Responsive breakdown bars */}
       <div className="flex flex-col sm:flex-row w-full gap-4 mt-2">

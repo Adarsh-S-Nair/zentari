@@ -146,10 +146,6 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
         }}
         data-debug-visible={visible}
         data-debug-isopen={isOpen}
-        {...(() => { console.log('[LoginModal] Modal style:', {
-          transform: visible ? 'translateY(0)' : 'translateY(-40px)',
-          opacity: visible ? 1 : 0
-        }); return {}; })()}
       >
         <button onClick={handleClose} style={{
           position: 'absolute', top: '12px', right: '12px',
