@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react'
 import { formatCurrency, formatDate, toTitleCase } from '../../utils/formatters'
 import { useFinancial } from '../../contexts/FinancialContext'
 import { useNavigate } from 'react-router-dom'
-import CategoryDropdown from '../ui/CategoryDropdown'
+import InlineCategoryDropdown from '../ui/CategoryDropdown'
 import { useModal } from '../../App'
 import { FaPencilRuler } from 'react-icons/fa'
 
 const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColor, isFirst = false }) => (
   <div
-    className={`flex justify-between items-center py-4 px-4 text-sm transition-colors ${
+    className={`flex justify-between items-center py-4 px-3 text-sm transition-colors ${
       hoverable ? 'cursor-pointer' : ''
     } ${!isFirst ? 'border-t' : ''}`}
     style={{ 
@@ -25,7 +25,7 @@ const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColo
 )
 
 const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false }) => {
-  const { accounts, updateTransactionCategory, setToast } = useFinancial()
+  const { accounts, updateTransactionCategory, setToast, categories } = useFinancial()
   const navigate = useNavigate()
   const { showModal } = useModal()
   const [note, setNote] = useState(transaction?.notes || '')
@@ -48,6 +48,22 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
     }
   }, [transaction?.category_id, transaction?.category_name, transaction?.category_color])
 
+  // Handle clicking outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowCategories(false)
+      }
+    }
+
+    if (showCategories) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showCategories])
 
 
   if (!transaction) {
@@ -93,7 +109,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
         </div>
         
         <div
-          className="w-full rounded-2xl px-4 py-3 sm:px-6 flex-shrink-0"
+          className="w-full rounded-2xl px-1 py-1 sm:px-1 flex-shrink-0"
           style={{
             background: 'var(--color-bg-secondary)',
             border: '1px solid var(--color-border-primary)'
@@ -123,54 +139,54 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
               </span>
             </DetailRow>
 
-            <DetailRow 
-              label="Category" 
-              hoverable 
-              onClick={() => setShowCategories(!showCategories)}
-              backgroundColor={showCategories ? 'var(--color-bg-primary)' : undefined}
-            >
-              <div className="flex items-center gap-2">
-                {localCategory.color && (
-                  <div 
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: localCategory.color }}
-                  />
-                )}
-                <span className="text-[14px] truncate max-w-[120px] sm:max-w-[180px]" style={{ color: 'var(--color-text-secondary)' }}>
-                  {localCategory.name || 'Uncategorized'}
-                </span>
-                <svg 
-                  className={`w-4 h-4 transition-transform ${showCategories ? 'rotate-180' : ''}`}
-                  style={{ color: 'var(--color-text-secondary)' }}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
+            <DetailRow label="Category">
+              <div className="relative">
+                <button
+                  onClick={() => setShowCategories(!showCategories)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md border transition-all duration-150 hover:scale-[1.02] hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  style={{
+                    borderColor: 'var(--color-border-primary)',
+                    background: 'var(--color-bg-primary)',
+                    color: 'var(--color-text-primary)',
+                    minWidth: '180px',
+                    maxWidth: '240px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--color-bg-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--color-bg-primary)';
+                  }}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                  {localCategory.color && (
+                    <div 
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: localCategory.color }}
+                    />
+                  )}
+                  <span className="text-[14px] truncate flex-1 text-left">
+                    {localCategory.name || 'Uncategorized'}
+                  </span>
+                  <svg 
+                    className={`w-4 h-4 transition-transform flex-shrink-0 ${showCategories ? 'rotate-180' : ''}`}
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                <InlineCategoryDropdown
+                  isOpen={showCategories}
+                  onClose={() => setShowCategories(false)}
+                  selectedCategory={localCategory}
+                  onCategorySelect={handleCategorySelect}
+                  dropdownRef={dropdownRef}
+                />
               </div>
             </DetailRow>
-
-            {/* Connected Category Dropdown */}
-            <div 
-              ref={dropdownRef}
-              className={`transition-all duration-300 ease-in-out overflow-hidden`}
-              style={{
-                maxHeight: showCategories ? 'none' : '0px',
-                background: 'var(--color-bg-primary)',
-                borderBottomLeftRadius: '12px',
-                borderBottomRightRadius: '12px',
-                boxShadow: showCategories ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
-              }}
-            >
-              <CategoryDropdown
-                isOpen={showCategories}
-                onClose={() => setShowCategories(false)}
-                selectedCategory={localCategory}
-                onCategorySelect={handleCategorySelect}
-                setToast={setToast}
-              />
-            </div>
 
             {transaction.accounts?.name && (
               <DetailRow

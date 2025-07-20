@@ -1,217 +1,201 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useFinancial } from '../../contexts/FinancialContext'
-import { useModal } from '../../App'
-import Button from './Button'
-import { FaWrench } from 'react-icons/fa'
-import CategoryRuleForm from './CategoryRuleForm'
 
-const categoryListStyles = `
-  @keyframes slideInUp {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .category-group-content {
-    transition: all 0.15s ease-out;
-    overflow: hidden;
-  }
-  
-  .category-group-content.expanded {
-    max-height: 500px;
-    transform: translateY(0);
-  }
-  
-  .category-group-content.collapsed {
-    max-height: 0;
-    transform: translateY(-2px);
-  }
-`
-
-const CategoryDropdown = ({ 
+const InlineCategoryDropdown = ({ 
   isOpen, 
   onClose, 
   selectedCategory, 
   onCategorySelect,
-  onCreateRule
+  dropdownRef
 }) => {
   const { categories } = useFinancial()
-  const { showModal } = useModal()
-  const [expandedGroup, setExpandedGroup] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [isFormValid, setIsFormValid] = useState(false)
-  const formRef = React.useRef(null)
+  const [expandedGroups, setExpandedGroups] = useState(new Set())
 
-  const groupedCategories = React.useMemo(() => {
-    if (!categories) {
-      return {}
-    }
-    
-    const grouped = {}
-    const query = searchQuery.toLowerCase().trim()
-
-    categories.forEach((category) => {
-      // Use group info from category_groups
-      const groupName = category.group_name || 'Other'
-      const groupId = category.group_id || 'other'
-      const groupColor = category.color // fallback to category color for now
-      
-      // Search by category name or group name
-      if (query && !category.name.toLowerCase().includes(query) &&
-          !(groupName && groupName.toLowerCase().includes(query))) {
-        return
-      }
-      
-      if (!grouped[groupId]) {
-        grouped[groupId] = {
-          name: groupName,
-          color: groupColor,
-          categories: []
-        }
-      }
-      grouped[groupId].categories.push(category)
-    })
-    
-    return grouped
-  }, [categories, searchQuery])
-
-  const toggleGroup = (groupName) => {
-    setExpandedGroup(prev => prev === groupName ? null : groupName)
-  }
-
-  const handleCategorySelect = (category) => {
-    setSearchQuery('')
-    setExpandedGroup(null)
-    onCategorySelect(category)
-  }
-
-  const handleCreateRule = () => {
-    showModal({
-      header: 'Create a Category Rule',
-      description: (
-        <CategoryRuleForm
-          categories={categories}
-          onSave={(rule) => {
-            // TODO: Save rule to backend
-          }}
-          onCancel={() => {
-            // Modal will close automatically
-          }}
-          onSubmitRef={formRef}
-          onValidityChange={setIsFormValid}
-        />
-      ),
-      buttons: [
-        { 
-          text: 'Cancel', 
-          color: 'gray', 
-          onClick: null
-        },
-        { 
-          text: 'Create Rule', 
-          color: 'networth', 
-          onClick: () => {
-            if (formRef.current?.isValid) {
-              formRef.current.submit()
-            }
-          },
-          disabled: !isFormValid
-        }
-      ]
-    })
-  }
-
+  // Handle clicking outside dropdown
   useEffect(() => {
-    if (searchQuery.trim()) {
-      // When searching, expand the first group that has results
-      const firstGroupWithResults = Object.keys(groupedCategories).find(groupName => 
-        groupedCategories[groupName].categories.length > 0
-      )
-      setExpandedGroup(firstGroupWithResults || null)
-    } else {
-      setExpandedGroup(null)
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        onClose()
+        setSearchQuery('')
+        setExpandedGroups(new Set())
+      }
     }
-  }, [searchQuery, groupedCategories])
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen, onClose, dropdownRef])
 
   useEffect(() => {
     if (!isOpen) {
       setSearchQuery('')
-      setExpandedGroup(null)
+      setExpandedGroups(new Set())
     }
   }, [isOpen])
 
+  // Auto-expand groups when searching
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      // Find groups that contain matching categories
+      const groupsToExpand = new Set()
+      const query = searchQuery.toLowerCase().trim()
+      
+      categories?.forEach(category => {
+        if (category.name.toLowerCase().includes(query)) {
+          const groupName = category.group_name || 'Other'
+          groupsToExpand.add(groupName)
+        }
+      })
+      
+      setExpandedGroups(groupsToExpand)
+    } else {
+      setExpandedGroups(new Set())
+    }
+  }, [searchQuery, categories])
+
+  const handleCategorySelect = (category) => {
+    setSearchQuery('')
+    onCategorySelect(category)
+  }
+
+  const toggleGroup = (groupName) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(groupName)) {
+        newSet.delete(groupName)
+      } else {
+        newSet.add(groupName)
+      }
+      return newSet
+    })
+  }
+
   if (!isOpen) return null
 
-  return (
-    <>
-      <style>{categoryListStyles}</style>
-      <div className="overflow-hidden max-h-none opacity-100 px-4 pt-3 pb-5">
-        <div className="grid grid-cols-1">
-          {/* Search and Create Rule */}
-          <div className="flex items-center gap-2 pb-4">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                placeholder="Search categories..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full p-3 pr-10 border text-[13px] bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                style={{
-                  borderColor: 'var(--color-border-primary)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'inherit',
-                  background: 'var(--color-bg-primary)'
-                }}
-              />
-              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center h-full">
-                <svg 
-                  className="w-4 h-4 pointer-events-none"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </span>
-            </div>
-            <button
-              onClick={handleCreateRule}
-              className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:scale-105"
-              style={{
-                color: 'var(--color-text-white)',
-                background: 'var(--color-gradient-primary)'
-              }}
-            >
-              <FaWrench size={16} />
-            </button>
-          </div>
+  // Group categories by their group
+  const groupedCategories = {}
+  const filteredCategories = categories?.filter(cat => 
+    !searchQuery || cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || []
+  
+  filteredCategories.forEach(category => {
+    const groupName = category.group_name || 'Other'
+    if (!groupedCategories[groupName]) {
+      groupedCategories[groupName] = {
+        name: groupName,
+        color: category.color, // Use first category's color for group
+        categories: []
+      }
+    }
+    groupedCategories[groupName].categories.push(category)
+  })
 
-          {/* Category Groups */}
+  return (
+    <div 
+      ref={dropdownRef}
+      className="absolute top-full left-0 mt-1 z-10 rounded-md border shadow-lg max-h-60 overflow-y-auto"
+      style={{
+        background: 'var(--color-bg-secondary)',
+        borderColor: 'var(--color-border-primary)',
+        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        backdropFilter: 'blur(8px)',
+        width: '200px',
+        maxWidth: '240px',
+        scrollbarWidth: 'thin',
+        scrollbarColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#252b32 #22272e' : '#cbd5e1 #f1f5f9'
+      }}
+    >
+      <style>{`
+        .category-dropdown::-webkit-scrollbar {
+          width: 4px;
+          background: #f1f5f9;
+        }
+        .category-dropdown::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 2px;
+        }
+        .category-dropdown::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+        .category-dropdown::-webkit-scrollbar-corner {
+          background: #f1f5f9;
+        }
+        [data-theme="dark"] .category-dropdown::-webkit-scrollbar {
+          background: #22272e !important;
+        }
+        [data-theme="dark"] .category-dropdown::-webkit-scrollbar-thumb {
+          background: #252b32 !important;
+        }
+        [data-theme="dark"] .category-dropdown::-webkit-scrollbar-thumb:hover {
+          background: #323637 !important;
+        }
+        [data-theme="dark"] .category-dropdown::-webkit-scrollbar-corner {
+          background: #22272e !important;
+        }
+      `}</style>
+      
+      {/* Fixed Search Bar with Background */}
+      <div className="sticky top-0 z-20 p-2" style={{ background: 'var(--color-bg-secondary)' }}>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search categories..."
+            className="w-full p-1.5 pl-7 text-[12px] border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+            style={{
+              borderColor: 'var(--color-border-primary)',
+              color: 'var(--color-text-primary)',
+              background: 'var(--color-bg-primary)'
+            }}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <svg 
+            className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 pointer-events-none"
+            style={{ color: 'var(--color-text-secondary)' }}
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
+      
+      {/* Scrollable Content */}
+      <div className="p-2 category-dropdown">
+        <div className="space-y-1">
           {Object.entries(groupedCategories).map(([groupName, group]) => (
             <div key={groupName}>
+              {/* Group Header - Clickable */}
               <button
                 onClick={() => toggleGroup(groupName)}
-                className="w-full flex items-center gap-3 px-2 py-3 rounded-md transition-colors duration-100 text-left cursor-pointer"
-                style={{ 
-                  backgroundColor: 'transparent',
+                className="w-full flex items-center gap-2 px-1 py-2 rounded-md text-left transition-all duration-150 cursor-pointer hover:scale-[1.02] hover:shadow-sm"
+                style={{
                   color: 'var(--color-text-primary)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--color-bg-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
               >
-                <div 
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: group.color }}
-                />
-                <span className="text-[13px] flex-1">{group.name}</span>
+                {group.color && (
+                  <div 
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: group.color }}
+                  />
+                )}
+                <span className="text-[11px] flex-1">
+                  {group.name}
+                </span>
                 <svg 
-                  className={`w-4 h-4 transition-transform duration-100 ${expandedGroup === groupName ? 'rotate-180' : ''}`}
+                  className={`w-3 h-3 transition-transform duration-150 flex-shrink-0 ${expandedGroups.has(groupName) ? 'rotate-180' : ''}`}
                   style={{ color: 'var(--color-text-secondary)' }}
                   fill="none" 
                   stroke="currentColor" 
@@ -221,43 +205,53 @@ const CategoryDropdown = ({
                 </svg>
               </button>
 
-              {/* Categories */}
-              <div 
-                className={`category-group-content ${
-                  expandedGroup === groupName ? 'expanded' : 'collapsed'
-                }`}
-              >
-                <div className="ml-6 py-1">
-                  {group.categories.map((category) => {
-                    const isSelected = selectedCategory?.id === category.id
-                    return (
-                      <button
-                        key={category.id}
-                        onClick={() => handleCategorySelect(category)}
-                        className="w-full px-3 py-2 text-left rounded-md text-[13px] transition-colors duration-75 cursor-pointer"
-                        style={{
-                          backgroundColor: isSelected ? 'var(--color-bg-primary)' : 'transparent',
-                          color: 'var(--color-text-primary)'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'
-                        }}
-                      >
+              {/* Categories under this group */}
+              {expandedGroups.has(groupName) && (
+                <div className="ml-4 space-y-1">
+                  {group.categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => handleCategorySelect(category)}
+                      className="w-full flex items-center gap-2 px-1 py-1.5 rounded-md text-left transition-all duration-150 cursor-pointer hover:scale-[1.02] hover:shadow-sm"
+                      style={{
+                        background: selectedCategory?.id === category.id ? 'var(--color-bg-selected)' : 'transparent',
+                        color: 'var(--color-text-primary)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedCategory?.id !== category.id) {
+                          e.currentTarget.style.background = 'var(--color-bg-hover)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedCategory?.id !== category.id) {
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      <span className="text-[11px] truncate flex-1">
                         {category.name}
-                      </button>
-                    )
-                  })}
+                      </span>
+                      {selectedCategory?.id === category.id && (
+                        <svg 
+                          className="w-3 h-3 flex-shrink-0"
+                          style={{ color: 'var(--color-primary)' }}
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
           ))}
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
-export default CategoryDropdown
+export default InlineCategoryDropdown
