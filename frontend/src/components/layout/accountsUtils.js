@@ -30,50 +30,20 @@ export const groupAccountsByType = (accounts) => {
   return grouped
 }
 
-export const getTotal = (accs) => accs.reduce((sum, acc) => sum + (acc.balances?.current || 0), 0)
+export const getTotal = (accounts) => {
+  return accounts?.reduce((sum, acc) => sum + getRawBalance(acc), 0) || 0
+}
 
-// Extract raw balance from a single account
 export const getRawBalance = (account) => {
-  const balance = account?.balances?.current || 0;
-  // Display balances as-is without negation
-  return balance;
+  if (!account) return 0
+  return account.balances?.current || account.balance || 0
 }
 
-// Get balance for display purposes
 export const getDisplayBalance = (account) => {
-  const balance = account?.balances?.current || 0;
-  // Display balances as-is without negation
-  return balance;
-}
-
-export const getActiveTabAccounts = (grouped, activeTab) => {
-  if (!grouped) return []
-  
-  switch (activeTab) {
-    case 'cash':
-      return grouped.cash || []
-    case 'credit':
-      return grouped.credit || []
-    case 'investment':
-      return grouped.investment || []
-    case 'loan':
-      return grouped.loan || []
-    default:
-      return grouped.cash || []
+  const balance = getRawBalance(account)
+  // For credit accounts, show positive balance as negative (since it's debt)
+  if (account.type?.toLowerCase() === 'credit') {
+    return -balance
   }
-}
-
-export const getActiveTabLabel = (activeTab) => {
-  switch (activeTab) {
-    case 'cash':
-      return 'Cash'
-    case 'credit':
-      return 'Credit Cards'
-    case 'investment':
-      return 'Investments'
-    case 'loan':
-      return 'Loans'
-    default:
-      return 'Cash'
-  }
+  return balance
 } 

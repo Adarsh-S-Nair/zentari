@@ -192,7 +192,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
               <DetailRow
                 label="Account"
                 hoverable
-                onClick={() => navigate(`/accounts/${account?.type}/${account?.id}`)}
+                onClick={() => navigate(`/accounts/${account?.id}`)}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center"

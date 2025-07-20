@@ -5,13 +5,10 @@ import { PlaidLinkModal } from '../modals';
 import { useFinancial } from '../../contexts/FinancialContext';
 import AccountsSummaryCard from './AccountsSummaryCard';
 import AccountsList from './AccountsList';
-import Tabs from '../ui/Tabs';
 import {
   getAccountTypeIcon,
   groupAccountsByType,
   getTotal,
-  getActiveTabAccounts,
-  getActiveTabLabel,
   getRawBalance,
 } from './accountsUtils';
 import noAccountsImage from '../../assets/no-accounts.png';
@@ -23,24 +20,12 @@ import { FaCreditCard, FaChartLine } from 'react-icons/fa6';
 import InfoBubble from '../ui/InfoBubble';
 import PageToolbar from './PageToolbar';
 
-function AccountsPanel({ isMobile, maxWidth = 700, circleUsers, activeTab: propActiveTab }) {
+function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
   const navigate = useNavigate();
   const [plaidModalOpen, setPlaidModalOpen] = useState(false);
   const [plaidLoading, setPlaidLoading] = useState(false);
   const { accounts, loading, error, refreshAccounts, fetchTransactions, user, setToast } = useFinancial();
-  const hasSetInitialTab = useRef(false);
   const [selectedCircleUser, setSelectedCircleUser] = useState(user?.id || 'combined');
-  // InfoBubble state/refs for each card
-  const [showNetWorthInfo, setShowNetWorthInfo] = useState(false);
-  const [showAssetsInfo, setShowAssetsInfo] = useState(false);
-  const [showLiabilitiesInfo, setShowLiabilitiesInfo] = useState(false);
-  const netWorthInfoRef = useRef(null);
-  const assetsInfoRef = useRef(null);
-  const liabilitiesInfoRef = useRef(null);
-  // Timeout refs for delayed hide
-  const netWorthTimeout = useRef();
-  const assetsTimeout = useRef();
-  const liabilitiesTimeout = useRef();
 
   const grouped = groupAccountsByType(accounts || []) || {
     cash: [],
@@ -50,27 +35,10 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers, activeTab: propA
   };
 
   useEffect(() => {
-    if (accounts && accounts.length > 0 && grouped && !hasSetInitialTab.current && !propActiveTab) {
-      if (grouped.cash?.length > 0) {
-        navigate('/accounts/cash');
-      } else if (grouped.credit?.length > 0) {
-        navigate('/accounts/credit');
-      } else if (grouped.investment?.length > 0) {
-        navigate('/accounts/investment');
-      } else if (grouped.loan?.length > 0) {
-        navigate('/accounts/loan');
-      }
-      hasSetInitialTab.current = true;
-    }
-  }, [accounts, grouped, propActiveTab, navigate]);
-
-  useEffect(() => {
     if (user?.id) {
       setSelectedCircleUser(user.id);
     }
   }, [user]);
-
-
 
   const handlePlaidSuccess = () => {
     refreshAccounts();
@@ -108,15 +76,6 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers, activeTab: propA
   const assetTotal = assets.reduce((sum, a) => sum + getRawBalance(a), 0);
   const liabilityTotal = liabilities.reduce((sum, a) => sum + getRawBalance(a), 0);
   const totalBalance = assetTotal + liabilityTotal;
-
-  // Helper functions for hover with delay
-  const handleShow = (setShow, timeoutRef) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setShow(true);
-  };
-  const handleHide = (setShow, timeoutRef) => {
-    timeoutRef.current = setTimeout(() => setShow(false), 120);
-  };
 
   return (
     <>
@@ -166,49 +125,9 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers, activeTab: propA
           <>
             {/* Unified Net Worth Card with Breakdown Bars */}
             <AccountsSummaryCard grouped={grouped} />
-            {/* Tabs + Add Button */}
+            {/* Grouped Accounts List */}
             <div className="w-full max-w-[700px] mx-auto box-border px-1 mb-4">
-              <div className="flex justify-between items-center flex-wrap gap-2 mb-3">
-                <div className="flex-grow overflow-x-auto">
-                  <Tabs
-                    tabs={[
-                      grouped.cash?.length > 0 && {
-                        id: 'cash',
-                        label: 'Cash',
-                        count: grouped.cash.length,
-                      },
-                      grouped.credit?.length > 0 && {
-                        id: 'credit',
-                        label: 'Credit',
-                        count: grouped.credit.length,
-                      },
-                      grouped.investment?.length > 0 && {
-                        id: 'investment',
-                        label: 'Investments',
-                        count: grouped.investment.length,
-                      },
-                      grouped.loan?.length > 0 && {
-                        id: 'loan',
-                        label: 'Loans',
-                        count: grouped.loan.length,
-                      },
-                    ].filter(Boolean)}
-                    activeId={propActiveTab || 'cash'}
-                    onChange={(tabId) => {
-                      navigate(`/accounts/${tabId}`);
-                    }}
-                  />
-                </div>
-              </div>
-              {/* Account Content */}
-              <div className="min-h-[200px]">
-                <AccountsList
-                  accounts={getActiveTabAccounts(grouped, propActiveTab || 'cash')}
-                  activeTab={propActiveTab || 'cash'}
-                  getAccountTypeIcon={getAccountTypeIcon}
-                  getTotal={getTotal}
-                />
-              </div>
+              <AccountsList grouped={grouped} />
             </div>
           </>
         )}

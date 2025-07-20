@@ -372,10 +372,6 @@ function AppContent({
     <Routes>
       <Route
         path="/accounts"
-        element={user ? <Navigate to="/accounts/cash" replace /> : null}
-      />
-      <Route
-        path="/accounts/cash"
         element={user ? (
           <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
             {!isMobile && (
@@ -394,112 +390,7 @@ function AppContent({
             <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
               <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
-                <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} activeTab="cash" />
-              </div>
-              {isMobile && (
-                <MobileBottomBar
-                  user={user}
-                  onLoginClick={() => setLoginOpen(true)}
-                  setLogoutOpen={() => {}}
-                  visibleTabs={visibleTabs}
-                  currentTab={'/accounts'}
-                />
-              )}
-            </div>
-          </div>
-        ) : null}
-      />
-      <Route
-        path="/accounts/credit"
-        element={user ? (
-          <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
-            {!isMobile && (
-              <CollapsibleSidebar
-                visibleTabs={visibleTabs}
-                form={form}
-                handleChange={handleChange}
-                handleSubmit={handleSubmit}
-                onLoginClick={() => setLoginOpen(true)}
-                user={user}
-                isTablet={isTablet}
-                isMobile={isMobile}
-                currentTab={'/accounts'}
-              />
-            )}
-            <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
-              <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
-                <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} activeTab="credit" />
-              </div>
-              {isMobile && (
-                <MobileBottomBar
-                  user={user}
-                  onLoginClick={() => setLoginOpen(true)}
-                  setLogoutOpen={() => {}}
-                  visibleTabs={visibleTabs}
-                  currentTab={'/accounts'}
-                />
-              )}
-            </div>
-          </div>
-        ) : null}
-      />
-      <Route
-        path="/accounts/investment"
-        element={user ? (
-          <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
-            {!isMobile && (
-              <CollapsibleSidebar
-                visibleTabs={visibleTabs}
-                form={form}
-                handleChange={handleChange}
-                handleSubmit={handleSubmit}
-                onLoginClick={() => setLoginOpen(true)}
-                user={user}
-                isTablet={isTablet}
-                isMobile={isMobile}
-                currentTab={'/accounts'}
-              />
-            )}
-            <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
-              <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
-                <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} activeTab="investment" />
-              </div>
-              {isMobile && (
-                <MobileBottomBar
-                  user={user}
-                  onLoginClick={() => setLoginOpen(true)}
-                  setLogoutOpen={() => {}}
-                  visibleTabs={visibleTabs}
-                  currentTab={'/accounts'}
-                />
-              )}
-            </div>
-          </div>
-        ) : null}
-      />
-      <Route
-        path="/accounts/loan"
-        element={user ? (
-          <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
-            {!isMobile && (
-              <CollapsibleSidebar
-                visibleTabs={visibleTabs}
-                form={form}
-                handleChange={handleChange}
-                handleSubmit={handleSubmit}
-                onLoginClick={() => setLoginOpen(true)}
-                user={user}
-                isTablet={isTablet}
-                isMobile={isMobile}
-                currentTab={'/accounts'}
-              />
-            )}
-            <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
-              <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
-                <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} activeTab="loan" />
+                <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
               </div>
               {isMobile && (
                 <MobileBottomBar
@@ -550,7 +441,7 @@ function AppContent({
         ) : null}
       />
       <Route
-        path="/accounts/:tab/:accountId"
+        path="/accounts/:accountId"
         element={user ? (
           <AccountDrawerLayout
             user={user}
@@ -584,11 +475,11 @@ function AppContent({
           />
         ) : null}
       />
-      <Route path="/" element={user ? <Navigate to="/accounts/cash" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
-      <Route path="/login" element={user ? <Navigate to="/accounts/cash" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
+      <Route path="/" element={user ? <Navigate to="/accounts" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
+      <Route path="/login" element={user ? <Navigate to="/accounts" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
       <Route
         path="*"
-        element={user ? <Navigate to="/accounts/cash" replace /> : <Navigate to="/simulate" replace />}
+        element={user ? <Navigate to="/accounts" replace /> : <Navigate to="/simulate" replace />}
       />
     </Routes>
   );
@@ -690,15 +581,15 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
 
 // Layout for account drawer
 function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth, circleUsers }) {
-  const { accountId, tab } = useParams();
+  const { accountId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { accounts } = useContext(FinancialContext) || {};
   const account = accounts?.find(acc => String(acc.id) === String(accountId));
   
-  // Determine which tab to go back to based on the tab parameter
+  // Go back to accounts page
   const getBackPath = () => {
-    return `/accounts/${tab || 'cash'}`;
+    return '/accounts';
   };
   
   // Disable main page scroll when drawer is open on desktop
@@ -730,7 +621,7 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
           <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
             <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
             <div className="flex-1 pb-[60px]">
-              <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} activeTab={tab || 'cash'} />
+              <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
             </div>
             <MobileBottomBar
               user={user}
@@ -771,7 +662,7 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
         <div className="flex-1 flex flex-col sm:pb-0 ml-[55px]">
           <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
           <div className="flex-1">
-            <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} activeTab={tab || 'cash'} />
+            <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
           </div>
         </div>
       </div>
