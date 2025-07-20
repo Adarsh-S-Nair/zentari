@@ -12,15 +12,9 @@ import os
 router = APIRouter(prefix="/plaid", tags=["plaid"])
 
 def _trigger_initial_sync(user_id: str, item_id: str, access_token: str, supabase_accounts, sync_service):
-    """Trigger initial transaction sync for new accounts (sandbox mode only)"""
-    # Only sync in sandbox mode since webhooks handle sync in production
-    environment = os.getenv('ENV', 'development')
+    """Trigger initial transaction sync for new accounts"""
     
-    if environment != 'development':
-        print(f"[LINK] Skipping initial sync in {environment} mode - webhooks will handle sync")
-        return
-    
-    print(f"[LINK] Triggering initial transaction sync for sandbox mode")
+    print(f"[LINK] Triggering initial transaction sync")
     try:
         from api.sync_routes import sync_transactions_for_item
         from plaid_services import get_transactions
@@ -297,11 +291,58 @@ async def plaid_webhook(request: Request):
             # Historical update completed - all historical transactions are now available
             new_transactions = webhook_data.get('new_transactions', 0)
             historical_complete = webhook_data.get('historical_update_complete', False)
-            print(f"[WEBHOOK] HISTORICAL_UPDATE for item {item_id} - {new_transactions} transactions, complete: {historical_complete}")
+            initial_complete = webhook_data.get('initial_update_complete', False)
+            print(f"[WEBHOOK] HISTORICAL_UPDATE for item {item_id} - {new_transactions} transactions, complete: {historical_complete}, initial_complete: {initial_complete}")
+            
+            if historical_complete and initial_complete:
+                print(f"[WEBHOOK] Both updates complete - expecting SYNC_UPDATES_AVAILABLE webhook next")
+                print(f"[WEBHOOK] Manually triggering sync since both updates are complete...")
+                
+                # Try to find the sync state and trigger sync manually
+                sync_service = get_sync()
+                plaid_item_result = sync_service.get_by_item_id(item_id)
+                
+                if plaid_item_result.get('success'):
+                    plaid_item = plaid_item_result['plaid_item']
+                    user_id = plaid_item['user_id']
+                    access_token = plaid_item['access_token']
+                    
+                    print(f"[WEBHOOK] Found sync state, triggering manual sync for user {user_id}")
+                    
+                    # Create item object for sync_transactions_for_item
+                    item = {
+                        'item_id': item_id,
+                        'access_token': access_token,
+                        'transaction_cursor': plaid_item.get('transaction_cursor', '')
+                    }
+                    
+                    # Trigger sync
+                    from api.sync_routes import sync_transactions_for_item
+                    from plaid_services import get_transactions
+                    from supabase_services import get_transactions as get_supabase_transactions, get_accounts as get_supabase_accounts
+                    
+                    supabase_transactions = get_supabase_transactions()
+                    plaid_transactions = get_transactions()
+                    supabase_accounts = get_supabase_accounts()
+                    
+                    sync_result = sync_transactions_for_item(supabase_transactions, plaid_transactions, supabase_accounts, sync_service, user_id, item)
+                    print(f"[WEBHOOK] Manual sync result: {sync_result}")
+                    
+                    return {"success": True, "message": f"Historical update completed and manual sync triggered: {sync_result}"}
+                else:
+                    print(f"[WEBHOOK] Could not find sync state for manual sync")
+                    return {"success": True, "message": f"Historical update completed with {new_transactions} transactions"}
+                    
+            elif not historical_complete:
+                print(f"[WEBHOOK] Historical update still in progress - waiting for completion")
+            elif not initial_complete:
+                print(f"[WEBHOOK] Initial update not complete - this is unexpected")
+            
             return {"success": True, "message": f"Historical update completed with {new_transactions} transactions"}
         
         else:
             print(f"[WEBHOOK] Unhandled webhook code: {webhook_code}")
+            print(f"[WEBHOOK] Full webhook data: {webhook_data}")
             return {"success": True, "message": "Webhook received (unhandled)"}
             
     except Exception as e:
