@@ -20,18 +20,19 @@ import {
   LoginModal,
   LogoutModal,
   Toast,
+  CircleUserToggle,
+  AccountDetail,
+  LandingPage,
+  TransactionDetail,
 } from './components';
+import { Button, RightDrawer, BottomSheet, Modal } from './components/ui';
+import { PlaidLinkModal } from './components/modals';
 import { useMediaQuery } from 'react-responsive';
-import { FaChartArea } from 'react-icons/fa';
+import { FaChartArea, FaSearch } from 'react-icons/fa';
 import { IoFolderOpen } from 'react-icons/io5';
 import { FaReceipt } from 'react-icons/fa';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiFilter } from 'react-icons/fi';
 import { FinancialContext } from './contexts/FinancialContext';
-import { RightDrawer, BottomSheet, Modal } from './components/ui';
-import AccountDetail from './components/layout/AccountDetail';
-
-import LandingPage from './components/layout/LandingPage';
-import TransactionDetail from './components/layout/TransactionDetail';
 
 // Modal Context
 const ModalContext = createContext();
@@ -324,6 +325,13 @@ function AppContent({
   const { accounts } = useContext(FinancialContext) || {};
   const maxWidth = 700;
 
+  // Toolbar state
+  const [selectedCircleUser, setSelectedCircleUser] = useState(null);
+  const [plaidModalOpen, setPlaidModalOpen] = useState(false);
+  const [plaidLoading, setPlaidLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const authenticatedRoutes = ['/accounts', '/transactions'];
 
   useEffect(() => {
@@ -373,7 +381,7 @@ function AppContent({
       <Route
         path="/accounts"
         element={user ? (
-          <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+          <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
             {!isMobile && (
               <CollapsibleSidebar
                 visibleTabs={visibleTabs}
@@ -388,7 +396,31 @@ function AppContent({
               />
             )}
             <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
+              <Topbar 
+                user={user} 
+                onLoginClick={() => setLoginOpen(true)} 
+                currentPage={'Accounts'} 
+                maxWidth={maxWidth} 
+                isMobile={isMobile}
+                toolbarItems={
+                  <div className="flex items-center justify-between gap-3">
+                    <CircleUserToggle
+                      users={circleUsers}
+                      selectedUser={selectedCircleUser}
+                      onSelectUser={setSelectedCircleUser}
+                    />
+                    <Button
+                      label="Add Accounts"
+                      onClick={() => setPlaidModalOpen(true)}
+                      width="w-32"
+                      loading={plaidLoading}
+                      disabled={plaidLoading}
+                      className="h-8"
+                      color="networth"
+                    />
+                  </div>
+                }
+              />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
                 <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
               </div>
@@ -408,7 +440,7 @@ function AppContent({
       <Route
         path="/transactions"
         element={user ? (
-          <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+          <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
             {!isMobile && (
               <CollapsibleSidebar
                 visibleTabs={visibleTabs}
@@ -423,7 +455,58 @@ function AppContent({
               />
             )}
             <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-              <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} isMobile={isMobile} />
+              <Topbar 
+                user={user} 
+                onLoginClick={() => setLoginOpen(true)} 
+                currentPage={'Transactions'} 
+                maxWidth={maxWidth} 
+                isMobile={isMobile}
+                toolbarItems={
+                  <>
+                    <div className="flex items-center justify-between w-full gap-3">
+                      <CircleUserToggle
+                        users={circleUsers}
+                        selectedUser={selectedCircleUser}
+                        onSelectUser={setSelectedCircleUser}
+                        onAddAccounts={() => {}}
+                        addLoading={false}
+                        maxWidth={maxWidth - 120}
+                      />
+                      <Button
+                        label="Filters"
+                        icon={<FiFilter size={16} />}
+                        width="w-32"
+                        className="h-8"
+                        color="networth"
+                      />
+                    </div>
+                    <div className="mt-2">
+                      <div 
+                        className="flex items-center py-2.5 px-3 min-h-[40px] w-full" 
+                        style={{ 
+                          background: 'var(--color-bg-secondary)',
+                          borderRadius: '8px',
+                          boxShadow: '0 1px 2px 0 var(--color-shadow-light)'
+                        }}
+                      >
+                        <FaSearch size={14} className="mr-3" style={{ color: 'var(--color-text-muted)' }} />
+                        <input
+                          type="text"
+                          placeholder="Search transactions"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="border-none outline-none flex-1 text-[14px] bg-transparent min-w-0 h-6 w-full"
+                          style={{ 
+                            fontFamily: 'inherit', 
+                            color: 'var(--color-text-primary)',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                }
+              />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
                 <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
               </div>
@@ -519,10 +602,10 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
   if (isMobile) {
     return (
       <>
-        <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+        <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
           <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
             <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} isMobile={isMobile} />
-            <div className="flex-1 pb-[60px]">
+            <div className="flex-1 pb-[60px] pt-[56px]">
               <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
             </div>
             <MobileBottomBar
@@ -549,7 +632,7 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
   // On desktop/tablet, show as drawer
   return (
     <>
-      <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+      <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
         <CollapsibleSidebar
           visibleTabs={visibleTabs}
           form={form}
@@ -563,7 +646,7 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
         />
         <div className="flex-1 flex flex-col sm:pb-0 ml-[55px]">
           <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} isMobile={isMobile} />
-          <div className="flex-1">
+          <div className="flex-1 pt-[56px]">
             <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
           </div>
         </div>
@@ -617,10 +700,10 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
   if (isMobile) {
     return (
       <>
-        <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+        <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
           <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
             <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
-            <div className="flex-1 pb-[60px]">
+            <div className="flex-1 pb-[60px] pt-[56px]">
               <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
             </div>
             <MobileBottomBar
@@ -647,7 +730,7 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
   // On desktop/tablet, show as drawer
   return (
     <>
-      <div className="flex min-h-screen w-full relative" style={{ background: 'var(--color-bg-primary)' }}>
+      <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
         <CollapsibleSidebar
           visibleTabs={visibleTabs}
           form={form}
@@ -661,7 +744,7 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
         />
         <div className="flex-1 flex flex-col sm:pb-0 ml-[55px]">
           <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
-          <div className="flex-1">
+          <div className="flex-1 pt-[56px]">
             <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
           </div>
         </div>

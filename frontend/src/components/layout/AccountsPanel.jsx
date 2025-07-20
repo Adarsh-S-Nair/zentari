@@ -1,30 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FinancialContext } from '../../contexts/FinancialContext';
+import { AccountsSummaryCard, AccountsList, CircleUserToggle } from './';
 import { Button, Spinner } from '../ui';
 import { PlaidLinkModal } from '../modals';
-import { useFinancial } from '../../contexts/FinancialContext';
-import AccountsSummaryCard from './AccountsSummaryCard';
-import AccountsList from './AccountsList';
-import {
-  getAccountTypeIcon,
-  groupAccountsByType,
-  getTotal,
-  getRawBalance,
-} from './accountsUtils';
+import { groupAccountsByType, getRawBalance } from './accountsUtils';
 import noAccountsImage from '../../assets/no-accounts.png';
-import CircleUserToggle from './CircleUserToggle';
-import { formatCurrency } from '../../utils/formatters';
-import { FiInfo } from 'react-icons/fi';
-import { IoMdCash } from 'react-icons/io';
 import { FaCreditCard, FaChartLine } from 'react-icons/fa6';
 import InfoBubble from '../ui/InfoBubble';
-import PageToolbar from './PageToolbar';
 
 function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
   const navigate = useNavigate();
   const [plaidModalOpen, setPlaidModalOpen] = useState(false);
   const [plaidLoading, setPlaidLoading] = useState(false);
-  const { accounts, loading, error, refreshAccounts, fetchTransactions, user, setToast } = useFinancial();
+  const { accounts, loading, error, refreshAccounts, fetchTransactions, user, setToast } = useContext(FinancialContext);
   const [selectedCircleUser, setSelectedCircleUser] = useState(user?.id || 'combined');
 
   const grouped = groupAccountsByType(accounts || []) || {
@@ -79,28 +68,6 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
 
   return (
     <>
-      {/* Circle User Toggle Row */}
-      {!allAccountsEmpty && (
-        <PageToolbar>
-          <div className="max-w-[700px] mx-auto flex items-center justify-between gap-3 px-3">
-            <CircleUserToggle
-              users={circleUsers}
-              selectedUser={selectedCircleUser}
-              onSelectUser={setSelectedCircleUser}
-            />
-            <Button
-              label="Add Accounts"
-              onClick={handleAddAccounts}
-              width="w-32"
-              loading={plaidLoading}
-              disabled={plaidLoading}
-              className="h-8"
-              color="networth"
-            />
-          </div>
-        </PageToolbar>
-      )}
-
       <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-0 box-border mb-4" style={{ background: 'var(--color-bg-primary)' }}>
         <div className={`flex flex-col items-center ${allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''} w-full box-border ${allAccountsEmpty ? 'px-3' : ''}`}>
         {loading ? (
@@ -126,7 +93,7 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
             {/* Unified Net Worth Card with Breakdown Bars */}
             <AccountsSummaryCard grouped={grouped} />
             {/* Grouped Accounts List */}
-            <div className="w-full max-w-[700px] mx-auto box-border px-1 mb-4">
+            <div className="w-full max-w-[700px] mx-auto box-border mb-4">
               <AccountsList grouped={grouped} />
             </div>
           </>

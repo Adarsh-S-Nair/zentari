@@ -78,12 +78,11 @@ const AccountsList = ({ grouped }) => {
                 className="px-4 py-3 border-b"
                 style={{ 
                   borderColor: 'var(--color-border-primary)', 
-                  background: type.gradient
+                  background: 'var(--color-bg-secondary)'
                 }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <typeIcon.icon size={16} style={{ color: typeIcon.color }} />
                     <span className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>
                       {type.label}
                     </span>
@@ -98,7 +97,7 @@ const AccountsList = ({ grouped }) => {
               </div>
 
               {/* Accounts List */}
-              <div className="px-2">
+              <div className="px-0 overflow-hidden">
                 {accounts.map((acc, index) => {
                   const balance = getDisplayBalance(acc);
                   const isZero = balance === 0;
@@ -108,14 +107,13 @@ const AccountsList = ({ grouped }) => {
                   return (
                     <div
                       key={acc.account_id}
-                      className={`flex items-center py-4 min-h-[70px] box-border transition-all duration-200 cursor-pointer w-full max-w-full overflow-x-hidden transform hover:scale-[1.01] hover:shadow-md ${
+                      className={`flex items-center py-4 px-4 min-h-[70px] box-border transition-all duration-200 cursor-pointer w-full max-w-full overflow-hidden transform hover:scale-[1.01] hover:shadow-md ${
                         !isLast ? 'border-b' : ''
                       }`}
                       style={{ 
                         background: 'var(--color-bg-secondary)', 
                         borderColor: 'var(--color-border-primary)',
-                        borderRadius: '8px',
-                        margin: '4px 0'
+                        margin: '2px 0'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'var(--color-bg-hover)';
@@ -130,7 +128,7 @@ const AccountsList = ({ grouped }) => {
                       }}
                     >
                       {/* Institution Logo */}
-                      <div className="flex-shrink-0 mr-2 sm:mr-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center overflow-hidden self-center transition-all duration-200 transform hover:scale-110" style={{ 
+                      <div className="flex-shrink-0 mr-3 sm:mr-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center overflow-hidden self-center transition-all duration-200 transform hover:scale-110" style={{ 
                         background: acc.institution_logo ? 'transparent' : 'var(--color-bg-primary)', 
                         border: '1px solid var(--color-border-primary)',
                         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
@@ -145,13 +143,13 @@ const AccountsList = ({ grouped }) => {
                           />
                         ) : null}
                         <div className={`${acc.institution_logo ? 'hidden' : 'flex'} items-center justify-center w-full h-full opacity-70`} style={{ color: 'var(--color-text-muted)' }}>
-                          <FaUniversity size={16} />
+                          <FaUniversity size={12} />
                         </div>
                       </div>
 
                       {/* Account Info */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-center px-2">
-                        <div className="text-[14px] sm:text-[16px] truncate max-w-[180px] sm:max-w-none" style={{ color: 'var(--color-text-primary)' }}>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center px-3">
+                        <div className="text-[14px] sm:text-[16px] truncate max-w-[160px] sm:max-w-[200px] lg:max-w-none" style={{ color: 'var(--color-text-primary)' }}>
                           {acc.name}
                         </div>
                         <div className="flex items-center gap-1 sm:gap-2 mt-1">
@@ -163,22 +161,26 @@ const AccountsList = ({ grouped }) => {
                           <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
                             {capitalizeWords(acc.subtype)}
                           </span>
-                          {lastSync && (
-                            <span className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>
-                              • {formatLastUpdated(lastSync)}
-                            </span>
-                          )}
-                          {acc.update_success ? (
-                            <FaCircleCheck size={8} className="text-green-500 ml-1" />
-                          ) : (
-                            <FaCircleXmark size={8} className="text-red-500 ml-1" />
-                          )}
                         </div>
                       </div>
 
-                      {/* Balance */}
-                      <div className="flex-shrink-0 text-right text-[12px] sm:text-[14px] min-w-[60px] sm:min-w-[80px] ml-2 sm:ml-3 whitespace-nowrap transition-colors duration-150 flex items-center justify-center self-center" style={{ color: 'var(--color-text-primary)' }}>
-                        {formatCurrency(balance)}
+                      {/* Balance and Last Sync - Right Aligned */}
+                      <div className="flex-shrink-0 text-right min-w-[70px] sm:min-w-[90px] ml-3 flex flex-col items-end justify-center">
+                        <div className="text-[12px] sm:text-[14px] whitespace-nowrap transition-colors duration-150" style={{ color: 'var(--color-text-primary)' }}>
+                          {formatCurrency(balance)}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1">
+                          {lastSync && (
+                            <span className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>
+                              {formatLastUpdated(lastSync)}
+                            </span>
+                          )}
+                          {acc.update_success ? (
+                            <FaCircleCheck size={8} className="text-green-500" />
+                          ) : (
+                            <FaCircleXmark size={8} className="text-red-500" />
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
