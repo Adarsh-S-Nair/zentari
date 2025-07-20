@@ -232,6 +232,22 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = f
     t => t.accounts?.account_id === account.account_id
   ).slice(0, 8);
 
+  // Debug: Log transaction icon data
+  if (accountTransactions.length > 0) {
+    console.log('[ACCOUNT] Transaction icon data sample:', {
+      first: {
+        icon_url: accountTransactions[0].icon_url,
+        category_icon_lib: accountTransactions[0].category_icon_lib,
+        category_icon_name: accountTransactions[0].category_icon_name,
+        category_name: accountTransactions[0].category_name,
+        category_color: accountTransactions[0].category_color
+      },
+      total: accountTransactions.length,
+      withIcons: accountTransactions.filter(t => t.icon_url || (t.category_icon_lib && t.category_icon_name)).length,
+      withCategories: accountTransactions.filter(t => t.category_name).length
+    });
+  }
+
   const type = (account?.type || '').toLowerCase();
   let gradientStyle = { background: cardColor };
   
@@ -418,7 +434,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = f
                   >
                     {/* Icon/avatar - made smaller */}
                     <div className="flex-shrink-0 mr-2 sm:mr-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center overflow-hidden self-center transition-all duration-200 transform hover:scale-110" style={{ 
-                      background: txn.icon_url ? 'transparent' : (txn.category_color || 'var(--color-bg-primary)'), 
+                      background: txn.icon_url ? 'transparent' : (txn.category_color || 'var(--color-primary)'), 
                       border: 'none',
                       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
                       filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))'
@@ -427,6 +443,10 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = f
                         <img src={txn.icon_url} alt="icon" className="w-full h-full rounded-full object-cover block" />
                       ) : txn.category_icon_lib && txn.category_icon_name ? (
                         <CategoryIcon lib={txn.category_icon_lib} name={txn.category_icon_name} size={16} color={'var(--color-text-white)'} />
+                      ) : txn.category_name ? (
+                        <span className="text-[12px] font-semibold" style={{ color: 'var(--color-text-white)' }}>
+                          {txn.category_name.charAt(0).toUpperCase()}
+                        </span>
                       ) : (
                         <FaChevronRight size={14} style={{ color: 'var(--color-text-white)' }} />
                       )}

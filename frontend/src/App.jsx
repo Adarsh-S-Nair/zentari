@@ -745,8 +745,7 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
         <BottomSheet 
           isOpen={true} 
           onClose={() => navigate(getBackPath())}
-          header={account?.name || 'Account Details'}
-          maxHeight="90vh"
+          maxHeight="80vh"
         >
           <AccountDetail account={account} inBottomSheet={true} />
         </BottomSheet>
