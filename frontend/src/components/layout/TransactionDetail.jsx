@@ -80,8 +80,8 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
   }
 
   return (
-    <main className={`w-full max-w-[700px] mx-auto overflow-hidden h-full flex flex-col ${inBottomSheet ? 'px-4' : 'px-4 sm:px-6'}`}>
-      <div className="flex flex-col gap-6 pt-6 pb-6 flex-1 overflow-y-auto">
+    <main className={`w-full max-w-[700px] mx-auto h-full flex flex-col`}>
+      <div className={`flex flex-col gap-6 pt-6 pb-6 flex-1 overflow-y-auto ${inBottomSheet ? 'px-4' : 'px-4 sm:px-6'}`}>
         {/* Transaction amount and description above main card */}
         <div className="flex flex-col items-center gap-2">
           <span className="text-2xl font-semibold" style={{ color: transaction.amount > 0 ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>

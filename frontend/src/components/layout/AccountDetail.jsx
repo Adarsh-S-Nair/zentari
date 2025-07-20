@@ -415,40 +415,54 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = f
                 return (
                   <div
                     key={txn.id || i}
-                    className="flex items-center px-2 py-4 min-h-[70px] box-border border-b transition-all duration-200 cursor-pointer w-full max-w-full overflow-x-hidden transform hover:scale-[1.01] hover:shadow-md"
+                    className="flex items-center px-2 py-4 min-h-[70px] box-border border-b transition-all duration-200 cursor-pointer w-full max-w-full overflow-x-hidden"
                     style={{ 
-                      background: 'var(--color-bg-primary)', 
-                      borderColor: 'var(--color-border-primary)',
-                      borderRadius: '8px',
-                      margin: '4px 0'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'var(--color-bg-hover)';
-                      e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'var(--color-bg-primary)';
-                      e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                      borderColor: 'var(--color-border-primary)'
                     }}
                     onClick={() => navigate(`/transaction/${txn.id}`)}
                   >
-                    {/* Icon/avatar - made smaller */}
-                    <div className="flex-shrink-0 mr-2 sm:mr-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center overflow-hidden self-center transition-all duration-200 transform hover:scale-110" style={{ 
-                      background: txn.icon_url ? 'transparent' : (txn.category_color || 'var(--color-primary)'), 
-                      border: 'none',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                      filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))'
+                    {/* Icon/avatar */}
+                    <div className="flex-shrink-0 mr-2 sm:mr-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center overflow-hidden self-center" style={{ 
+                      background: txn.icon_url ? 'transparent' : (txn.category_color || 'var(--color-primary)')
                     }}>
                       {txn.icon_url ? (
-                        <img src={txn.icon_url} alt="icon" className="w-full h-full rounded-full object-cover block" />
-                      ) : txn.category_icon_lib && txn.category_icon_name ? (
-                        <CategoryIcon lib={txn.category_icon_lib} name={txn.category_icon_name} size={16} color={'var(--color-text-white)'} />
+                        <img 
+                          src={txn.icon_url} 
+                          alt="icon" 
+                          className="w-full h-full rounded-full object-cover block"
+                          onError={(e) => {
+                            // Hide broken images and show fallback
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      {txn.category_icon_lib && txn.category_icon_name ? (
+                        <CategoryIcon 
+                          lib={txn.category_icon_lib} 
+                          name={txn.category_icon_name} 
+                          size={16} 
+                          color={'var(--color-text-white)'} 
+                          style={{ display: txn.icon_url ? 'none' : 'flex' }}
+                        />
                       ) : txn.category_name ? (
-                        <span className="text-[12px] font-semibold" style={{ color: 'var(--color-text-white)' }}>
+                        <span 
+                          className="text-[12px] font-semibold" 
+                          style={{ 
+                            color: 'var(--color-text-white)',
+                            display: txn.icon_url ? 'none' : 'block'
+                          }}
+                        >
                           {txn.category_name.charAt(0).toUpperCase()}
                         </span>
                       ) : (
-                        <FaChevronRight size={14} style={{ color: 'var(--color-text-white)' }} />
+                        <FaChevronRight 
+                          size={14} 
+                          style={{ 
+                            color: 'var(--color-text-white)',
+                            display: txn.icon_url ? 'none' : 'block'
+                          }} 
+                        />
                       )}
                     </div>
                     {/* Main info and category */}
@@ -462,7 +476,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = f
                       )}
                     </div>
                     {/* Amount */}
-                    <div className="flex-shrink-0 text-right text-[12px] sm:text-[14px] min-w-[60px] sm:min-w-[80px] ml-2 sm:ml-3 whitespace-nowrap transition-colors duration-150 flex items-center justify-center self-center" style={{ color: amountColor }}>
+                    <div className="flex-shrink-0 text-right text-[12px] sm:text-[14px] min-w-[60px] sm:min-w-[80px] ml-2 sm:ml-3 whitespace-nowrap flex items-center justify-center self-center" style={{ color: amountColor }}>
                       {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
                     </div>
                   </div>
