@@ -43,7 +43,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
 
   return (
     <>
-      <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-0 box-border mb-4 overflow-x-hidden" style={{ background: 'var(--color-bg-primary)' }}>
+      <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-12 box-border mb-4 overflow-x-hidden" style={{ background: 'var(--color-bg-primary)' }}>
         {/* Transactions Card - styled like recent transactions */}
         <div className="w-full box-border mx-auto max-w-full sm:max-w-[700px] overflow-x-hidden px-2">
           {transactionsLoading ? (
@@ -73,28 +73,23 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                   return (
                     <div
                       key={txn.id || i}
-                      className="flex items-center px-3 py-4 min-h-[70px] box-border border-b transition-all duration-200 cursor-pointer w-full max-w-full overflow-x-hidden transform hover:scale-[1.01] hover:shadow-md"
+                      className="flex items-center px-3 py-4 min-h-[70px] box-border border-b transition-all duration-200 cursor-pointer w-full max-w-full overflow-x-hidden"
                       style={{ 
                         background: 'var(--color-bg-primary)', 
-                        borderColor: 'var(--color-border-primary)',
-                        margin: '4px 0'
+                        borderColor: 'var(--color-border-primary)'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'var(--color-bg-hover)';
-                        e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'var(--color-bg-primary)';
-                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
                       }}
                       onClick={() => navigate(`/transaction/${txn.id}`)}
                     >
                       {/* Icon/avatar - made smaller */}
-                      <div className="flex-shrink-0 mr-3 sm:mr-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center overflow-hidden self-center transition-all duration-200 transform hover:scale-110" style={{ 
+                      <div className="flex-shrink-0 mr-3 sm:mr-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center overflow-hidden self-center" style={{ 
                         background: txn.icon_url ? 'transparent' : (txn.category_color || 'var(--color-bg-primary)'), 
-                        border: 'none',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                        filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))'
+                        border: 'none'
                       }}>
                         {txn.icon_url ? (
                           <img src={txn.icon_url} alt="icon" className="w-full h-full rounded-full object-cover block" />

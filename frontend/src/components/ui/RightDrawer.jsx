@@ -61,7 +61,7 @@ export default function RightDrawer({ isOpen, onClose, children, header }) {
         }
       `}</style>
       <div 
-        className="fixed inset-0 z-[300] flex items-start justify-end p-4"
+        className="fixed inset-0 z-[200] flex items-start justify-end p-4"
         style={{ 
           background: 'var(--color-backdrop-overlay)',
           backdropFilter: `blur(var(--color-backdrop-blur))`
@@ -69,7 +69,7 @@ export default function RightDrawer({ isOpen, onClose, children, header }) {
       >
         <div
           ref={drawerRef}
-          className="z-[400] h-[calc(100vh-2rem)] w-[420px] bg-white shadow-2xl transition-all flex flex-col rounded-2xl border"
+          className="z-[300] h-[calc(100vh-2rem)] w-[420px] bg-white shadow-2xl transition-all flex flex-col rounded-2xl border"
           style={{
             transform: visible ? 'translateX(0)' : 'translateX(100%)',
             opacity: visible ? 1 : 0,

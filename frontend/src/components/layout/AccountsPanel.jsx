@@ -68,7 +68,7 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
 
   return (
     <>
-      <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-0 box-border mb-4" style={{ background: 'var(--color-bg-primary)' }}>
+      <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-4 box-border mb-4" style={{ background: 'var(--color-bg-primary)' }}>
         <div className={`flex flex-col items-center ${allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''} w-full box-border ${allAccountsEmpty ? 'px-3' : ''}`}>
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)]">

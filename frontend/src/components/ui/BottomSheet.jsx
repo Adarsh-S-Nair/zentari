@@ -115,7 +115,7 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
   return createPortal(
     <div 
       ref={backdropRef}
-      className="fixed inset-0 z-[300] flex items-end pointer-events-auto"
+      className="fixed inset-0 z-[200] flex items-end pointer-events-auto"
       style={{ 
         background: 'var(--color-backdrop-overlay)',
         backdropFilter: `blur(var(--color-backdrop-blur))`
@@ -133,7 +133,7 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
           borderColor: 'var(--color-border-primary)',
           boxShadow: '0 -25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           position: 'relative',
-          zIndex: 301
+          zIndex: 201
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}

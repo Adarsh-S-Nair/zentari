@@ -577,6 +577,10 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
   const { transactions } = useContext(FinancialContext) || {};
   const transaction = transactions?.find(txn => String(txn.id) === String(transactionId));
   
+  // Toolbar state
+  const [selectedCircleUser, setSelectedCircleUser] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
   // Disable main page scroll when drawer is open on desktop
   useEffect(() => {
     if (!isMobile) {
@@ -604,8 +608,59 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
       <>
         <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
           <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
-            <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} isMobile={isMobile} />
-            <div className="flex-1 pb-[60px] pt-[56px]">
+            <Topbar 
+              user={user} 
+              onLoginClick={() => setLoginOpen(true)} 
+              currentPage={'Transactions'} 
+              maxWidth={maxWidth} 
+              isMobile={isMobile}
+              toolbarItems={
+                <>
+                  <div className="flex items-center justify-between w-full gap-3">
+                    <CircleUserToggle
+                      users={circleUsers}
+                      selectedUser={selectedCircleUser}
+                      onSelectUser={setSelectedCircleUser}
+                      onAddAccounts={() => {}}
+                      addLoading={false}
+                      maxWidth={maxWidth - 120}
+                    />
+                    <Button
+                      label="Filters"
+                      icon={<FiFilter size={16} />}
+                      width="w-32"
+                      className="h-8"
+                      color="networth"
+                    />
+                  </div>
+                  <div className="mt-2">
+                    <div 
+                      className="flex items-center py-2.5 px-3 min-h-[40px] w-full" 
+                      style={{ 
+                        background: 'var(--color-bg-secondary)',
+                        borderRadius: '8px',
+                        boxShadow: '0 1px 2px 0 var(--color-shadow-light)'
+                      }}
+                    >
+                      <FaSearch size={14} className="mr-3" style={{ color: 'var(--color-text-muted)' }} />
+                      <input
+                        type="text"
+                        placeholder="Search transactions"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="border-none outline-none flex-1 text-[14px] bg-transparent min-w-0 h-6 w-full"
+                        style={{ 
+                          fontFamily: 'inherit', 
+                          color: 'var(--color-text-primary)',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              }
+            />
+            <div className="flex-1 pb-[60px]">
               <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
             </div>
             <MobileBottomBar
@@ -645,8 +700,59 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
           currentTab={'/transactions'}
         />
         <div className="flex-1 flex flex-col sm:pb-0 ml-[55px]">
-          <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Transactions'} maxWidth={maxWidth} isMobile={isMobile} />
-          <div className="flex-1 pt-[56px]">
+          <Topbar 
+            user={user} 
+            onLoginClick={() => setLoginOpen(true)} 
+            currentPage={'Transactions'} 
+            maxWidth={maxWidth} 
+            isMobile={isMobile}
+            toolbarItems={
+              <>
+                <div className="flex items-center justify-between w-full gap-3">
+                  <CircleUserToggle
+                    users={circleUsers}
+                    selectedUser={selectedCircleUser}
+                    onSelectUser={setSelectedCircleUser}
+                    onAddAccounts={() => {}}
+                    addLoading={false}
+                    maxWidth={maxWidth - 120}
+                  />
+                  <Button
+                    label="Filters"
+                    icon={<FiFilter size={16} />}
+                    width="w-32"
+                    className="h-8"
+                    color="networth"
+                  />
+                </div>
+                <div className="mt-2">
+                  <div 
+                    className="flex items-center py-2.5 px-3 min-h-[40px] w-full" 
+                    style={{ 
+                      background: 'var(--color-bg-secondary)',
+                      borderRadius: '8px',
+                      boxShadow: '0 1px 2px 0 var(--color-shadow-light)'
+                    }}
+                  >
+                    <FaSearch size={14} className="mr-3" style={{ color: 'var(--color-text-muted)' }} />
+                    <input
+                      type="text"
+                      placeholder="Search transactions"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="border-none outline-none flex-1 text-[14px] bg-transparent min-w-0 h-6 w-full"
+                      style={{ 
+                        fontFamily: 'inherit', 
+                        color: 'var(--color-text-primary)',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            }
+          />
+          <div className="flex-1">
             <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
           </div>
         </div>
@@ -669,6 +775,11 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
   const location = useLocation();
   const { accounts } = useContext(FinancialContext) || {};
   const account = accounts?.find(acc => String(acc.id) === String(accountId));
+  
+  // Toolbar state
+  const [selectedCircleUser, setSelectedCircleUser] = useState(null);
+  const [plaidModalOpen, setPlaidModalOpen] = useState(false);
+  const [plaidLoading, setPlaidLoading] = useState(false);
   
   // Go back to accounts page
   const getBackPath = () => {
@@ -702,8 +813,32 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
       <>
         <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
           <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
-            <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
-            <div className="flex-1 pb-[60px] pt-[56px]">
+            <Topbar 
+              user={user} 
+              onLoginClick={() => setLoginOpen(true)} 
+              currentPage={'Accounts'} 
+              maxWidth={maxWidth} 
+              isMobile={isMobile}
+              toolbarItems={
+                <div className="flex items-center justify-between gap-3">
+                  <CircleUserToggle
+                    users={circleUsers}
+                    selectedUser={selectedCircleUser}
+                    onSelectUser={setSelectedCircleUser}
+                  />
+                  <Button
+                    label="Add Accounts"
+                    onClick={() => setPlaidModalOpen(true)}
+                    width="w-32"
+                    loading={plaidLoading}
+                    disabled={plaidLoading}
+                    className="h-8"
+                    color="networth"
+                  />
+                </div>
+              }
+            />
+            <div className="flex-1 pb-[60px]">
               <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
             </div>
             <MobileBottomBar
@@ -743,8 +878,32 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
           currentTab={'/accounts'}
         />
         <div className="flex-1 flex flex-col sm:pb-0 ml-[55px]">
-          <Topbar user={user} onLoginClick={() => setLoginOpen(true)} currentPage={'Accounts'} maxWidth={maxWidth} isMobile={isMobile} />
-          <div className="flex-1 pt-[56px]">
+          <Topbar 
+            user={user} 
+            onLoginClick={() => setLoginOpen(true)} 
+            currentPage={'Accounts'} 
+            maxWidth={maxWidth} 
+            isMobile={isMobile}
+            toolbarItems={
+              <div className="flex items-center justify-between gap-3">
+                <CircleUserToggle
+                  users={circleUsers}
+                  selectedUser={selectedCircleUser}
+                  onSelectUser={setSelectedCircleUser}
+                />
+                <Button
+                  label="Add Accounts"
+                  onClick={() => setPlaidModalOpen(true)}
+                  width="w-32"
+                  loading={plaidLoading}
+                  disabled={plaidLoading}
+                  className="h-8"
+                  color="networth"
+                />
+              </div>
+            }
+          />
+          <div className="flex-1">
             <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
           </div>
         </div>

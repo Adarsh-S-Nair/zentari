@@ -181,9 +181,9 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
           </div>
         </div>
 
-        {/* Toolbar Section */}
+        {/* Toolbar Section - integrated into topbar */}
         {toolbarItems && (
-          <div className="w-full py-4 px-0 border-t" style={{ borderColor: 'var(--color-border-primary)' }}>
+          <div className="w-full py-3 px-0 border-t" style={{ borderColor: 'var(--color-border-primary)' }}>
             <div className="max-w-[700px] mx-auto px-3 sm:px-4 md:px-6">
               {toolbarItems}
             </div>
@@ -191,8 +191,8 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
         )}
       </div>
       
-      {/* Spacer - adjust height based on whether toolbar is present */}
-      <div className={`w-full ${toolbarItems ? 'h-[120px] min-h-[120px] max-h-[120px]' : 'h-[56px] min-h-[56px] max-h-[56px]'}`} />
+      {/* Spacer - fixed height that accounts for toolbar */}
+      <div className={`w-full ${toolbarItems ? 'h-[104px] min-h-[104px] max-h-[104px]' : 'h-[56px] min-h-[56px] max-h-[56px]'}`} />
       <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} onConfirm={handleLogout} />
     </>
   );

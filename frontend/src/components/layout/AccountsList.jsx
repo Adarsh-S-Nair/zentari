@@ -107,32 +107,27 @@ const AccountsList = ({ grouped }) => {
                   return (
                     <div
                       key={acc.account_id}
-                      className={`flex items-center py-4 px-4 min-h-[70px] box-border transition-all duration-200 cursor-pointer w-full max-w-full overflow-hidden transform hover:scale-[1.01] hover:shadow-md ${
+                      className={`flex items-center py-4 px-4 min-h-[70px] box-border transition-all duration-200 cursor-pointer w-full max-w-full overflow-hidden ${
                         !isLast ? 'border-b' : ''
                       }`}
                       style={{ 
                         background: 'var(--color-bg-secondary)', 
-                        borderColor: 'var(--color-border-primary)',
-                        margin: '2px 0'
+                        borderColor: 'var(--color-border-primary)'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'var(--color-bg-hover)';
-                        e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'var(--color-bg-secondary)';
-                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
                       }}
                       onClick={() => {
                         navigate(`/accounts/${acc.id}`);
                       }}
                     >
                       {/* Institution Logo */}
-                      <div className="flex-shrink-0 mr-3 sm:mr-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center overflow-hidden self-center transition-all duration-200 transform hover:scale-110" style={{ 
+                      <div className="flex-shrink-0 mr-3 sm:mr-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center overflow-hidden self-center" style={{ 
                         background: acc.institution_logo ? 'transparent' : 'var(--color-bg-primary)', 
-                        border: '1px solid var(--color-border-primary)',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                        filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))'
+                        border: '1px solid var(--color-border-primary)'
                       }}>
                         {acc.institution_logo ? (
                           <img
