@@ -138,11 +138,16 @@
   --color-button-disabled-bg: var(--color-gray-100);
 
   /* Gradient Colors */
-  --color-gradient-primary: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
-  --color-gradient-primary-hover: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
-  --color-gradient-primary-active: linear-gradient(135deg, #4338ca 0%, #1d4ed8 100%);
+  --color-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --color-gradient-primary-hover: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  --color-gradient-primary-active: linear-gradient(135deg, #4c51bf 0%, #553c9a 100%);
   --color-gradient-success: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   --color-gradient-success-hover: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  
+  /* Card Gradients - Purple Theme */
+  --color-gradient-networth: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --color-gradient-assets: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a855f7 100%);
+  --color-gradient-liabilities: linear-gradient(135deg, #f472b6 0%, #ec4899 50%, #d946ef 100%);
 }
 
 /* Utility classes for common color combinations */
@@ -320,11 +325,16 @@
   --color-button-disabled-bg: #232728;
 
   /* Gradient Colors */
-  --color-gradient-primary: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
-  --color-gradient-primary-hover: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
-  --color-gradient-primary-active: linear-gradient(135deg, #4338ca 0%, #1d4ed8 100%);
+  --color-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --color-gradient-primary-hover: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  --color-gradient-primary-active: linear-gradient(135deg, #4c51bf 0%, #553c9a 100%);
   --color-gradient-success: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   --color-gradient-success-hover: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  
+  /* Card Gradients - Purple Theme */
+  --color-gradient-networth: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --color-gradient-assets: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a855f7 100%);
+  --color-gradient-liabilities: linear-gradient(135deg, #f472b6 0%, #ec4899 50%, #d946ef 100%);
 } 
 
 /* Light theme scrollbar */

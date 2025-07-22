@@ -24,9 +24,10 @@ export default function MobileBottomBar({ user, onLoginClick, setLogoutOpen, vis
               className={
                 `flex flex-col items-center px-2 py-1.5 rounded-[10px] transition-all duration-150 ` +
                 (isActive
-                  ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white'
+                  ? 'text-white'
                   : 'bg-transparent text-gray-500 hover:text-blue-600')
               }
+              style={isActive ? { background: 'var(--color-gradient-primary)' } : {}}
             >
               {React.cloneElement(tab.icon, { color: isActive ? '#fff' : '#6b7280' })}
             </div>
