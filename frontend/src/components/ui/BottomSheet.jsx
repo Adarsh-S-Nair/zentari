@@ -7,6 +7,7 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
   const [startY, setStartY] = useState(0);
   const [currentY, setCurrentY] = useState(0);
   const [translateY, setTranslateY] = useState(window.innerHeight);
+  const [isExpanded, setIsExpanded] = useState(false);
   const sheetRef = useRef(null);
   const backdropRef = useRef(null);
 
@@ -61,9 +62,11 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
     setCurrentY(newY);
     
     const deltaY = newY - startY;
-    if (deltaY > 0) { // Only allow downward drag
+    
+    if (deltaY > 0) { // Downward drag
       setTranslateY(deltaY);
     }
+    // Remove upward drag logic - we'll handle expansion differently
   };
 
   const handleTouchEnd = () => {
@@ -72,14 +75,20 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
     setIsDragging(false);
     const deltaY = currentY - startY;
     const threshold = 100; // Minimum drag distance to close
+    const expandThreshold = -50; // Threshold to expand to full screen
     
     if (deltaY > threshold) {
       // Close the sheet
       setTranslateY(window.innerHeight);
       closeWithDelay();
+    } else if (deltaY < expandThreshold) {
+      // Expand to full screen with animation
+      setIsExpanded(true);
+      setTranslateY(0);
     } else {
       // Snap back to original position
       setTranslateY(0);
+      setIsExpanded(false);
     }
   };
 
@@ -109,23 +118,27 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
     >
       <div
         ref={sheetRef}
-        className="w-full bg-white shadow-2xl transition-all flex flex-col rounded-t-2xl border pointer-events-auto"
+        className="w-full bg-white shadow-2xl transition-all flex flex-col border pointer-events-auto"
         style={{
-          height: maxHeight,
+          height: isExpanded ? '100vh' : maxHeight,
+          bottom: '0',
           transform: `translateY(${translateY}px)`,
           opacity: visible ? 1 : 0,
-          transition: isDragging ? 'none' : 'all 0.2s ease',
+          transition: isDragging ? 'none' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           borderColor: 'var(--color-border-primary)',
+          borderRadius: isExpanded ? '0' : '16px 16px 0 0',
           boxShadow: '0 -25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-          position: 'relative',
+          position: 'fixed',
           zIndex: 201
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-2">
+        <div 
+          className="flex justify-center pt-3 pb-2"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div 
             className="w-12 h-1 rounded-full cursor-grab active:cursor-grabbing"
             style={{ background: 'var(--color-border-primary)' }}
