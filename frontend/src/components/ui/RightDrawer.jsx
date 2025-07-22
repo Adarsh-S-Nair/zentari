@@ -6,7 +6,11 @@ export default function RightDrawer({ isOpen, onClose, children, header }) {
   const drawerRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen) setVisible(true);
+    if (isOpen) {
+      setVisible(true);
+    } else {
+      setVisible(false);
+    }
 
     const handleKeyDown = (e) => e.key === 'Escape' && closeWithDelay();
     const handleClickOutside = (e) =>
@@ -14,6 +18,7 @@ export default function RightDrawer({ isOpen, onClose, children, header }) {
 
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleClickOutside);
+    
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleClickOutside);

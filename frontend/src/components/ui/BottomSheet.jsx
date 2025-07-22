@@ -22,9 +22,6 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
       
       // Prevent background scrolling
       document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.body.style.top = `-${window.scrollY}px`;
     } else {
       // Slide down animation
       setTranslateY(window.innerHeight);
@@ -33,24 +30,12 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
       }, 200);
       
       // Restore background scrolling
-      const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.top = '';
       document.body.style.overflow = '';
-      window.scrollTo(0, parseInt(scrollY || '0') * -1);
     }
     
     return () => {
       // Cleanup: restore scrolling if component unmounts
-      if (isOpen) {
-        const scrollY = document.body.style.top;
-        document.body.style.position = '';
-        document.body.style.width = '';
-        document.body.style.top = '';
-        document.body.style.overflow = '';
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
-      }
+      document.body.style.overflow = '';
     };
   }, [isOpen]);
 

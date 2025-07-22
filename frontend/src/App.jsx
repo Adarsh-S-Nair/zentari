@@ -584,20 +584,12 @@ function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, 
   // Disable main page scroll when drawer is open on desktop
   useEffect(() => {
     if (!isMobile) {
-      // Force disable scroll immediately
+      // Prevent background scrolling
       document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.body.style.top = `-${window.scrollY}px`;
       
       return () => {
-        // Restore scroll state
-        const scrollY = document.body.style.top;
-        document.body.style.position = '';
-        document.body.style.width = '';
-        document.body.style.top = '';
+        // Restore background scrolling
         document.body.style.overflow = '';
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
       };
     }
   }, [isMobile, transactionId]);
@@ -789,20 +781,12 @@ function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, hand
   // Disable main page scroll when drawer is open on desktop
   useEffect(() => {
     if (!isMobile) {
-      // Force disable scroll immediately
+      // Prevent background scrolling
       document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.body.style.top = `-${window.scrollY}px`;
       
       return () => {
-        // Restore scroll state
-        const scrollY = document.body.style.top;
-        document.body.style.position = '';
-        document.body.style.width = '';
-        document.body.style.top = '';
+        // Restore background scrolling
         document.body.style.overflow = '';
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
       };
     }
   }, [isMobile, accountId]);
