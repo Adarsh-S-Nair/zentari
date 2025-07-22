@@ -109,7 +109,7 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
   return (
     <div className="w-full h-full flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
+      <div className="flex items-center gap-3 p-2 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
         <button
           onClick={onBack}
           className="p-2 rounded-lg transition-all duration-200 hover:scale-105 cursor-pointer"
@@ -122,7 +122,7 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
         >
           <FiArrowLeft size={20} />
         </button>
-        <h2 className="text-lg" style={{ color: 'var(--color-text-primary)' }}>
+        <h2 className="text-base" style={{ color: 'var(--color-text-primary)' }}>
           Select Category
         </h2>
       </div>
@@ -139,7 +139,7 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
             <input
               type="text"
               placeholder="Search categories..."
-              className="w-full pl-10 pr-4 py-3 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+              className="w-full pl-10 pr-4 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
               style={{
                 borderColor: 'var(--color-border-primary)',
                 color: 'var(--color-text-primary)',
@@ -154,7 +154,7 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
             onClick={handleRuleBuilderClick}
             color="networth"
             width="w-auto"
-            className="px-3 py-3"
+            className="px-2 py-2"
             icon={<FiSettings size={16} />}
             title="Category Rule Builder"
           />

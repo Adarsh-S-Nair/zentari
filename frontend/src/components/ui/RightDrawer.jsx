@@ -46,13 +46,14 @@ export default function RightDrawer({ isOpen, onClose, children, header }) {
     >
       <div
         ref={drawerRef}
-        className="z-[300] h-[calc(100vh-2rem)] w-[420px] bg-white shadow-2xl transition-all flex flex-col rounded-2xl border"
+        className="z-[300] h-[calc(100vh-2rem)] w-[420px] shadow-2xl transition-all flex flex-col rounded-2xl border"
         style={{
           transform: visible ? 'translateX(0)' : 'translateX(100%)',
           opacity: visible ? 1 : 0,
           transition: 'all 0.2s ease',
           borderColor: 'var(--color-border-primary)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+          background: 'var(--color-bg-primary)'
         }}
       >
         {/* Content area */}

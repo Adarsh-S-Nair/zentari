@@ -109,7 +109,7 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
     >
       <div
         ref={sheetRef}
-        className="w-full bg-white shadow-2xl transition-all flex flex-col rounded-t-2xl border pointer-events-auto"
+        className="w-full shadow-2xl transition-all flex flex-col rounded-t-2xl border pointer-events-auto"
         style={{
           height: maxHeight,
           transform: `translateY(${translateY}px)`,
@@ -118,7 +118,8 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
           borderColor: 'var(--color-border-primary)',
           boxShadow: '0 -25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           position: 'relative',
-          zIndex: 201
+          zIndex: 201,
+          background: 'var(--color-bg-primary)'
         }}
       >
         {/* Drag handle */}

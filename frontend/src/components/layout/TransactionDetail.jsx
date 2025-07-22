@@ -9,7 +9,7 @@ import CategoryList from '../ui/CategoryList'
 
 const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColor, isFirst = false }) => (
   <div
-    className={`flex justify-between items-center py-4 px-3 text-sm transition-colors ${
+    className={`flex justify-between items-center py-4 px-4 text-sm transition-colors ${
       hoverable ? 'cursor-pointer' : ''
     } ${!isFirst ? 'border-t' : ''}`}
     style={{ 
@@ -99,7 +99,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
   }
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-white">
+    <div className="w-full h-full relative overflow-hidden" style={{ background: 'var(--color-bg-primary)' }}>
       {/* Transaction Detail - slides left when category list is shown */}
       <div 
         className="w-full h-full absolute top-0 left-0"
@@ -109,179 +109,171 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
         }}
       >
         <main className={`w-full max-w-[700px] mx-auto h-full flex flex-col`}>
-          <div className={`flex flex-col gap-6 pt-6 pb-6 flex-1 overflow-y-auto ${inBottomSheet ? 'px-4' : 'px-4 sm:px-6'}`}>
+          <div className={`flex flex-col gap-8 pt-8 pb-6 flex-1 overflow-y-auto`}>
             {/* Transaction amount and description above main card */}
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-2xl font-semibold" style={{ color: transaction.amount > 0 ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>
+            <div className="flex flex-col items-center gap-3 px-2">
+              <span className="text-3xl font-semibold" style={{ color: transaction.amount > 0 ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>
                 {transaction.amount > 0 ? '+' : ''}{formatCurrency(Math.abs(transaction.amount))}
               </span>
-              <div className="text-sm text-center" style={{ color: 'var(--color-text-secondary)' }}>
+              <div className="text-sm text-center max-w-md" style={{ color: 'var(--color-text-secondary)' }}>
                 {transaction.description}
               </div>
             </div>
             
-            <div
-              className="w-full rounded-2xl px-1 py-1 sm:px-1 flex-shrink-0"
-              style={{
-                background: 'var(--color-bg-secondary)',
-                border: '1px solid var(--color-border-primary)'
-              }}
-            >
-              {/* Rows */}
-              <div className="text-sm flex flex-col">
-                <DetailRow label="Status" isFirst={true}>
-                  <span
-                    className="text-[12px] px-2 py-1 rounded-md font-normal"
-                    style={{
-                      color: transaction.pending ? 'var(--color-warning)' : 'var(--color-success)',
-                      background: transaction.pending
-                        ? 'linear-gradient(135deg, var(--color-warning-bg) 0%, rgba(255, 193, 7, 0.10) 100%)'
-                        : 'linear-gradient(135deg, var(--color-success-bg) 0%, rgba(40, 167, 69, 0.10) 100%)',
-                      border: `1px solid ${transaction.pending ? 'rgba(255, 193, 7, 0.12)' : 'rgba(40, 167, 69, 0.12)'}`,
-                      boxShadow: `0 1px 2px ${transaction.pending ? 'rgba(255, 193, 7, 0.07)' : 'rgba(40, 167, 69, 0.07)'}`
-                    }}
-                  >
-                    {transaction.pending ? 'Pending' : 'Posted'}
-                  </span>
-                </DetailRow>
+            {/* Detail rows without card wrapper */}
+            <div className="text-sm flex flex-col px-2 space-y-1">
+              <DetailRow label="Status" isFirst={true}>
+                <span
+                  className="text-[12px] px-3 py-1.5 rounded-full"
+                  style={{
+                    color: transaction.pending ? 'var(--color-warning)' : 'var(--color-success)',
+                    background: transaction.pending
+                      ? 'linear-gradient(135deg, var(--color-warning-bg) 0%, rgba(255, 193, 7, 0.10) 100%)'
+                      : 'linear-gradient(135deg, var(--color-success-bg) 0%, rgba(40, 167, 69, 0.10) 100%)',
+                    border: `1px solid ${transaction.pending ? 'rgba(255, 193, 7, 0.12)' : 'rgba(40, 167, 69, 0.12)'}`,
+                    boxShadow: `0 1px 2px ${transaction.pending ? 'rgba(255, 193, 7, 0.07)' : 'rgba(40, 167, 69, 0.07)'}`
+                  }}
+                >
+                  {transaction.pending ? 'Pending' : 'Posted'}
+                </span>
+              </DetailRow>
 
-                <DetailRow label="Date">
-                  <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
-                    {formatDate(transaction.datetime)}
-                  </span>
-                </DetailRow>
+              <DetailRow label="Date">
+                <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {formatDate(transaction.datetime)}
+                </span>
+              </DetailRow>
 
-                <DetailRow 
-                  label="Category" 
-                  hoverable 
-                  onClick={handleShowCategoryList}
+              <DetailRow 
+                label="Category" 
+                hoverable 
+                onClick={handleShowCategoryList}
+              >
+                <div className="flex items-center gap-2 max-w-[200px]">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {localCategory.color && (
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: localCategory.color }}
+                      />
+                    )}
+                    <span className="text-[14px] truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                      {localCategory.name || 'Uncategorized'}
+                    </span>
+                  </div>
+                  <FiChevronRight size={16} style={{ color: 'var(--color-text-secondary)' }} className="flex-shrink-0" />
+                </div>
+              </DetailRow>
+
+              {transaction.accounts?.name && (
+                <DetailRow
+                  label="Account"
+                  hoverable
+                  onClick={() => navigate(`/accounts/${account?.id}`)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      {localCategory.color && (
-                        <div 
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: localCategory.color }}
-                        />
-                      )}
-                      <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
-                        {localCategory.name || 'Uncategorized'}
-                      </span>
-                    </div>
-                    <FiChevronRight size={16} style={{ color: 'var(--color-text-secondary)' }} />
-                  </div>
-                </DetailRow>
-
-                {transaction.accounts?.name && (
-                  <DetailRow
-                    label="Account"
-                    hoverable
-                    onClick={() => navigate(`/accounts/${account?.id}`)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center"
-                        style={account?.institution_logo ? {} : {
-                          background: 'var(--color-gray-200)',
-                          border: '1px solid var(--color-border-primary)'
-                        }}
-                      >
-                        {account?.institution_logo ? (
-                          <img src={account.institution_logo} className="w-full h-full object-cover rounded-full"
-                            alt={account.institution_name || 'Bank'}
-                          />
-                        ) : (
-                          <div className="w-3 h-3 rounded-full bg-gray-400" />
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-[14px] truncate max-w-[120px] sm:max-w-[180px]" style={{ color: 'var(--color-text-secondary)' }}>
-                          {transaction.accounts.name}
-                        </span>
-                        {transaction.accounts.mask && (
-                          <span className="text-[11px] font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-                            ••••{transaction.accounts.mask}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </DetailRow>
-                )}
-
-                {transaction.subtype && (
-                  <DetailRow label="Type">
-                    <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
-                      {transaction.subtype}
-                    </span>
-                  </DetailRow>
-                )}
-
-                {transaction.payment_channel && (
-                  <DetailRow label="Payment Channel">
-                    <span
-                      className="text-[12px] px-2 py-1 rounded-md font-normal"
-                      style={{
-                        color: 'var(--color-primary)',
-                        background: 'linear-gradient(135deg, var(--color-primary-bg) 0%, rgba(59, 130, 246, 0.10) 100%)',
-                        border: '1px solid rgba(59, 130, 246, 0.12)',
-                        boxShadow: '0 1px 2px rgba(59, 130, 246, 0.07)'
+                    <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center"
+                      style={account?.institution_logo ? {} : {
+                        background: 'var(--color-gray-200)',
+                        border: '1px solid var(--color-border-primary)'
                       }}
                     >
-                      {toTitleCase(transaction.payment_channel)}
-                    </span>
-                  </DetailRow>
-                )}
-
-                {transaction.website && (
-                  <DetailRow label="Website">
-                    <a
-                      href={transaction.website.startsWith('http') ? transaction.website : `https://${transaction.website}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[14px] hover:underline"
-                      style={{ color: 'var(--color-primary)' }}
-                    >
-                      {transaction.website}
-                    </a>
-                  </DetailRow>
-                )}
-
-                {transaction.location && (() => {
-                  const { address, city, region, postal_code, country, store_number } = transaction.location
-                  const lines = [
-                    address,
-                    [city, region, postal_code].filter(Boolean).join(', '),
-                    country,
-                    store_number ? `Store #${store_number}` : null
-                  ].filter(Boolean)
-
-                  return lines.length > 0 && (
-                    <div className="border-t py-4 px-4 text-[14px]" style={{ borderColor: 'var(--color-border-primary)' }}>
-                      <span className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>Location</span>
-                      <div className="mt-2 space-y-1 text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
-                        {lines.map((line, idx) => (
-                          <div key={idx}>{line}</div>
-                        ))}
-                      </div>
+                      {account?.institution_logo ? (
+                        <img src={account.institution_logo} className="w-full h-full object-cover rounded-full"
+                          alt={account.institution_name || 'Bank'}
+                        />
+                      ) : (
+                        <div className="w-3 h-3 rounded-full bg-gray-400" />
+                      )}
                     </div>
-                  )
-                })()}
+                    <div className="flex flex-col items-end">
+                      <span className="text-[14px] truncate max-w-[120px] sm:max-w-[180px]" style={{ color: 'var(--color-text-secondary)' }}>
+                        {transaction.accounts.name}
+                      </span>
+                      {transaction.accounts.mask && (
+                        <span className="text-[11px] font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+                          ••••{transaction.accounts.mask}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </DetailRow>
+              )}
 
-                <div className="border-t py-4 px-4" style={{ borderColor: 'var(--color-border-primary)' }}>
-                  <label htmlFor="note" className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>Note</label>
-                  <textarea
-                    id="note"
-                    rows={3}
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    className="mt-2 w-full bg-transparent border rounded-lg p-2 text-[14px] resize-none"
+              {transaction.subtype && (
+                <DetailRow label="Type">
+                  <span className="text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
+                    {transaction.subtype}
+                  </span>
+                </DetailRow>
+              )}
+
+              {transaction.payment_channel && (
+                <DetailRow label="Payment Channel">
+                  <span
+                    className="text-[12px] px-3 py-1.5 rounded-full"
                     style={{
-                      borderColor: 'var(--color-border-primary)',
-                      color: 'var(--color-text-primary)',
-                      fontFamily: 'inherit'
+                      color: 'var(--color-primary)',
+                      background: 'linear-gradient(135deg, var(--color-primary-bg) 0%, rgba(59, 130, 246, 0.10) 100%)',
+                      border: '1px solid rgba(59, 130, 246, 0.12)',
+                      boxShadow: '0 1px 2px rgba(59, 130, 246, 0.07)'
                     }}
-                    placeholder="Add a note about this transaction..."
-                  />
-                </div>
+                  >
+                    {toTitleCase(transaction.payment_channel)}
+                  </span>
+                </DetailRow>
+              )}
+
+              {transaction.website && (
+                <DetailRow label="Website">
+                  <a
+                    href={transaction.website.startsWith('http') ? transaction.website : `https://${transaction.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[14px] hover:underline"
+                    style={{ color: 'var(--color-primary)' }}
+                  >
+                    {transaction.website}
+                  </a>
+                </DetailRow>
+              )}
+
+              {transaction.location && (() => {
+                const { address, city, region, postal_code, country, store_number } = transaction.location
+                const lines = [
+                  address,
+                  [city, region, postal_code].filter(Boolean).join(', '),
+                  country,
+                  store_number ? `Store #${store_number}` : null
+                ].filter(Boolean)
+
+                return lines.length > 0 && (
+                  <div className="border-t py-4 px-4 text-[14px]" style={{ borderColor: 'var(--color-border-primary)' }}>
+                    <span className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>Location</span>
+                    <div className="mt-2 space-y-1 text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
+                      {lines.map((line, idx) => (
+                        <div key={idx}>{line}</div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+
+              <div className="border-t py-4 px-4" style={{ borderColor: 'var(--color-border-primary)' }}>
+                <label htmlFor="note" className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>Note</label>
+                <textarea
+                  id="note"
+                  rows={3}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="mt-2 w-full bg-transparent border rounded-lg p-3 text-[14px] resize-none transition-colors"
+                  style={{
+                    borderColor: 'var(--color-border-primary)',
+                    color: 'var(--color-text-primary)',
+                    fontFamily: 'inherit'
+                  }}
+                  placeholder="Add a note about this transaction..."
+                />
               </div>
             </div>
           </div>
