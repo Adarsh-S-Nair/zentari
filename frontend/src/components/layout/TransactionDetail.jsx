@@ -6,6 +6,7 @@ import { useModal } from '../../App'
 import { FaPencilRuler } from 'react-icons/fa'
 import { FiChevronRight } from 'react-icons/fi'
 import CategoryList from '../ui/CategoryList'
+import AccountDetail from './AccountDetail'
 
 const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColor, isFirst = false }) => (
   <div
@@ -31,7 +32,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
   const { showModal } = useModal()
   const [note, setNote] = useState(transaction?.notes || '')
   const [showCategoryList, setShowCategoryList] = useState(false)
-  const [isAnimating, setIsAnimating] = useState(false)
+  const [showAccountDetail, setShowAccountDetail] = useState(false)
 
   const [localCategory, setLocalCategory] = useState({
     id: transaction?.category_id || null,
@@ -68,11 +69,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
     })
     
     // Start animation to slide back
-    setIsAnimating(true)
-    setTimeout(() => {
-      setShowCategoryList(false)
-      setIsAnimating(false)
-    }, 200)
+    setShowCategoryList(false)
     
     const success = await updateTransactionCategory(transaction.id, categoryId)
     if (!success && setToast) {
@@ -86,25 +83,28 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
   }
 
   const handleBackFromCategoryList = () => {
-    // Start animation to slide back
-    setIsAnimating(true)
-    setTimeout(() => {
-      setShowCategoryList(false)
-      setIsAnimating(false)
-    }, 200)
+    setShowCategoryList(false)
+  }
+
+  const handleBackFromAccountDetail = () => {
+    setShowAccountDetail(false)
   }
 
   const handleShowCategoryList = () => {
     setShowCategoryList(true)
   }
 
+  const handleShowAccountDetail = () => {
+    setShowAccountDetail(true)
+  }
+
   return (
-    <div className="w-full h-full relative overflow-hidden" style={{ background: 'var(--color-bg-primary)' }}>
-      {/* Transaction Detail - slides left when category list is shown */}
+    <div className="w-full h-full relative overflow-hidden rounded-2xl" style={{ background: 'var(--color-bg-primary)' }}>
+      {/* Transaction Detail - slides left when category list or account detail is shown */}
       <div 
         className="w-full h-full absolute top-0 left-0"
         style={{
-          transform: showCategoryList ? 'translateX(-100%)' : 'translateX(0)',
+          transform: (showCategoryList || showAccountDetail) ? 'translateX(-100%)' : 'translateX(0)',
           transition: 'transform 0.2s ease-in-out'
         }}
       >
@@ -169,7 +169,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
                 <DetailRow
                   label="Account"
                   hoverable
-                  onClick={() => navigate(`/accounts/${account?.id}`)}
+                  onClick={handleShowAccountDetail}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center"
@@ -196,6 +196,7 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
                         </span>
                       )}
                     </div>
+                    <FiChevronRight size={16} style={{ color: 'var(--color-text-secondary)' }} className="flex-shrink-0" />
                   </div>
                 </DetailRow>
               )}
@@ -292,6 +293,21 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
           onBack={handleBackFromCategoryList}
           onCategorySelect={handleCategorySelect}
           selectedCategory={localCategory}
+        />
+      </div>
+
+      {/* Account Detail - slides in from right */}
+      <div 
+        className="w-full h-full absolute top-0 left-0"
+        style={{
+          transform: showAccountDetail ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.2s ease-in-out'
+        }}
+      >
+        <AccountDetail 
+          account={account} 
+          onBack={handleBackFromAccountDetail}
+          inBottomSheet={inBottomSheet}
         />
       </div>
     </div>

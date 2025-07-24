@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useFinancial } from '../../contexts/FinancialContext'
 import { useModal } from '../../App'
-import { FiArrowLeft, FiSearch, FiChevronDown, FiSettings } from 'react-icons/fi'
+import { FiSearch, FiChevronDown, FiSettings } from 'react-icons/fi'
 import CategoryRuleForm from './CategoryRuleForm'
 import Button from './Button'
+import SlideOver from './SlideOver'
 
 const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
   const { categories } = useFinancial()
@@ -107,26 +108,7 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
   })
 
   return (
-    <div className="w-full h-full flex flex-col" style={{ background: 'var(--color-bg-primary)' }}>
-      {/* Header */}
-      <div className="flex items-center gap-3 p-2 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
-        <button
-          onClick={onBack}
-          className="p-2 rounded-lg transition-all duration-200 hover:scale-105 cursor-pointer"
-          style={{ 
-            color: 'var(--color-text-primary)',
-            background: 'transparent'
-          }}
-          onMouseEnter={(e) => e.target.style.background = 'var(--color-bg-hover)'}
-          onMouseLeave={(e) => e.target.style.background = 'transparent'}
-        >
-          <FiArrowLeft size={20} />
-        </button>
-        <h2 className="text-base" style={{ color: 'var(--color-text-primary)' }}>
-          Select Category
-        </h2>
-      </div>
-
+    <SlideOver onBack={onBack} title="Select Category">
       {/* Search Bar */}
       <div className="p-4 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
         <div className="flex gap-2">
@@ -162,8 +144,7 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
       </div>
 
       {/* Categories List */}
-      <div className="flex-1 overflow-y-auto category-list-scrollbar">
-        <div className="w-full box-border mx-auto overflow-x-hidden p-2">
+      <div className="w-full box-border mx-auto overflow-x-hidden p-2">
           {Object.entries(groupedCategories).map(([groupName, group]) => (
             <div key={groupName} className="mb-2">
               {/* Group Header - Clickable */}
@@ -276,8 +257,7 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
             </div>
           ))}
         </div>
-      </div>
-    </div>
+    </SlideOver>
   )
 }
 
