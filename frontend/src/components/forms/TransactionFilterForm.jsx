@@ -1,8 +1,9 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Button } from '../ui';
 import { formatCurrency } from '../../utils/formatters';
 import { FinancialContext } from '../../contexts/FinancialContext';
 import { FaTimes } from 'react-icons/fa';
+import { FiSearch, FiChevronDown } from 'react-icons/fi';
 
 const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
   const { categories } = useContext(FinancialContext);
@@ -14,6 +15,10 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
     searchQuery: '',
     transactionType: 'all' // 'all', 'income', 'expense'
   });
+
+  // Category search and expansion state
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [expandedCategoryGroups, setExpandedCategoryGroups] = useState(new Set());
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({
@@ -31,6 +36,38 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
     }));
   };
 
+  // Auto-expand groups when searching categories
+  useEffect(() => {
+    if (categorySearchQuery.trim()) {
+      // Find groups that contain matching categories
+      const groupsToExpand = new Set();
+      const query = categorySearchQuery.toLowerCase().trim();
+      
+      categories?.forEach(category => {
+        if (category.name.toLowerCase().includes(query)) {
+          const groupName = category.group_name || 'Other';
+          groupsToExpand.add(groupName);
+        }
+      });
+      
+      setExpandedCategoryGroups(groupsToExpand);
+    } else {
+      setExpandedCategoryGroups(new Set());
+    }
+  }, [categorySearchQuery, categories]);
+
+  const toggleCategoryGroup = (groupName) => {
+    setExpandedCategoryGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupName)) {
+        newSet.delete(groupName);
+      } else {
+        newSet.add(groupName);
+      }
+      return newSet;
+    });
+  };
+
   const handleApply = () => {
     onApply(filters);
     onClose();
@@ -45,17 +82,27 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
       searchQuery: '',
       transactionType: 'all'
     });
+    setCategorySearchQuery('');
+    setExpandedCategoryGroups(new Set());
     onReset();
   };
 
   // Group categories by their group for better organization
   const groupedCategories = {};
-  categories?.forEach(category => {
+  const filteredCategories = categories?.filter(cat => 
+    !categorySearchQuery || cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
+  ) || [];
+  
+  filteredCategories.forEach(category => {
     const groupName = category.group_name || 'Other';
     if (!groupedCategories[groupName]) {
-      groupedCategories[groupName] = [];
+      groupedCategories[groupName] = {
+        name: groupName,
+        color: category.color, // Use first category's color for group
+        categories: []
+      };
     }
-    groupedCategories[groupName].push(category);
+    groupedCategories[groupName].categories.push(category);
   });
 
   return (
@@ -160,53 +207,140 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
         <label className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
           Categories ({filters.categories.length} selected)
         </label>
-        <div className="max-h-48 overflow-y-auto border rounded-lg p-3" style={{ 
-          borderColor: 'var(--color-border-primary)',
-          background: 'var(--color-bg-secondary)'
-        }}>
-          {Object.entries(groupedCategories).map(([groupName, groupCategories]) => (
-            <div key={groupName} className="mb-4 last:mb-0">
-              <div className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-muted)' }}>
-                {groupName}
-              </div>
-              <div className="space-y-1">
-                {groupCategories.map((category) => (
-                  <label
-                    key={category.id}
-                    className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-opacity-10"
-                    style={{ 
-                      background: filters.categories.includes(category.id) 
-                        ? `${category.color}20` 
-                        : 'transparent'
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={filters.categories.includes(category.id)}
-                      onChange={() => handleCategoryToggle(category.id)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      style={{ borderColor: 'var(--color-border-primary)' }}
-                    />
-                    <div className="flex items-center space-x-2 flex-1">
-                      <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0" 
-                        style={{ background: category.color }}
-                      />
-                      <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
-                        {category.name}
-                      </span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))}
-          {categories?.length === 0 && (
-            <div className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
-              No categories available
-            </div>
-          )}
+        
+        {/* Category Search Bar */}
+        <div className="relative">
+          <FiSearch 
+            className="absolute left-3 top-1/2 transform -translate-y-1/2" 
+            size={16} 
+            style={{ color: 'var(--color-text-secondary)' }}
+          />
+          <input
+            type="text"
+            placeholder="Search categories..."
+            className="w-full pl-10 pr-4 py-2 text-sm border rounded-t-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
+            style={{
+              borderColor: 'var(--color-border-primary)',
+              color: 'var(--color-text-primary)',
+              background: 'var(--color-bg-secondary)'
+            }}
+            value={categorySearchQuery}
+            onChange={(e) => setCategorySearchQuery(e.target.value)}
+          />
         </div>
+
+        {/* Categories List - Attached to search bar */}
+        <div className="max-h-64 overflow-y-auto border rounded-b-xl" style={{ 
+          borderColor: 'var(--color-border-primary)',
+          background: 'var(--color-bg-secondary)',
+          marginTop: '-8px', // Attach to search bar
+          borderTop: 'none' // Remove top border to attach to search bar
+        }}>
+          <div className="w-full box-border mx-auto overflow-x-hidden">
+            {Object.entries(groupedCategories).map(([groupName, group]) => (
+              <div key={groupName}>
+                {/* Group Header - Clickable */}
+                <button
+                  onClick={() => toggleCategoryGroup(groupName)}
+                  className="w-full flex items-center px-4 py-3 min-h-[48px] transition-all duration-200 cursor-pointer"
+                  style={{
+                    background: expandedCategoryGroups.has(groupName) ? 'var(--color-bg-hover)' : 'var(--color-bg-primary)',
+                    color: 'var(--color-text-primary)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!expandedCategoryGroups.has(groupName)) {
+                      e.currentTarget.style.background = 'var(--color-bg-hover)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!expandedCategoryGroups.has(groupName)) {
+                      e.currentTarget.style.background = 'var(--color-bg-primary)';
+                    }
+                  }}
+                >
+                  {/* Group color dot */}
+                  {group.color && (
+                    <div className="flex-shrink-0 mr-3 w-2.5 h-2.5 rounded-full" style={{ 
+                      background: group.color
+                    }} />
+                  )}
+                  
+                  {/* Group name */}
+                  <div className="flex-1 text-left">
+                    <div className="text-[14px]" style={{ color: 'var(--color-text-primary)' }}>
+                      {group.name}
+                    </div>
+                  </div>
+                  
+                  {/* Expand/collapse arrow */}
+                  <FiChevronDown 
+                    className={`w-4 h-4 transition-transform duration-200 flex-shrink-0 ${expandedCategoryGroups.has(groupName) ? 'rotate-180' : ''}`}
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  />
+                </button>
+
+                {/* Categories under this group - Animated */}
+                <div 
+                  className="overflow-hidden transition-all duration-200 ease-in-out"
+                  style={{
+                    maxHeight: expandedCategoryGroups.has(groupName) ? `${group.categories.length * 48}px` : '0px',
+                    opacity: expandedCategoryGroups.has(groupName) ? 1 : 0,
+                    background: expandedCategoryGroups.has(groupName) ? 'var(--color-bg-hover)' : 'transparent'
+                  }}
+                >
+                  {group.categories.map((category, index) => (
+                    <label
+                      key={category.id}
+                      className="w-full flex items-center py-3 min-h-[48px] transition-all duration-200 cursor-pointer"
+                      style={{
+                        background: filters.categories.includes(category.id) ? 'var(--color-primary-bg)' : 'transparent',
+                        color: 'var(--color-text-primary)',
+                        paddingLeft: 'calc(1rem + 1.5rem)' // 16px + 24px for indentation
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!filters.categories.includes(category.id)) {
+                          e.currentTarget.style.background = 'var(--color-bg-secondary)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!filters.categories.includes(category.id)) {
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={filters.categories.includes(category.id)}
+                        onChange={() => handleCategoryToggle(category.id)}
+                        className="mr-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        style={{ borderColor: 'var(--color-border-primary)' }}
+                      />
+                      
+                      {/* Category color dot */}
+                      <div className="flex-shrink-0 mr-3 w-2.5 h-2.5 rounded-full" style={{ 
+                        background: category.color || 'var(--color-primary)'
+                      }} />
+                      
+                      {/* Category name */}
+                      <div className="flex-1 text-left">
+                        <div className="text-[14px] truncate" style={{ color: 'var(--color-text-primary)' }}>
+                          {category.name}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {categories?.length === 0 && (
+              <div className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
+                No categories available
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Selected Categories Pills */}
         {filters.categories.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {filters.categories.map((categoryId) => {

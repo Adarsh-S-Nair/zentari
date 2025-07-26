@@ -24,19 +24,32 @@ def sync_transactions_for_item(supabase_transactions, plaid_transactions, supaba
     access_token = item.get('access_token')
     cursor = item.get('transaction_cursor')
     
+    print(f"[SYNC] Starting sync for item {item_id}, user {user_id}")
+    print(f"[SYNC] Access token: {access_token[:20]}...")
+    print(f"[SYNC] Cursor: '{cursor}'")
+    
     if not item_id or not access_token:
         print(f"[SYNC] Skipping item {item_id}: missing item_id or access_token")
         return {'item_id': item_id, 'success': False, 'error': 'Missing item_id or access_token'}
     
     # Only sync if at least one account for this item has auto_sync = True
     accounts = supabase_accounts.get_auto_sync(user_id, item_id)
+    print(f"[SYNC] Found {len(accounts)} accounts with auto_sync=True for item {item_id}")
+    
     if not accounts:
         print(f"[SYNC] Skipping item {item_id}: no accounts with auto_sync")
+        # Let's check what accounts exist for this item
+        all_accounts = supabase_accounts.get_by_item(item_id)
+        print(f"[SYNC] Total accounts for item {item_id}: {len(all_accounts.get('data', []))}")
+        for acc in all_accounts.get('data', []):
+            print(f"[SYNC] Account: {acc.get('name')} - auto_sync: {acc.get('auto_sync')}")
         return {'item_id': item_id, 'success': False, 'skipped': True, 'reason': 'No accounts with auto_sync'}
     
     # Sync transactions for this item
     print(f"[SYNC] Syncing transactions for item {item_id} with cursor: {cursor}")
     sync_result = plaid_transactions.sync(access_token, cursor)
+    
+    print(f"[SYNC] Plaid sync result: {sync_result}")
     
     if not sync_result.get('success'):
         print(f"[SYNC] Error syncing transactions for item {item_id}: {sync_result.get('error')}")
@@ -45,7 +58,13 @@ def sync_transactions_for_item(supabase_transactions, plaid_transactions, supaba
     # Store new transactions
     added = sync_result.get('added', [])
     print(f"[SYNC] {len(added)} transactions to add for item {item_id}")
-    store_result = supabase_transactions.store(added)
+    
+    if added:
+        store_result = supabase_transactions.store(added)
+        print(f"[SYNC] Store result: {store_result}")
+    else:
+        print(f"[SYNC] No transactions to store")
+        store_result = {"success": True, "message": "No transactions to store"}
     
     # Handle modified transactions
     modified_ids = sync_result.get('modified', [])
