@@ -42,12 +42,29 @@ async def get_user_accounts(user_id: str, authorization: Optional[str] = Header(
         return {"success": True, "accounts": []}
 
 @router.get("/user-transactions/{user_id}")
-async def get_user_transactions(user_id: str, limit: int = 100, offset: int = 0, authorization: Optional[str] = Header(None)):
+async def get_user_transactions(
+    user_id: str, 
+    limit: int = 100, 
+    offset: int = 0, 
+    category_ids: Optional[str] = None,
+    authorization: Optional[str] = Header(None)
+):
     """Get all stored transactions for a user from the database"""
     try:
         print(f"[DB] Getting transactions for user {user_id}, limit={limit}, offset={offset}")
+        
+        # Parse category_ids if provided
+        category_filter = None
+        if category_ids:
+            try:
+                category_filter = [cat_id.strip() for cat_id in category_ids.split(',') if cat_id.strip()]
+                print(f"[DB] Filtering by categories: {category_filter}")
+            except Exception as e:
+                print(f"[DB] Error parsing category_ids: {e}")
+                category_filter = None
+        
         transactions_service = get_transactions()
-        result = transactions_service.get_by_user(user_id, limit, offset)
+        result = transactions_service.get_by_user(user_id, limit, offset, category_filter)
         
         if not result["success"]:
             print(f"[DB] Error getting transactions for user {user_id}: {result.get('error')}")

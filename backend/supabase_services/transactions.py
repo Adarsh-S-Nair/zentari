@@ -134,10 +134,12 @@ class TransactionService:
             print(f"[TRANSACTIONS] Error updating transactions: {str(e)}")
             return {"success": False, "error": str(e)}
     
-    def get_by_user(self, user_id: str, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
+    def get_by_user(self, user_id: str, limit: int = 100, offset: int = 0, category_filter: List[str] = None) -> Dict[str, Any]:
         """Get transactions for user with category info"""
         try:
             print(f"[TRANSACTIONS] Getting transactions for user {user_id}, limit={limit}, offset={offset}")
+            if category_filter:
+                print(f"[TRANSACTIONS] Filtering by categories: {category_filter}")
             
             # First get all account IDs for this user
             from .accounts import AccountService
@@ -155,7 +157,7 @@ class TransactionService:
                 print(f"[TRANSACTIONS] No account IDs found for user {user_id}")
                 return {"success": True, "data": []}
             
-            # Complex query with joins - filter by account_id in the list of user's accounts
+            # Build the base query
             query = self.client.client.table('transactions').select(
                 'id, plaid_transaction_id, datetime, description, category_id, merchant_name, icon_url, '
                 'personal_finance_category, amount, currency_code, pending, location, payment_channel, '
@@ -163,7 +165,14 @@ class TransactionService:
                 'accounts:account_id(account_id, name, mask, type, subtype, user_id), '
                 'system_categories:category_id(id, group_id, label, description, hex_color, '
                 'category_groups:group_id(id, name, icon_lib, icon_name))'
-            ).in_('account_id', user_account_ids).order('datetime', desc=True).range(offset, offset + limit - 1)
+            ).in_('account_id', user_account_ids)
+            
+            # Apply category filter if provided
+            if category_filter:
+                query = query.in_('category_id', category_filter)
+            
+            # Apply ordering and pagination
+            query = query.order('datetime', desc=True).range(offset, offset + limit - 1)
             
             response = query.execute()
             print(f"[TRANSACTIONS] Query executed, found {len(response.data)} transactions")
@@ -193,6 +202,7 @@ class TransactionService:
                 print(f"[TRANSACTIONS] No transactions found in response")
                 return {"success": True, "data": []}
         except Exception as e:
+            print(f"[TRANSACTIONS] Error in get_by_user: {str(e)}")
             return {"success": False, "error": str(e)}
     
     def delete_by_plaid_ids(self, plaid_transaction_ids: List[str]) -> Dict[str, Any]:

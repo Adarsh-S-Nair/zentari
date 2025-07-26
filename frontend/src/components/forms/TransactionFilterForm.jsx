@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Button } from '../ui';
 import { formatCurrency } from '../../utils/formatters';
+import { FinancialContext } from '../../contexts/FinancialContext';
+import { FaTimes } from 'react-icons/fa';
 
 const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
+  const { categories } = useContext(FinancialContext);
   const [filters, setFilters] = useState({
     dateRange: 'all',
     amountRange: 'all',
@@ -16,6 +19,15 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
     setFilters(prev => ({
       ...prev,
       [key]: value
+    }));
+  };
+
+  const handleCategoryToggle = (categoryId) => {
+    setFilters(prev => ({
+      ...prev,
+      categories: prev.categories.includes(categoryId)
+        ? prev.categories.filter(id => id !== categoryId)
+        : [...prev.categories, categoryId]
     }));
   };
 
@@ -35,6 +47,16 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
     });
     onReset();
   };
+
+  // Group categories by their group for better organization
+  const groupedCategories = {};
+  categories?.forEach(category => {
+    const groupName = category.group_name || 'Other';
+    if (!groupedCategories[groupName]) {
+      groupedCategories[groupName] = [];
+    }
+    groupedCategories[groupName].push(category);
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -133,18 +155,87 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
         />
       </div>
 
-      {/* Placeholder for Categories */}
-      <div className="space-y-2">
+      {/* Categories */}
+      <div className="space-y-3">
         <label className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-          Categories
+          Categories ({filters.categories.length} selected)
         </label>
-        <div className="px-3 py-2 border rounded-lg text-sm" style={{ 
+        <div className="max-h-48 overflow-y-auto border rounded-lg p-3" style={{ 
           borderColor: 'var(--color-border-primary)',
-          color: 'var(--color-text-muted)',
           background: 'var(--color-bg-secondary)'
         }}>
-          <span className="text-xs">Category filtering coming soon...</span>
+          {Object.entries(groupedCategories).map(([groupName, groupCategories]) => (
+            <div key={groupName} className="mb-4 last:mb-0">
+              <div className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                {groupName}
+              </div>
+              <div className="space-y-1">
+                {groupCategories.map((category) => (
+                  <label
+                    key={category.id}
+                    className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-opacity-10"
+                    style={{ 
+                      background: filters.categories.includes(category.id) 
+                        ? `${category.color}20` 
+                        : 'transparent'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.categories.includes(category.id)}
+                      onChange={() => handleCategoryToggle(category.id)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      style={{ borderColor: 'var(--color-border-primary)' }}
+                    />
+                    <div className="flex items-center space-x-2 flex-1">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ background: category.color }}
+                      />
+                      <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                        {category.name}
+                      </span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+          {categories?.length === 0 && (
+            <div className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
+              No categories available
+            </div>
+          )}
         </div>
+        {filters.categories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {filters.categories.map((categoryId) => {
+              const category = categories?.find(c => c.id === categoryId);
+              return category ? (
+                <div
+                  key={categoryId}
+                  className="flex items-center space-x-1 px-2 py-1 rounded-full text-xs"
+                  style={{ 
+                    background: `${category.color}20`,
+                    color: category.color
+                  }}
+                >
+                  <div 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ background: category.color }}
+                  />
+                  <span>{category.name}</span>
+                  <button
+                    onClick={() => handleCategoryToggle(categoryId)}
+                    className="ml-1 hover:bg-opacity-20 rounded-full p-0.5"
+                  >
+                    <FaTimes size={8} />
+                  </button>
+                </div>
+              ) : null;
+            })}
+          </div>
+        )}
       </div>
 
       {/* Placeholder for Accounts */}

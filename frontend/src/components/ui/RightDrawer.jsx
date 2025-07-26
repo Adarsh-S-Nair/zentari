@@ -20,7 +20,7 @@ export default function RightDrawer({ isOpen, onClose, children, header }) {
     const handleKeyDown = (e) => e.key === 'Escape' && onClose();
     const handleClickOutside = (e) =>
       drawerRef.current && !drawerRef.current.contains(e.target) && onClose();
-    
+
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleClickOutside);
     
@@ -34,7 +34,7 @@ export default function RightDrawer({ isOpen, onClose, children, header }) {
   if (!isOpen) return null;
 
   return createPortal(
-    <div
+    <div 
       className="fixed inset-0 z-[200] flex items-center justify-end"
       style={{ background: 'rgba(0, 0, 0, 0.5)' }}
     >

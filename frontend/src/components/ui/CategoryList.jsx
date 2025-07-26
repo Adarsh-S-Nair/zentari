@@ -71,41 +71,41 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
 
   const handleRuleBuilderClick = () => {
     if (showModal) {
-      showModal({
-        header: 'Category Rule Builder',
-        description: (
-          <CategoryRuleForm
-            categories={categories}
-            onSave={(rule) => {
-              console.log('Rule saved:', rule)
-              // TODO: Implement rule saving logic
-            }}
-            onCancel={() => {}}
-            onSubmitRef={ruleFormRef}
-            onValidityChange={setIsRuleFormValid}
-          />
-        ),
-        headerIcon: <FiSettings size={20} style={{ color: 'var(--color-text-secondary)' }} />,
-        buttons: [
-          { 
-            text: 'Cancel', 
-            color: 'gray', 
-            onClick: null,
-            icon: null
+    showModal({
+      header: 'Category Rule Builder',
+      description: (
+        <CategoryRuleForm
+          categories={categories}
+          onSave={(rule) => {
+            console.log('Rule saved:', rule)
+            // TODO: Implement rule saving logic
+          }}
+          onCancel={() => {}}
+          onSubmitRef={ruleFormRef}
+          onValidityChange={setIsRuleFormValid}
+        />
+      ),
+      headerIcon: <FiSettings size={20} style={{ color: 'var(--color-text-secondary)' }} />,
+      buttons: [
+        { 
+          text: 'Cancel', 
+          color: 'gray', 
+          onClick: null,
+          icon: null
+        },
+        { 
+          text: 'Save Rule', 
+          color: 'networth', 
+          onClick: () => {
+            if (ruleFormRef.current && ruleFormRef.current.submit) {
+              ruleFormRef.current.submit()
+            }
           },
-          { 
-            text: 'Save Rule', 
-            color: 'networth', 
-            onClick: () => {
-              if (ruleFormRef.current && ruleFormRef.current.submit) {
-                ruleFormRef.current.submit()
-              }
-            },
-            icon: null,
-            disabled: !isRuleFormValid
-          }
-        ]
-      })
+          icon: null,
+          disabled: !isRuleFormValid
+        }
+      ]
+    })
     }
   }
 
@@ -152,15 +152,15 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
             />
           </div>
           {showModal && (
-            <Button
-              label=""
-              onClick={handleRuleBuilderClick}
-              color="networth"
-              width="w-auto"
-              className="px-2 py-2"
-              icon={<FiSettings size={16} />}
-              title="Category Rule Builder"
-            />
+          <Button
+            label=""
+            onClick={handleRuleBuilderClick}
+            color="networth"
+            width="w-auto"
+            className="px-2 py-2"
+            icon={<FiSettings size={16} />}
+            title="Category Rule Builder"
+          />
           )}
         </div>
       </div>

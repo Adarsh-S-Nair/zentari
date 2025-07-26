@@ -95,8 +95,8 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
       setLocalExpanded(true)
       setReadyToShow(false)
     } else if (localExpanded) {
-      setLocalExpanded(false)
-      setReadyToShow(false)
+        setLocalExpanded(false)
+        setReadyToShow(false)
     }
   }, [isActive])
 
@@ -105,9 +105,9 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
       setShouldAnimate(false)
       setContentHeight(0)
       void contentRef.current.offsetHeight
-      setContentHeight(contentRef.current.scrollHeight)
-      setShouldAnimate(true)
-      setReadyToShow(true)
+        setContentHeight(contentRef.current.scrollHeight)
+        setShouldAnimate(true)
+        setReadyToShow(true)
     }
   }, [localExpanded, fullyOpen, isActive])
 

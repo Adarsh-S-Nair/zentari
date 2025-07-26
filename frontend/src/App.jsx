@@ -412,7 +412,7 @@ function AppContent({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { accounts } = useContext(FinancialContext) || {};
+  const { fetchFilteredTransactions } = useContext(FinancialContext);
   const { openDrawer } = useDrawer();
   const maxWidth = 700;
 
@@ -422,6 +422,8 @@ function AppContent({
   const [plaidLoading, setPlaidLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filteredTransactions, setFilteredTransactions] = useState(null);
+  const [activeFilters, setActiveFilters] = useState(null);
 
   const authenticatedRoutes = ['/dashboard', '/accounts', '/transactions'];
 
@@ -461,13 +463,20 @@ function AppContent({
       title: 'Filter Transactions',
       content: (
         <TransactionFilterForm
-          onApply={(filters) => {
+          onApply={async (filters) => {
             console.log('Applied filters:', filters);
-            // TODO: Implement filter logic
+            setActiveFilters(filters);
+            
+            // Fetch filtered transactions
+            if (user?.id) {
+              const filtered = await fetchFilteredTransactions(user.id, filters);
+              setFilteredTransactions(filtered);
+            }
           }}
           onReset={() => {
             console.log('Reset filters');
-            // TODO: Implement reset logic
+            setActiveFilters(null);
+            setFilteredTransactions(null);
           }}
           onClose={() => {
             // Drawer will close automatically
@@ -661,7 +670,13 @@ function AppContent({
                 }
               />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
-                <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
+                <TransactionsPanel 
+                  isMobile={isMobile} 
+                  maxWidth={maxWidth} 
+                  circleUsers={circleUsers}
+                  filteredTransactions={filteredTransactions}
+                  activeFilters={activeFilters}
+                />
               </div>
               {isMobile && (
                 <MobileBottomBar

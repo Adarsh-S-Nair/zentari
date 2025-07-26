@@ -59,7 +59,7 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
   if (!isOpen) return null;
 
   return createPortal(
-    <div
+    <div 
       ref={backdropRef}
       className="fixed inset-0 z-[200] flex items-end justify-center"
       style={{ background: 'rgba(0, 0, 0, 0.5)' }}
@@ -75,10 +75,10 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
           boxShadow: '0 -25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           background: 'var(--color-bg-primary)'
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-2">
           <div 
@@ -95,7 +95,7 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
             </h2>
           </div>
         )}
-
+        
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {children}

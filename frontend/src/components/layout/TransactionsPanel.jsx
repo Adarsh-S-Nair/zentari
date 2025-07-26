@@ -9,7 +9,7 @@ import CircleUserToggle from './CircleUserToggle';
 import { useDrawer } from '../../App';
 import TransactionDetail from './TransactionDetail';
 
-const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
+const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTransactions, activeFilters }) => {
   const { 
     transactions, 
     transactionsLoading, 
@@ -33,7 +33,10 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
     }
   }, [user]);
 
-  const filteredTransactions = transactions.filter(
+  // Use filtered transactions if available, otherwise use regular transactions
+  const baseTransactions = filteredTransactions !== null ? filteredTransactions : transactions;
+
+  const filteredTransactionsList = baseTransactions.filter(
     (txn) =>
       (selectedAccount === 'all' || txn.accounts?.account_id === selectedAccount) &&
       txn.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -42,7 +45,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
   // Group transactions by date
   const groupedTransactions = React.useMemo(() => {
     const grouped = {};
-    filteredTransactions.forEach(txn => {
+    filteredTransactionsList.forEach(txn => {
       const date = formatDate(txn.datetime);
       if (!grouped[date]) {
         grouped[date] = [];
@@ -50,7 +53,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
       grouped[date].push(txn);
     });
     return grouped;
-  }, [filteredTransactions]);
+  }, [filteredTransactionsList]);
 
   const handleTransactionClick = React.useCallback((transaction) => {
     // Create a wrapper component that shows loading initially
@@ -98,17 +101,62 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
           </div>
         )}
         
+        {/* Filter indicator */}
+        {activeFilters && (
+          <div className="mb-4 p-3 rounded-lg border" style={{ 
+            borderColor: 'var(--color-border-primary)',
+            background: 'var(--color-bg-secondary)'
+          }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                  Filters Applied
+                </span>
+                {activeFilters.categories?.length > 0 && (
+                  <span className="text-xs px-2 py-1 rounded-full" style={{ 
+                    background: 'var(--color-primary)',
+                    color: 'white'
+                  }}>
+                    {activeFilters.categories.length} categories
+                  </span>
+                )}
+                {activeFilters.transactionType !== 'all' && (
+                  <span className="text-xs px-2 py-1 rounded-full" style={{ 
+                    background: 'var(--color-primary)',
+                    color: 'white'
+                  }}>
+                    {activeFilters.transactionType}
+                  </span>
+                )}
+                {activeFilters.amountRange !== 'all' && (
+                  <span className="text-xs px-2 py-1 rounded-full" style={{ 
+                    background: 'var(--color-primary)',
+                    color: 'white'
+                  }}>
+                    {activeFilters.amountRange}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {filteredTransactionsList.length} transactions
+              </span>
+            </div>
+          </div>
+        )}
+        
         {/* Transactions Card - styled like recent transactions */}
         <div className="w-full box-border mx-auto max-w-full sm:max-w-[700px] overflow-x-hidden px-2">
           {transactionsLoading && transactions.length === 0 ? (
             <div className="h-full flex items-center justify-center min-h-[120px]">
               <Spinner size={28} />
             </div>
-          ) : filteredTransactions.length === 0 ? (
+          ) : filteredTransactionsList.length === 0 ? (
             <div className="h-full flex items-center justify-center text-sm text-center px-6 min-h-[120px]" style={{ color: 'var(--color-text-muted)' }}>
-              {transactions.length === 0
-                ? 'No transactions found. Add accounts to see your transaction history.'
-                : 'No transactions match your filters.'}
+              {activeFilters 
+                ? 'No transactions match your current filters. Try adjusting your filter criteria.'
+                : transactions.length === 0
+                  ? 'No transactions found. Add accounts to see your transaction history.'
+                  : 'No transactions match your filters.'}
             </div>
           ) : (
             <>
@@ -175,7 +223,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
               ))}
               
               {/* Load More Button */}
-              {hasMoreTransactions && (
+              {hasMoreTransactions && !activeFilters && (
                 <div className="flex justify-center py-6">
                   <button
                     onClick={handleLoadMore}
@@ -196,6 +244,19 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers }) => {
                       'Load More Transactions'
                     )}
                   </button>
+                </div>
+              )}
+              
+              {/* Filter notice */}
+              {activeFilters && (
+                <div className="flex justify-center py-4">
+                  <div className="text-xs text-center px-4 py-2 rounded-lg" style={{ 
+                    background: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text-muted)',
+                    border: '1px solid var(--color-border-primary)'
+                  }}>
+                    Showing filtered results. Clear filters to load more transactions.
+                  </div>
                 </div>
               )}
             </>

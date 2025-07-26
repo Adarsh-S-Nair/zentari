@@ -124,7 +124,7 @@ const AccountsList = ({ grouped, onAccountClick }) => {
                         if (onAccountClick) {
                           onAccountClick(acc);
                         } else {
-                          navigate(`/accounts/${acc.id}`);
+                        navigate(`/accounts/${acc.id}`);
                         }
                       }}
                     >

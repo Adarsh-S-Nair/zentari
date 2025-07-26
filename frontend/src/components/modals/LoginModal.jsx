@@ -65,8 +65,8 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
   const handleClose = () => {
     setVisible(false)
-    onClose()
-    setIsSignup(false)
+      onClose()
+      setIsSignup(false)
   }
 
   const handleSubmit = async () => {

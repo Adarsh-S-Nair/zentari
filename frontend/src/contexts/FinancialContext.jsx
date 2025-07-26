@@ -263,6 +263,111 @@ export const FinancialProvider = ({ children, setToast }) => {
     return loadRecentTransactions(userId)
   }
 
+  const fetchFilteredTransactions = async (userId, filters = {}) => {
+    if (!userId) return
+    
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        limit: '100',
+        offset: '0'
+      })
+      
+      // Add category filter if provided
+      if (filters.categories && filters.categories.length > 0) {
+        params.append('category_ids', filters.categories.join(','))
+      }
+      
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?${params.toString()}`
+      
+      const response = await fetch(fullUrl)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        const filteredTransactions = result.transactions || []
+        
+        // Apply additional client-side filters
+        let processedTransactions = filteredTransactions
+        
+        // Filter by transaction type (income/expense)
+        if (filters.transactionType && filters.transactionType !== 'all') {
+          processedTransactions = processedTransactions.filter(txn => {
+            if (filters.transactionType === 'income') return txn.amount > 0
+            if (filters.transactionType === 'expense') return txn.amount < 0
+            return true
+          })
+        }
+        
+        // Filter by search query
+        if (filters.searchQuery && filters.searchQuery.trim()) {
+          const query = filters.searchQuery.toLowerCase().trim()
+          processedTransactions = processedTransactions.filter(txn =>
+            txn.description?.toLowerCase().includes(query) ||
+            txn.merchant_name?.toLowerCase().includes(query)
+          )
+        }
+        
+        // Filter by amount range
+        if (filters.amountRange && filters.amountRange !== 'all') {
+          processedTransactions = processedTransactions.filter(txn => {
+            const amount = Math.abs(txn.amount)
+            switch (filters.amountRange) {
+              case 'small': return amount < 50
+              case 'medium': return amount >= 50 && amount <= 500
+              case 'large': return amount > 500
+              default: return true
+            }
+          })
+        }
+        
+        // Filter by date range (client-side for now)
+        if (filters.dateRange && filters.dateRange !== 'all') {
+          const now = new Date()
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+          
+          processedTransactions = processedTransactions.filter(txn => {
+            const txnDate = new Date(txn.datetime)
+            switch (filters.dateRange) {
+              case 'today':
+                return txnDate >= today
+              case 'week':
+                const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+                return txnDate >= weekAgo
+              case 'month':
+                const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
+                return txnDate >= monthAgo
+              case 'quarter':
+                const quarterAgo = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate())
+                return txnDate >= quarterAgo
+              case 'year':
+                const yearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
+                return txnDate >= yearAgo
+              default:
+                return true
+            }
+          })
+        }
+        
+        return processedTransactions
+      } else {
+        throw new Error(result.error || 'Failed to fetch filtered transactions')
+      }
+    } catch (error) {
+      console.error('Error fetching filtered transactions:', error)
+      return []
+    }
+  }
+
   const fetchCategories = async () => {
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
@@ -454,6 +559,7 @@ export const FinancialProvider = ({ children, setToast }) => {
       fetchCategories,
       fetchPlaidItems,
       loadMoreTransactions,
+      fetchFilteredTransactions,
       setToast
     }}>
       {children}
