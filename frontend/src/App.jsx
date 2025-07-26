@@ -27,7 +27,7 @@ import {
   TransactionDetail,
 } from './components';
 import { Button, RightDrawer, BottomSheet, Modal } from './components/ui';
-import { PlaidLinkModal } from './components/modals';
+import { TransactionFilterForm } from './components/forms';
 import { useMediaQuery } from 'react-responsive';
 import { FaChartArea, FaSearch, FaTachometerAlt } from 'react-icons/fa';
 import { IoFolderOpen } from 'react-icons/io5';
@@ -349,18 +349,13 @@ function App() {
   }, [user]);
 
   const handleLoginSuccess = () => {
-    setLoginOpen(false);
+    navigate('/dashboard');
   };
 
   return (
     <FinancialProvider setToast={setToast}>
-      <ModalProvider>
-        <DrawerProvider>
-          <LoginModal
-            isOpen={loginOpen}
-            onClose={() => setLoginOpen(false)}
-            onLoginSuccess={handleLoginSuccess}
-          />
+      <DrawerProvider>
+        <ModalProvider>
           <Router>
             <AppContent
               loading={loading}
@@ -388,9 +383,23 @@ function App() {
               handleSubmit={handleSubmit}
               circleUsers={circleUsers}
             />
+            <LoginModal
+              isOpen={loginOpen}
+              onClose={() => setLoginOpen(false)}
+              onLoginSuccess={handleLoginSuccess}
+            />
+            <LogoutModal
+              isOpen={logoutOpen}
+              onClose={() => setLogoutOpen(false)}
+              onConfirm={() => {
+                supabase.auth.signOut();
+                setLogoutOpen(false);
+              }}
+            />
+            <Toast message={toast.message} type={toast.type} />
           </Router>
-        </DrawerProvider>
-      </ModalProvider>
+        </ModalProvider>
+      </DrawerProvider>
     </FinancialProvider>
   );
 }
@@ -401,9 +410,10 @@ function AppContent({
   logoutOpen, setLogoutOpen, isTablet, isMobile, allTabs, visibleTabs,
   form, setForm, handleChange, handleSubmit, circleUsers
 }) {
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { accounts } = useContext(FinancialContext) || {};
+  const { openDrawer } = useDrawer();
   const maxWidth = 700;
 
   // Toolbar state
@@ -444,6 +454,30 @@ function AppContent({
 
   const handleLogoutSuccess = () => {
     navigate('/simulate');
+  };
+
+  const handleFilterClick = () => {
+    openDrawer({
+      title: 'Filter Transactions',
+      content: (
+        <TransactionFilterForm
+          onApply={(filters) => {
+            console.log('Applied filters:', filters);
+            // TODO: Implement filter logic
+          }}
+          onReset={() => {
+            console.log('Reset filters');
+            // TODO: Implement reset logic
+          }}
+          onClose={() => {
+            // Drawer will close automatically
+          }}
+        />
+      ),
+      onClose: () => {
+        // No additional cleanup needed
+      }
+    });
   };
 
   return (
@@ -596,6 +630,7 @@ function AppContent({
                         width="w-32"
                         className="h-8"
                         color="networth"
+                        onClick={handleFilterClick}
                       />
                     </div>
                     <div className="mt-2">

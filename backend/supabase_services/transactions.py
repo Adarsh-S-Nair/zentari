@@ -13,6 +13,8 @@ class TransactionService:
             if not transactions:
                 return {"success": True, "message": "No transactions to store"}
             
+            print(f"[TRANSACTIONS] Storing {len(transactions)} transactions using upsert")
+            
             transaction_data = []
             for transaction in transactions:
                 # Get account UUID from plaid account_id
@@ -21,6 +23,7 @@ class TransactionService:
                 account_result = account_service.get_by_plaid_id(transaction['account_id'])
                 
                 if not account_result.get('success') or not account_result.get('data'):
+                    print(f"[TRANSACTIONS] Could not find account for plaid_id: {transaction['account_id']}")
                     continue
                 
                 account_uuid = account_result['data'][0]['id']
@@ -44,27 +47,38 @@ class TransactionService:
                     'payment_channel': transaction.get('payment_channel'),
                     'website': transaction.get('website')
                 })
+                
+                print(f"[TRANSACTIONS] Prepared transaction: {transaction['description']} (ID: {transaction['plaid_transaction_id']}) - Pending: {transaction['pending']}")
             
             if transaction_data:
                 result = self.client.upsert('transactions', transaction_data, 'plaid_transaction_id')
+                if result.get('success'):
+                    print(f"[TRANSACTIONS] Successfully stored {len(transaction_data)} transactions")
+                else:
+                    print(f"[TRANSACTIONS] Error storing transactions: {result.get('error')}")
+                
                 return {
                     "success": True,
                     "message": f"Stored {len(transaction_data)} transactions",
                     "stored_count": len(transaction_data)
                 }
             else:
+                print(f"[TRANSACTIONS] No valid transactions to store")
                 return {"success": True, "message": "No valid transactions to store"}
                 
         except Exception as e:
+            print(f"[TRANSACTIONS] Error storing transactions: {str(e)}")
             return {"success": False, "error": str(e)}
     
     def update(self, transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Update existing transactions"""
+        """Update existing transactions using upsert to handle both new and modified transactions"""
         try:
             if not transactions:
                 return {"success": True, "message": "No transactions to update"}
             
+            print(f"[TRANSACTIONS] Updating {len(transactions)} transactions")
             updated_count = 0
+            
             for transaction in transactions:
                 # Get account UUID
                 from .accounts import AccountService
@@ -72,6 +86,7 @@ class TransactionService:
                 account_result = account_service.get_by_plaid_id(transaction['account_id'])
                 
                 if not account_result.get('success') or not account_result.get('data'):
+                    print(f"[TRANSACTIONS] Could not find account for plaid_id: {transaction['account_id']}")
                     continue
                 
                 account_uuid = account_result['data'][0]['id']
@@ -96,10 +111,18 @@ class TransactionService:
                     'website': transaction.get('website')
                 }
                 
-                result = self.client.update('transactions', transaction_data, 
+                # Use upsert to handle both new and existing transactions
+                # This ensures that if a transaction was previously "pending" and is now "posted",
+                # it will update the existing record instead of creating a duplicate
+                result = self.client.upsert('transactions', transaction_data, 
                                           {'plaid_transaction_id': transaction['plaid_transaction_id']})
                 if result.get('success'):
                     updated_count += 1
+                    print(f"[TRANSACTIONS] Successfully upserted transaction: {transaction['description']} (ID: {transaction['plaid_transaction_id']})")
+                else:
+                    print(f"[TRANSACTIONS] Failed to upsert transaction: {transaction['description']} - {result.get('error')}")
+            
+            print(f"[TRANSACTIONS] Successfully updated {updated_count} out of {len(transactions)} transactions")
             
             return {
                 "success": True,
@@ -108,6 +131,7 @@ class TransactionService:
             }
                 
         except Exception as e:
+            print(f"[TRANSACTIONS] Error updating transactions: {str(e)}")
             return {"success": False, "error": str(e)}
     
     def get_by_user(self, user_id: str, limit: int = 100, offset: int = 0) -> Dict[str, Any]:

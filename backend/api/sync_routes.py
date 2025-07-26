@@ -51,11 +51,26 @@ def sync_transactions_for_item(supabase_transactions, plaid_transactions, supaba
     modified_ids = sync_result.get('modified', [])
     modified_count = 0
     if modified_ids:
-        print(f"[SYNC] {len(modified_ids)} modified transaction IDs for item {item_id}")
+        print(f"[SYNC] {len(modified_ids)} modified transaction IDs for item {item_id}: {modified_ids}")
         modified_transactions = plaid_transactions.get_by_ids(access_token, modified_ids)
         if modified_transactions.get('success'):
-            modified_count = len(modified_transactions.get('transactions', []))
-            supabase_transactions.update(modified_transactions.get('transactions', []))
+            modified_transactions_list = modified_transactions.get('transactions', [])
+            modified_count = len(modified_transactions_list)
+            print(f"[SYNC] Retrieved {modified_count} modified transactions from Plaid")
+            
+            # Log details about each modified transaction
+            for txn in modified_transactions_list:
+                print(f"[SYNC] Modified transaction: {txn.get('description')} (ID: {txn.get('plaid_transaction_id')}) - Pending: {txn.get('pending')}")
+            
+            update_result = supabase_transactions.update(modified_transactions_list)
+            if update_result.get('success'):
+                print(f"[SYNC] Successfully updated {update_result.get('updated_count', 0)} modified transactions")
+            else:
+                print(f"[SYNC] Error updating modified transactions: {update_result.get('error')}")
+        else:
+            print(f"[SYNC] Error retrieving modified transactions: {modified_transactions.get('error')}")
+    else:
+        print(f"[SYNC] No modified transactions for item {item_id}")
     
     # Handle removed transactions
     removed_ids = sync_result.get('removed', [])

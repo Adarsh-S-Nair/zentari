@@ -27,6 +27,11 @@ const InfoBubble = ({
     setReady(false);
     // Next tick, measure and position
     requestAnimationFrame(() => {
+      if (!anchorRef?.current || !bubbleRef?.current) {
+        console.warn('InfoBubble: anchor or bubble ref not available');
+        return;
+      }
+      
       const anchorRect = anchorRef.current.getBoundingClientRect();
       const bubbleRect = bubbleRef.current.getBoundingClientRect();
       let top = 0, left = 0, arrowLeft = '50%';

@@ -145,8 +145,10 @@ class TransactionService:
                 # Debug logging for recent transactions
                 print(f"[SYNC] Processing transaction: {transaction.name} (ID: {transaction.transaction_id})")
                 print(f"[SYNC] - Has icon_url: {hasattr(transaction, 'icon_url')}")
+                print(f"[SYNC] - Icon URL value: {getattr(transaction, 'icon_url', None)}")
                 print(f"[SYNC] - Has personal_finance_category: {hasattr(transaction, 'personal_finance_category')}")
                 print(f"[SYNC] - Has merchant_name: {hasattr(transaction, 'merchant_name')}")
+                print(f"[SYNC] - Merchant name: {getattr(transaction, 'merchant_name', None)}")
                 
                 # Convert PersonalFinanceCategory object to dict if it exists
                 personal_finance_category = getattr(transaction, 'personal_finance_category', None)
@@ -240,27 +242,94 @@ class TransactionService:
             if not transaction_ids:
                 return {"success": True, "transactions": []}
             
-            # Use the regular get_transactions method with a wide date range
-            # and then filter by the specific transaction IDs
-            transactions_result = self.get(access_token, days_back=730)
+            print(f"[PLAID] Getting {len(transaction_ids)} specific transactions by IDs")
             
-            if not transactions_result.get('success'):
-                return transactions_result
+            # For modified transactions, we need to get the full transaction data
+            # Since Plaid doesn't have a direct "get by IDs" endpoint, we'll use
+            # a wider date range but more targeted approach
+            end_date = datetime.now().date()
+            start_date = end_date - timedelta(days=90)  # Last 90 days should be sufficient for modified transactions
             
-            all_transactions = transactions_result.get('transactions', [])
+            request = TransactionsGetRequest(
+                access_token=access_token,
+                start_date=start_date,
+                end_date=end_date
+            )
             
-            # Filter to only include the requested transaction IDs
-            filtered_transactions = [
-                txn for txn in all_transactions 
-                if txn.get('plaid_transaction_id') in transaction_ids
-            ]
+            response = self.client.transactions_get(request)
+            
+            # Process transactions and filter to only the requested IDs
+            transactions = []
+            for transaction in response.transactions:
+                if transaction.transaction_id in transaction_ids:
+                    # Convert PersonalFinanceCategory object to dict if it exists
+                    personal_finance_category = getattr(transaction, 'personal_finance_category', None)
+                    if personal_finance_category:
+                        try:
+                            personal_finance_category = {
+                                'confidence_level': str(personal_finance_category.confidence_level) if hasattr(personal_finance_category, 'confidence_level') else None,
+                                'detailed': str(personal_finance_category.detailed) if hasattr(personal_finance_category, 'detailed') else None,
+                                'primary': str(personal_finance_category.primary) if hasattr(personal_finance_category, 'primary') else None
+                            }
+                        except Exception as e:
+                            print(f"Error converting personal_finance_category: {e}")
+                            personal_finance_category = None
+                    
+                    # Get icon URL if available
+                    icon_url = getattr(transaction, 'icon_url', None)
+                    print(f"[PLAID] Transaction {transaction.transaction_id} icon_url: {icon_url}")
+                    
+                    # Get primary category from personal finance category (consistent with other methods)
+                    primary_category = None
+                    if personal_finance_category and isinstance(personal_finance_category, dict):
+                        primary_category = personal_finance_category.get('primary')
+                    
+                    # Convert location object to dict if it exists
+                    location = getattr(transaction, 'location', None)
+                    if location:
+                        try:
+                            location = {
+                                'address': getattr(location, 'address', None),
+                                'city': getattr(location, 'city', None),
+                                'region': getattr(location, 'region', None),
+                                'postal_code': getattr(location, 'postal_code', None),
+                                'country': getattr(location, 'country', None),
+                                'lat': getattr(location, 'lat', None),
+                                'lon': getattr(location, 'lon', None),
+                                'store_number': getattr(location, 'store_number', None)
+                            }
+                        except Exception as e:
+                            print(f"Error converting location: {e}")
+                            location = None
+
+                    transaction_data = {
+                        "plaid_transaction_id": transaction.transaction_id,
+                        "datetime": transaction.datetime.isoformat() if hasattr(transaction, 'datetime') and transaction.datetime else (transaction.date.isoformat() if transaction.date else None),
+                        "description": transaction.name,
+                        "category": primary_category,
+                        "category_id": getattr(transaction, 'category_id', None),
+                        "merchant_name": getattr(transaction, 'merchant_name', None),
+                        "icon_url": icon_url,
+                        "personal_finance_category": personal_finance_category,
+                        "amount": float(transaction.amount),
+                        "currency_code": transaction.iso_currency_code or "USD",
+                        "pending": transaction.pending,
+                        "account_id": transaction.account_id,
+                        "location": location,
+                        "payment_channel": getattr(transaction, 'payment_channel', None),
+                        "website": getattr(transaction, 'website', None)
+                    }
+                    transactions.append(transaction_data)
+            
+            print(f"[PLAID] Found {len(transactions)} out of {len(transaction_ids)} requested transactions")
             
             return {
                 "success": True,
-                "transactions": filtered_transactions,
-                "request_id": transactions_result.get('request_id')
+                "transactions": transactions,
+                "request_id": response.request_id
             }
         except Exception as e:
+            print(f"[PLAID] Error getting transactions by IDs: {str(e)}")
             return {
                 "success": False,
                 "error": str(e)

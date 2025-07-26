@@ -2,10 +2,25 @@ import React, { useEffect, useState } from 'react'
 import { usePlaidLink } from 'react-plaid-link'
 import { supabase } from '../../supabaseClient'
 
+// Global flag to prevent multiple script loading
+let plaidScriptLoaded = false;
+
 export default function PlaidLinkModal({ isOpen, onClose, onSuccess, onError }) {
   const [linkToken, setLinkToken] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  // Set global flag when component mounts
+  useEffect(() => {
+    if (!plaidScriptLoaded) {
+      plaidScriptLoaded = true;
+    }
+    
+    // Cleanup when component unmounts
+    return () => {
+      // Don't reset the flag on unmount to prevent script reloading
+    }
+  }, [])
 
   const createLinkToken = async () => {
     setLoading(true)
@@ -112,11 +127,23 @@ export default function PlaidLinkModal({ isOpen, onClose, onSuccess, onError }) 
     if (isOpen && !linkToken && !loading) {
       createLinkToken()
     }
+    
+    // Cleanup when modal closes
+    if (!isOpen) {
+      setLinkToken(null)
+      setError(null)
+    }
   }, [isOpen])
 
   useEffect(() => {
     if (ready && linkToken && isOpen) {
-      open()
+      try {
+        open()
+      } catch (err) {
+        console.error('Error opening Plaid Link:', err)
+        setError('Failed to open Plaid Link')
+        if (onError) onError('Failed to open Plaid Link')
+      }
     }
   }, [ready, linkToken, isOpen, open])
 

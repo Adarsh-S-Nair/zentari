@@ -304,7 +304,7 @@ export const FinancialProvider = ({ children, setToast }) => {
       
       // Ensure baseUrl doesn't already have a protocol
       const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
-      const fullUrl = `${protocol}://${cleanBaseUrl}/database/plaid-items/${userId}`
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-plaid-items/${userId}`
       
       const response = await fetch(fullUrl)
       
@@ -453,7 +453,8 @@ export const FinancialProvider = ({ children, setToast }) => {
       fetchTransactions,
       fetchCategories,
       fetchPlaidItems,
-      loadMoreTransactions
+      loadMoreTransactions,
+      setToast
     }}>
       {children}
     </FinancialContext.Provider>

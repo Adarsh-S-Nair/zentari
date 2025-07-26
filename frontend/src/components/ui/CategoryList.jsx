@@ -1,14 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useContext } from 'react'
 import { useFinancial } from '../../contexts/FinancialContext'
-import { useModal } from '../../App'
 import { FiSearch, FiChevronDown, FiSettings } from 'react-icons/fi'
 import CategoryRuleForm from './CategoryRuleForm'
 import Button from './Button'
 import SlideOver from './SlideOver'
 
+// Try to get modal context, but don't fail if it's not available
+let ModalContext;
+try {
+  ModalContext = require('../../App').ModalContext;
+} catch (e) {
+  ModalContext = null;
+}
+
 const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
   const { categories } = useFinancial()
-  const { showModal } = useModal()
+  
+  // Try to use modal context if available
+  let showModal = null;
+  try {
+    if (ModalContext) {
+      const modalContext = useContext(ModalContext);
+      showModal = modalContext?.showModal;
+    }
+  } catch (e) {
+    // Modal context not available, continue without it
+  }
+  
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedGroups, setExpandedGroups] = useState(new Set())
   const [isRuleFormValid, setIsRuleFormValid] = useState(false)
@@ -52,41 +70,43 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
   }
 
   const handleRuleBuilderClick = () => {
-    showModal({
-      header: 'Category Rule Builder',
-      description: (
-        <CategoryRuleForm
-          categories={categories}
-          onSave={(rule) => {
-            console.log('Rule saved:', rule)
-            // TODO: Implement rule saving logic
-          }}
-          onCancel={() => {}}
-          onSubmitRef={ruleFormRef}
-          onValidityChange={setIsRuleFormValid}
-        />
-      ),
-      headerIcon: <FiSettings size={20} style={{ color: 'var(--color-text-secondary)' }} />,
-      buttons: [
-        { 
-          text: 'Cancel', 
-          color: 'gray', 
-          onClick: null,
-          icon: null
-        },
-        { 
-          text: 'Save Rule', 
-          color: 'networth', 
-          onClick: () => {
-            if (ruleFormRef.current && ruleFormRef.current.submit) {
-              ruleFormRef.current.submit()
-            }
+    if (showModal) {
+      showModal({
+        header: 'Category Rule Builder',
+        description: (
+          <CategoryRuleForm
+            categories={categories}
+            onSave={(rule) => {
+              console.log('Rule saved:', rule)
+              // TODO: Implement rule saving logic
+            }}
+            onCancel={() => {}}
+            onSubmitRef={ruleFormRef}
+            onValidityChange={setIsRuleFormValid}
+          />
+        ),
+        headerIcon: <FiSettings size={20} style={{ color: 'var(--color-text-secondary)' }} />,
+        buttons: [
+          { 
+            text: 'Cancel', 
+            color: 'gray', 
+            onClick: null,
+            icon: null
           },
-          icon: null,
-          disabled: !isRuleFormValid
-        }
-      ]
-    })
+          { 
+            text: 'Save Rule', 
+            color: 'networth', 
+            onClick: () => {
+              if (ruleFormRef.current && ruleFormRef.current.submit) {
+                ruleFormRef.current.submit()
+              }
+            },
+            icon: null,
+            disabled: !isRuleFormValid
+          }
+        ]
+      })
+    }
   }
 
   // Group categories by their group
@@ -131,15 +151,17 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button
-            label=""
-            onClick={handleRuleBuilderClick}
-            color="networth"
-            width="w-auto"
-            className="px-2 py-2"
-            icon={<FiSettings size={16} />}
-            title="Category Rule Builder"
-          />
+          {showModal && (
+            <Button
+              label=""
+              onClick={handleRuleBuilderClick}
+              color="networth"
+              width="w-auto"
+              className="px-2 py-2"
+              icon={<FiSettings size={16} />}
+              title="Category Rule Builder"
+            />
+          )}
         </div>
       </div>
 
