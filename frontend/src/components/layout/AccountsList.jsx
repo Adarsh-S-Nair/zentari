@@ -11,7 +11,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { getDisplayBalance, getAccountTypeIcon, getTotal } from './accountsUtils';
 
-const AccountsList = ({ grouped }) => {
+const AccountsList = ({ grouped, onAccountClick }) => {
   const [menuOpenId, setMenuOpenId] = useState(null);
   const menuRef = useRef(null);
   const triggerRefs = useRef({});
@@ -121,7 +121,11 @@ const AccountsList = ({ grouped }) => {
                         e.currentTarget.style.background = 'var(--color-bg-secondary)';
                       }}
                       onClick={() => {
-                        navigate(`/accounts/${acc.id}`);
+                        if (onAccountClick) {
+                          onAccountClick(acc);
+                        } else {
+                          navigate(`/accounts/${acc.id}`);
+                        }
                       }}
                     >
                       {/* Institution Logo */}

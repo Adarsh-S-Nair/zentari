@@ -45,7 +45,7 @@ class TransactionService:
                         personal_finance_category = None
 
                 # Only use merchant logo for icon_url
-                icon_url = getattr(transaction, 'logo_url', None)
+                icon_url = getattr(transaction, 'icon_url', None)
 
                 # Get the primary category from personal finance category
                 primary_category = None
@@ -142,6 +142,12 @@ class TransactionService:
             
             transactions = []
             for transaction in response.added:
+                # Debug logging for recent transactions
+                print(f"[SYNC] Processing transaction: {transaction.name} (ID: {transaction.transaction_id})")
+                print(f"[SYNC] - Has icon_url: {hasattr(transaction, 'icon_url')}")
+                print(f"[SYNC] - Has personal_finance_category: {hasattr(transaction, 'personal_finance_category')}")
+                print(f"[SYNC] - Has merchant_name: {hasattr(transaction, 'merchant_name')}")
+                
                 # Convert PersonalFinanceCategory object to dict if it exists
                 personal_finance_category = getattr(transaction, 'personal_finance_category', None)
                 if personal_finance_category:
@@ -151,13 +157,20 @@ class TransactionService:
                             'detailed': str(personal_finance_category.detailed) if hasattr(personal_finance_category, 'detailed') else None,
                             'primary': str(personal_finance_category.primary) if hasattr(personal_finance_category, 'primary') else None
                         }
+                        print(f"[SYNC] - Personal finance category: {personal_finance_category}")
                     except Exception as e:
                         print(f"Error converting personal_finance_category: {e}")
                         personal_finance_category = None
-                icon_url = getattr(transaction, 'logo_url', None)
+                else:
+                    print(f"[SYNC] - No personal_finance_category found")
+                
+                icon_url = getattr(transaction, 'icon_url', None)
+                print(f"[SYNC] - Icon URL: {icon_url}")
+                
                 primary_category = None
                 if personal_finance_category and isinstance(personal_finance_category, dict):
                     primary_category = personal_finance_category.get('primary')
+                    print(f"[SYNC] - Primary category: {primary_category}")
                 
                 # Convert Location object to dict if it exists
                 location = getattr(transaction, 'location', None)

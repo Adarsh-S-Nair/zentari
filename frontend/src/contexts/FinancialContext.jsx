@@ -21,16 +21,33 @@ export const FinancialProvider = ({ children, setToast }) => {
   const [error, setError] = useState(null)
   const [user, setUser] = useState(null)
   const [plaidItems, setPlaidItems] = useState({})
+  
+  // Cache for instant UI rendering
+  const [accountsCache, setAccountsCache] = useState({})
+  const [transactionsCache, setTransactionsCache] = useState({})
+  const [categoriesCache, setCategoriesCache] = useState(null)
+  const [plaidItemsCache, setPlaidItemsCache] = useState({})
+  
+  // Loading states for background updates
+  const [accountsUpdating, setAccountsUpdating] = useState(false)
+  const [transactionsUpdating, setTransactionsUpdating] = useState(false)
+  const [categoriesUpdating, setCategoriesUpdating] = useState(false)
+  const [plaidItemsUpdating, setPlaidItemsUpdating] = useState(false)
+  
+  // Progressive loading states
+  const [hasMoreTransactions, setHasMoreTransactions] = useState(true)
+  const [transactionsPage, setTransactionsPage] = useState(1)
+  const [isLoadingMoreTransactions, setIsLoadingMoreTransactions] = useState(false)
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
       if (user) {
-        fetchAccounts(user.id)
-        fetchTransactions(user.id)
-        fetchCategories()
-        fetchPlaidItems(user.id)
+        // Load cached data instantly
+        loadCachedData(user.id)
+        // Then fetch fresh data in background (but not transactions initially)
+        fetchInitialDataInBackground(user.id)
       }
     }
     getUser()
@@ -39,20 +56,166 @@ export const FinancialProvider = ({ children, setToast }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null)
       if (session?.user) {
-        fetchAccounts(session.user.id)
-        fetchTransactions(session.user.id)
-        fetchCategories()
-        fetchPlaidItems(session.user.id)
+        // Load cached data instantly
+        loadCachedData(session.user.id)
+        // Then fetch fresh data in background (but not transactions initially)
+        fetchInitialDataInBackground(session.user.id)
       } else {
+        // Clear all data on logout
         setAccounts([])
         setTransactions([])
         setCategories([])
         setPlaidItems({})
+        setAccountsCache({})
+        setTransactionsCache({})
+        setCategoriesCache(null)
+        setPlaidItemsCache({})
+        setHasMoreTransactions(true)
+        setTransactionsPage(1)
       }
     })
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Load cached data instantly for instant UI rendering
+  const loadCachedData = (userId) => {
+    // Load accounts from cache
+    if (accountsCache[userId]) {
+      setAccounts(accountsCache[userId])
+    }
+    
+    // Load recent transactions from cache (only first page)
+    if (transactionsCache[userId] && transactionsCache[userId][1]) {
+      setTransactions(transactionsCache[userId][1] || [])
+    }
+    
+    // Load categories from cache (global)
+    if (categoriesCache) {
+      setCategories(categoriesCache)
+    }
+    
+    // Load plaid items from cache
+    if (plaidItemsCache[userId]) {
+      setPlaidItems(plaidItemsCache[userId])
+    }
+  }
+
+  // Fetch initial data in background (accounts, categories, plaid items, but NOT transactions)
+  const fetchInitialDataInBackground = async (userId) => {
+    // Fetch accounts in background
+    setAccountsUpdating(true)
+    fetchAccounts(userId).finally(() => setAccountsUpdating(false))
+    
+    // Fetch categories in background
+    setCategoriesUpdating(true)
+    fetchCategories().finally(() => setCategoriesUpdating(false))
+    
+    // Fetch plaid items in background
+    setPlaidItemsUpdating(true)
+    fetchPlaidItems(userId).finally(() => setPlaidItemsUpdating(false))
+    
+    // Load recent transactions in background (not blocking)
+    loadRecentTransactions(userId)
+  }
+
+  // Load recent transactions (last 30 days) without blocking UI
+  const loadRecentTransactions = async (userId) => {
+    if (!userId) return
+    
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+      
+      // Get date 30 days ago
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      const dateString = thirtyDaysAgo.toISOString().split('T')[0]
+      
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?limit=100&start_date=${dateString}`
+      
+      const response = await fetch(fullUrl)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        const recentTransactions = result.transactions || []
+        setTransactions(recentTransactions)
+        // Update cache for page 1 (recent transactions)
+        setTransactionsCache(prev => ({ 
+          ...prev, 
+          [userId]: { 
+            ...prev[userId], 
+            1: recentTransactions 
+          } 
+        }))
+        setHasMoreTransactions(recentTransactions.length === 100)
+      } else {
+        throw new Error(result.error || 'Failed to fetch recent transactions')
+      }
+    } catch (error) {
+      console.error('Error fetching recent transactions:', error)
+      setTransactions([])
+    }
+  }
+
+  // Load more transactions on demand
+  const loadMoreTransactions = async (userId) => {
+    if (!userId || !hasMoreTransactions || isLoadingMoreTransactions) return
+    
+    setIsLoadingMoreTransactions(true)
+    
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+      
+      const nextPage = transactionsPage + 1
+      const offset = (nextPage - 1) * 100
+      
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?limit=100&offset=${offset}`
+      
+      const response = await fetch(fullUrl)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        const newTransactions = result.transactions || []
+        
+        // Combine with existing transactions
+        setTransactions(prev => [...prev, ...newTransactions])
+        
+        // Update cache
+        setTransactionsCache(prev => ({ 
+          ...prev, 
+          [userId]: { 
+            ...prev[userId], 
+            [nextPage]: newTransactions 
+          } 
+        }))
+        
+        setTransactionsPage(nextPage)
+        setHasMoreTransactions(newTransactions.length === 100)
+      } else {
+        throw new Error(result.error || 'Failed to fetch more transactions')
+      }
+    } catch (error) {
+      console.error('Error fetching more transactions:', error)
+    } finally {
+      setIsLoadingMoreTransactions(false)
+    }
+  }
 
   const fetchAccounts = async (userId) => {
     if (!userId) return
@@ -78,7 +241,10 @@ export const FinancialProvider = ({ children, setToast }) => {
       const result = await response.json()
       
       if (result.success) {
-        setAccounts(result.accounts || [])
+        const freshAccounts = result.accounts || []
+        setAccounts(freshAccounts)
+        // Update cache
+        setAccountsCache(prev => ({ ...prev, [userId]: freshAccounts }))
       } else {
         throw new Error(result.error || 'Failed to fetch accounts')
       }
@@ -92,38 +258,9 @@ export const FinancialProvider = ({ children, setToast }) => {
   }
 
   const fetchTransactions = async (userId) => {
-    if (!userId) return
-    
-    setTransactionsLoading(true)
-    
-    try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
-      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
-      
-      // Ensure baseUrl doesn't already have a protocol
-      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
-      const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?limit=1000`
-      
-      const response = await fetch(fullUrl)
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`)
-      }
-      
-      const result = await response.json()
-      
-      if (result.success) {
-        setTransactions(result.transactions || [])
-      } else {
-        throw new Error(result.error || 'Failed to fetch transactions')
-      }
-    } catch (error) {
-      console.error('[FRONTEND] Error fetching transactions:', error)
-      setTransactions([])
-    } finally {
-      setTransactionsLoading(false)
-    }
+    // This is now replaced by loadRecentTransactions and loadMoreTransactions
+    // Keep for backward compatibility but redirect to recent transactions
+    return loadRecentTransactions(userId)
   }
 
   const fetchCategories = async () => {
@@ -145,50 +282,65 @@ export const FinancialProvider = ({ children, setToast }) => {
       const result = await response.json()
       
       if (result.success) {
-        setCategories(result.categories || [])
+        const freshCategories = result.categories || []
+        setCategories(freshCategories)
+        // Update cache (categories are global)
+        setCategoriesCache(freshCategories)
       } else {
         throw new Error(result.error || 'Failed to fetch categories')
       }
     } catch (error) {
-      console.error('[FRONTEND] Error fetching categories:', error)
+      console.error('Error fetching categories:', error)
       setCategories([])
     }
   }
 
   const fetchPlaidItems = async (userId) => {
-    if (!userId) return;
+    if (!userId) return
+    
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000';
-      const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
-      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '');
-      const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-plaid-items/${userId}`;
-      const response = await fetch(fullUrl);
-      if (!response.ok) return setPlaidItems({});
-      const result = await response.json();
-      if (result.success && Array.isArray(result.plaid_items)) {
-        // Map by item_id for fast lookup
-        const map = {};
-        for (const item of result.plaid_items) {
-          if (item.item_id) map[item.item_id] = item;
-        }
-        setPlaidItems(map);
-      } else {
-        setPlaidItems({});
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      
+      // Ensure baseUrl doesn't already have a protocol
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/plaid-items/${userId}`
+      
+      const response = await fetch(fullUrl)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`)
       }
-    } catch (e) {
-      setPlaidItems({});
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        const freshPlaidItems = result.plaid_items || {}
+        setPlaidItems(freshPlaidItems)
+        // Update cache
+        setPlaidItemsCache(prev => ({ ...prev, [userId]: freshPlaidItems }))
+      } else {
+        throw new Error(result.error || 'Failed to fetch plaid items')
+      }
+    } catch (error) {
+      console.error('Error fetching plaid items:', error)
+      setPlaidItems({})
     }
-  };
+  }
 
   const refreshAccounts = () => {
-    if (user) {
+    if (user?.id) {
       fetchAccounts(user.id)
     }
   }
 
   const refreshTransactions = () => {
-    if (user) {
-      fetchTransactions(user.id)
+    if (user?.id) {
+      // Reset to page 1 and load recent transactions
+      setTransactionsPage(1)
+      setHasMoreTransactions(true)
+      loadRecentTransactions(user.id)
     }
   }
 
@@ -196,61 +348,113 @@ export const FinancialProvider = ({ children, setToast }) => {
     setAccounts(prev => [...prev, ...newAccounts])
   }
 
-  // Update a transaction's category
   const updateTransactionCategory = async (transactionId, categoryId) => {
+    if (!transactionId) return false
+    
     try {
-      const fullUrl = `${getApiBaseUrl()}/database/transaction/${transactionId}/category`;
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      
+      // Ensure baseUrl doesn't already have a protocol
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/transactions/${transactionId}/category`
+      
       const response = await fetch(fullUrl, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category_id: categoryId })
-      });
-      const result = await response.json();
-      if (!result.success) {
-        if (setToast) setToast({ type: 'error', message: result.error || 'Failed to update category' });
-        return false;
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ category_id: categoryId }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`)
       }
       
-      // Find the category details (categoryId can be null when removing)
-      const category = categoryId ? categories.find(cat => cat.id === categoryId) : null;
+      const result = await response.json()
       
-      // Optimistically update transaction in state with category details
-      setTransactions(prev => prev.map(txn =>
-        txn.id === transactionId ? { 
-          ...txn, 
-          category_id: categoryId,
-          category_name: category?.name || null,
-          category_color: category?.color || null
-        } : txn
-      ));
-      return true;
+      if (result.success) {
+        // Update local state optimistically
+        setTransactions(prev => 
+          prev.map(txn => 
+            txn.id === transactionId 
+              ? { 
+                  ...txn, 
+                  category_id: categoryId,
+                  category_name: result.category_name,
+                  category_color: result.category_color,
+                  category_icon_lib: result.category_icon_lib,
+                  category_icon_name: result.category_icon_name
+                }
+              : txn
+          )
+        )
+        
+        // Update cache
+        if (user?.id && transactionsCache[user.id]) {
+          setTransactionsCache(prev => ({
+            ...prev,
+            [user.id]: Object.keys(prev[user.id]).reduce((acc, page) => {
+              acc[page] = prev[user.id][page].map(txn => 
+                txn.id === transactionId 
+                  ? { 
+                      ...txn, 
+                      category_id: categoryId,
+                      category_name: result.category_name,
+                      category_color: result.category_color,
+                      category_icon_lib: result.category_icon_lib,
+                      category_icon_name: result.category_icon_name
+                    }
+                  : txn
+              )
+              return acc
+            }, {})
+          }))
+        }
+        
+        return true
+      } else {
+        throw new Error(result.error || 'Failed to update transaction category')
+      }
     } catch (error) {
-      if (setToast) setToast({ type: 'error', message: error.message || 'Failed to update category' });
-      return false;
+      console.error('Error updating transaction category:', error)
+      if (setToast) {
+        setToast({ type: 'error', message: error.message })
+      }
+      return false
     }
-  };
-
-  const value = {
-    accounts,
-    transactions,
-    categories,
-    loading,
-    transactionsLoading,
-    error,
-    user,
-    refreshAccounts,
-    refreshTransactions,
-    addAccounts,
-    fetchAccounts,
-    fetchTransactions,
-    fetchCategories,
-    setToast,
-    plaidItems,
-    updateTransactionCategory,
   }
 
   return (
-    <FinancialContext.Provider value={value}>
+    <FinancialContext.Provider value={{
+      accounts,
+      transactions,
+      categories,
+      loading,
+      transactionsLoading,
+      error,
+      user,
+      plaidItems,
+      // Background loading states
+      accountsUpdating,
+      transactionsUpdating,
+      categoriesUpdating,
+      plaidItemsUpdating,
+      // Progressive loading states
+      hasMoreTransactions,
+      isLoadingMoreTransactions,
+      // Methods
+      refreshAccounts,
+      refreshTransactions,
+      addAccounts,
+      updateTransactionCategory,
+      fetchAccounts,
+      fetchTransactions,
+      fetchCategories,
+      fetchPlaidItems,
+      loadMoreTransactions
+    }}>
       {children}
     </FinancialContext.Provider>
   )

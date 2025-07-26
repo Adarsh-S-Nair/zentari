@@ -231,6 +231,12 @@ async def plaid_webhook(request: Request):
                 sync_result = sync_transactions_for_item(supabase_transactions, plaid_transactions, supabase_accounts, sync_service, user_id, item)
                 print(f"[WEBHOOK] Sync result: {sync_result}")
                 
+                # After sync, check for incomplete transactions
+                if sync_result.get('success') and sync_result.get('added_count', 0) > 0:
+                    print(f"[WEBHOOK] Checking for incomplete transactions after sync...")
+                    reprocess_result = supabase_transactions.reprocess_incomplete_transactions(user_id)
+                    print(f"[WEBHOOK] Reprocess check result: {reprocess_result}")
+                
                 return {"success": True, "message": f"Webhook processed, sync result: {sync_result}"}
             else:
                 print(f"[WEBHOOK] Could not find sync state for item {item_id}")

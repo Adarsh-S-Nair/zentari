@@ -109,4 +109,21 @@ async def sync_account_transactions(user_id: str = Depends(get_current_user)):
         raise
     except Exception as e:
         print(f"Error in sync_account_transactions: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.post("/reprocess-incomplete")
+async def reprocess_incomplete_transactions(user_id: str = Depends(get_current_user)):
+    """Reprocess transactions that might have incomplete data (missing icons, categories, etc.)"""
+    try:
+        supabase_transactions = get_supabase_transactions()
+        result = supabase_transactions.reprocess_incomplete_transactions(user_id)
+        
+        if not result.get('success'):
+            raise HTTPException(status_code=500, detail=result.get('error', 'Failed to reprocess transactions'))
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in reprocess_incomplete_transactions: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") 

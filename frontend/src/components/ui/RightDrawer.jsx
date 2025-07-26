@@ -1,69 +1,75 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { FiX } from 'react-icons/fi';
 
 export default function RightDrawer({ isOpen, onClose, children, header }) {
-  const [visible, setVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const drawerRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
-      setVisible(true);
-      // Prevent background scrolling when drawer is open
+      setIsVisible(true);
       document.body.style.overflow = 'hidden';
     } else {
-      setVisible(false);
+      setIsVisible(false);
+      document.body.style.overflow = '';
     }
+  }, [isOpen]);
 
-    const handleKeyDown = (e) => e.key === 'Escape' && closeWithDelay();
+  useEffect(() => {
+    const handleKeyDown = (e) => e.key === 'Escape' && onClose();
     const handleClickOutside = (e) =>
-      drawerRef.current && !drawerRef.current.contains(e.target) && closeWithDelay();
-
+      drawerRef.current && !drawerRef.current.contains(e.target) && onClose();
+    
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleClickOutside);
     
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleClickOutside);
-      // Restore scrolling when component unmounts
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
-
-  const closeWithDelay = () => {
-    setVisible(false);
-    setTimeout(onClose, 200);
-  };
+  }, [onClose]);
 
   if (!isOpen) return null;
 
-  return (
-    <div 
-      className="fixed inset-0 z-[200] flex items-start justify-end p-4"
-      style={{ 
-        background: 'var(--color-backdrop-overlay)',
-        backdropFilter: `blur(var(--color-backdrop-blur))`
-      }}
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-end"
+      style={{ background: 'rgba(0, 0, 0, 0.5)' }}
     >
       <div
         ref={drawerRef}
-        className="z-[300] h-[calc(100vh-2rem)] w-[420px] shadow-2xl transition-all flex flex-col rounded-2xl border"
+        className="z-[300] h-[calc(100vh-2rem)] w-[420px] shadow-2xl transition-transform duration-150 ease-out flex flex-col rounded-2xl border"
         style={{
-          transform: visible ? 'translateX(0)' : 'translateX(100%)',
-          opacity: visible ? 1 : 0,
-          transition: 'all 0.2s ease',
+          transform: isVisible ? 'translateX(0)' : 'translateX(100%)',
           borderColor: 'var(--color-border-primary)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           background: 'var(--color-bg-primary)'
         }}
       >
-        {/* Content area */}
-        <div className="flex-1 overflow-hidden" style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'var(--color-gray-300) var(--color-gray-100)'
-        }}>
+        {/* Header */}
+        {header && (
+          <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              {header}
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              <FiX size={20} />
+            </button>
+          </div>
+        )}
+        
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 } 

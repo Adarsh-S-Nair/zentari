@@ -95,11 +95,8 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
       setLocalExpanded(true)
       setReadyToShow(false)
     } else if (localExpanded) {
-      const timeout = setTimeout(() => {
-        setLocalExpanded(false)
-        setReadyToShow(false)
-      }, 200)
-      return () => clearTimeout(timeout)
+      setLocalExpanded(false)
+      setReadyToShow(false)
     }
   }, [isActive])
 
@@ -108,12 +105,9 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
       setShouldAnimate(false)
       setContentHeight(0)
       void contentRef.current.offsetHeight
-      const t = setTimeout(() => {
-        setContentHeight(contentRef.current.scrollHeight)
-        setShouldAnimate(true)
-        setReadyToShow(true)
-      }, 10)
-      return () => clearTimeout(t)
+      setContentHeight(contentRef.current.scrollHeight)
+      setShouldAnimate(true)
+      setReadyToShow(true)
     }
   }, [localExpanded, fullyOpen, isActive])
 
@@ -160,12 +154,12 @@ function SidebarTab({ tab, isActive, fullyOpen, contentRef, formProps, navigate 
 
       {fullyOpen && isExpandable && localExpanded && (
         <div
-          className={`overflow-hidden bg-slate-900 rounded-b-md mb-2 transition-[max-height] duration-200 ease-out`}
+          className={`overflow-hidden bg-slate-900 rounded-b-md mb-2`}
           style={{ maxHeight: isActive ? `${contentHeight}px` : '0px' }}
         >
           <div
             ref={contentRef}
-            className={`px-4 py-3 bg-slate-900 rounded-b-md transition-opacity duration-150 ease-out ${readyToShow ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+            className={`px-4 py-3 bg-slate-900 rounded-b-md ${readyToShow ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
           >
             <SimulationControls {...formProps} />
           </div>

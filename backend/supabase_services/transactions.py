@@ -115,7 +115,23 @@ class TransactionService:
         try:
             print(f"[TRANSACTIONS] Getting transactions for user {user_id}, limit={limit}, offset={offset}")
             
-            # Complex query with joins
+            # First get all account IDs for this user
+            from .accounts import AccountService
+            accounts_service = AccountService(self.client)
+            accounts_result = accounts_service.get_by_user(user_id)
+            
+            if not accounts_result.get('success') or not accounts_result.get('data'):
+                print(f"[TRANSACTIONS] No accounts found for user {user_id}")
+                return {"success": True, "data": []}
+            
+            user_account_ids = [account['id'] for account in accounts_result['data']]
+            print(f"[TRANSACTIONS] Found {len(user_account_ids)} accounts for user {user_id}: {user_account_ids}")
+            
+            if not user_account_ids:
+                print(f"[TRANSACTIONS] No account IDs found for user {user_id}")
+                return {"success": True, "data": []}
+            
+            # Complex query with joins - filter by account_id in the list of user's accounts
             query = self.client.client.table('transactions').select(
                 'id, plaid_transaction_id, datetime, description, category_id, merchant_name, icon_url, '
                 'personal_finance_category, amount, currency_code, pending, location, payment_channel, '
@@ -123,7 +139,7 @@ class TransactionService:
                 'accounts:account_id(account_id, name, mask, type, subtype, user_id), '
                 'system_categories:category_id(id, group_id, label, description, hex_color, '
                 'category_groups:group_id(id, name, icon_lib, icon_name))'
-            ).eq('accounts.user_id', user_id).order('datetime', desc=True).range(offset, offset + limit - 1)
+            ).in_('account_id', user_account_ids).order('datetime', desc=True).range(offset, offset + limit - 1)
             
             response = query.execute()
             print(f"[TRANSACTIONS] Query executed, found {len(response.data)} transactions")
@@ -178,6 +194,50 @@ class TransactionService:
         """Update category for transaction"""
         return self.client.update('transactions', {'category_id': category_id}, {'id': transaction_id})
     
+    def reprocess_incomplete_transactions(self, user_id: str) -> Dict[str, Any]:
+        """Reprocess transactions that might have incomplete data (missing icons, categories, etc.)"""
+        try:
+            # Get transactions for user that might be missing key data
+            from .accounts import AccountService
+            accounts_service = AccountService(self.client)
+            accounts_result = accounts_service.get_by_user(user_id)
+            
+            if not accounts_result.get('success') or not accounts_result.get('data'):
+                return {"success": True, "message": "No accounts found for user"}
+            
+            user_account_ids = [account['id'] for account in accounts_result['data']]
+            
+            # Find transactions missing key data
+            query = self.client.client.table('transactions').select(
+                'id, plaid_transaction_id, account_id, description, merchant_name, icon_url, personal_finance_category'
+            ).in_('account_id', user_account_ids).or_(
+                'icon_url.is.null,merchant_name.is.null,personal_finance_category.is.null'
+            ).limit(100)  # Process in batches
+            
+            response = query.execute()
+            
+            if not response.data:
+                return {"success": True, "message": "No incomplete transactions found"}
+            
+            print(f"[REPROCESS] Found {len(response.data)} transactions with incomplete data")
+            
+            # For now, just log the incomplete transactions
+            # In a full implementation, you would re-fetch these from Plaid
+            for txn in response.data:
+                print(f"[REPROCESS] Incomplete transaction: {txn.get('description')} (ID: {txn.get('id')})")
+                print(f"  - Has icon_url: {txn.get('icon_url') is not None}")
+                print(f"  - Has merchant_name: {txn.get('merchant_name') is not None}")
+                print(f"  - Has personal_finance_category: {txn.get('personal_finance_category') is not None}")
+            
+            return {
+                "success": True, 
+                "message": f"Found {len(response.data)} incomplete transactions",
+                "incomplete_count": len(response.data)
+            }
+            
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
     def _get_category_id(self, transaction: Dict[str, Any]) -> Optional[str]:
         """Get category ID from transaction data"""
         from .categories import CategoryService
@@ -193,12 +253,48 @@ class TransactionService:
                 if primary and detailed.startswith(primary + '_'):
                     # Remove the primary prefix and underscore
                     label = detailed[len(primary) + 1:]  # +1 for the underscore
-                    return category_service.get_id(label)
+                    category_id = category_service.get_id(label)
+                    if category_id is not None:
+                        return category_id
+                    else:
+                        # Try using the primary category as fallback
+                        print(f"[CATEGORY] Could not find category for '{label}', trying primary '{primary}'")
+                        category_id = category_service.get_id(primary)
+                        if category_id is not None:
+                            return category_id
                 else:
                     # Fallback: use the detailed as-is
-                    return category_service.get_id(detailed)
+                    category_id = category_service.get_id(detailed)
+                    if category_id is not None:
+                        return category_id
+                    else:
+                        # Try using the primary category as fallback
+                        primary = personal_finance_category.get('primary')
+                        if primary:
+                            print(f"[CATEGORY] Could not find category for '{detailed}', trying primary '{primary}'")
+                            category_id = category_service.get_id(primary)
+                            if category_id is not None:
+                                return category_id
+            elif isinstance(personal_finance_category, dict) and personal_finance_category.get('primary'):
+                # Only primary category available
+                primary = personal_finance_category['primary']
+                category_id = category_service.get_id(primary)
+                if category_id is not None:
+                    return category_id
         elif transaction.get('category'):
             # Fallback to old category field
-            return category_service.get_id(transaction['category'])
+            category_id = category_service.get_id(transaction['category'])
+            if category_id is not None:
+                return category_id
         
+        # If we still can't find a category, try to infer from merchant name or description
+        merchant_name = transaction.get('merchant_name')
+        description = transaction.get('description', '')
+        
+        if merchant_name:
+            print(f"[CATEGORY] Trying to infer category from merchant: {merchant_name}")
+            # You could add merchant-to-category mapping logic here
+            # For now, we'll return None and let it default to "Other"
+        
+        print(f"[CATEGORY] No category found for transaction: {description}")
         return None 

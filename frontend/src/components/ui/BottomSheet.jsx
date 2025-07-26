@@ -1,52 +1,23 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function BottomSheet({ isOpen, onClose, children, header, maxHeight = '80vh' }) {
-  const [visible, setVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
   const [currentY, setCurrentY] = useState(0);
-  const [translateY, setTranslateY] = useState(window.innerHeight);
   const sheetRef = useRef(null);
   const backdropRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
-      setVisible(true);
-      // Start from bottom and slide up
-      setTranslateY(window.innerHeight);
-      // Trigger slide up animation after a brief delay
-      setTimeout(() => {
-        setTranslateY(0);
-      }, 50);
-      
-      // Prevent background scrolling
+      setIsVisible(true);
       document.body.style.overflow = 'hidden';
     } else {
-      // Slide down animation
-      setTranslateY(window.innerHeight);
-      setTimeout(() => {
-        setVisible(false);
-      }, 200);
-      
-      // Restore background scrolling
+      setIsVisible(false);
       document.body.style.overflow = '';
     }
-    
-    return () => {
-      // Cleanup: restore scrolling if component unmounts
-      document.body.style.overflow = '';
-    };
   }, [isOpen]);
-
-  const closeWithDelay = () => {
-    // Slide down animation
-    setTranslateY(window.innerHeight);
-    setTimeout(() => {
-      setVisible(false);
-      onClose();
-    }, 200);
-  };
 
   const handleTouchStart = (e) => {
     setIsDragging(true);
@@ -59,11 +30,6 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
     
     const newY = e.touches[0].clientY;
     setCurrentY(newY);
-    
-    const deltaY = newY - startY;
-    if (deltaY > 0) { // Only allow downward drag
-      setTranslateY(deltaY);
-    }
   };
 
   const handleTouchEnd = () => {
@@ -74,69 +40,63 @@ export default function BottomSheet({ isOpen, onClose, children, header, maxHeig
     const threshold = 100; // Minimum drag distance to close
     
     if (deltaY > threshold) {
-      // Close the sheet
-      setTranslateY(window.innerHeight);
-      closeWithDelay();
-    } else {
-      // Snap back to original position
-      setTranslateY(0);
+      onClose();
     }
   };
 
   const handleBackdropClick = (e) => {
     if (e.target === backdropRef.current) {
-      closeWithDelay();
+      onClose();
     }
   };
 
   useEffect(() => {
-    const handleKeyDown = (e) => e.key === 'Escape' && closeWithDelay();
+    const handleKeyDown = (e) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [onClose]);
 
   if (!isOpen) return null;
 
   return createPortal(
-    <div 
+    <div
       ref={backdropRef}
-      className="fixed inset-0 z-[200] flex items-end pointer-events-auto"
-      style={{ 
-        background: 'var(--color-backdrop-overlay)',
-        backdropFilter: `blur(var(--color-backdrop-blur))`
-      }}
+      className="fixed inset-0 z-[200] flex items-end justify-center"
+      style={{ background: 'rgba(0, 0, 0, 0.5)' }}
       onClick={handleBackdropClick}
     >
       <div
         ref={sheetRef}
-        className="w-full shadow-2xl transition-all flex flex-col rounded-t-2xl border pointer-events-auto"
+        className="w-full shadow-2xl transition-transform duration-150 ease-out flex flex-col rounded-t-2xl border pointer-events-auto"
         style={{
           height: maxHeight,
-          transform: `translateY(${translateY}px)`,
-          opacity: visible ? 1 : 0,
-          transition: isDragging ? 'none' : 'all 0.2s ease',
+          transform: isVisible ? 'translateY(0)' : 'translateY(100%)',
           borderColor: 'var(--color-border-primary)',
           boxShadow: '0 -25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-          position: 'relative',
-          zIndex: 201,
           background: 'var(--color-bg-primary)'
         }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Drag handle */}
-        <div 
-          className="flex justify-center pt-3 pb-2"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
+        <div className="flex justify-center pt-3 pb-2">
           <div 
-            className="w-12 h-1 rounded-full cursor-grab active:cursor-grabbing"
+            className="w-12 h-1 rounded-full"
             style={{ background: 'var(--color-border-primary)' }}
           />
         </div>
 
-        
-        {/* Content area */}
+        {/* Header */}
+        {header && (
+          <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              {header}
+            </h2>
+          </div>
+        )}
+
+        {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {children}
         </div>

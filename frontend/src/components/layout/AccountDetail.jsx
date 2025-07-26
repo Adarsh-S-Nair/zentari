@@ -1,5 +1,5 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { MdEdit } from 'react-icons/md';
 import { FaChevronRight } from 'react-icons/fa';
 import IconButton from '../ui/IconButton';
@@ -97,12 +97,10 @@ const getBrandColor = (institutionName) => {
 
 // Function to extract dominant color from an image
 const extractDominantColor = (imageUrl) => {
-  console.log('[COLOR] Starting color extraction for:', imageUrl);
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
-      console.log('[COLOR] Image loaded successfully, dimensions:', img.width, 'x', img.height);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = img.width;
@@ -113,8 +111,6 @@ const extractDominantColor = (imageUrl) => {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         const colorCounts = {};
         
-        console.log('[COLOR] Analyzing', imageData.length / 4, 'pixels');
-        
         // Sample pixels and count colors
         for (let i = 0; i < imageData.length; i += 4) {
           const r = imageData[i];
@@ -123,8 +119,6 @@ const extractDominantColor = (imageUrl) => {
           const rgb = `${r},${g},${b}`;
           colorCounts[rgb] = (colorCounts[rgb] || 0) + 1;
         }
-        
-        console.log('[COLOR] Found', Object.keys(colorCounts).length, 'unique colors');
         
         // Find the most common color
         let dominantColor = 'var(--color-gradient-primary)'; // fallback
@@ -138,12 +132,10 @@ const extractDominantColor = (imageUrl) => {
             if (brightness > 50 && brightness < 200) {
               dominantColor = `rgb(${r}, ${g}, ${b})`;
               maxCount = count;
-              console.log('[COLOR] New dominant color:', dominantColor, 'count:', count, 'brightness:', brightness);
             }
           }
         }
         
-        console.log('[COLOR] Final dominant color:', dominantColor);
         resolve(dominantColor);
       } catch (error) {
         console.warn('[COLOR] Could not extract color from image:', error);
@@ -160,7 +152,7 @@ const extractDominantColor = (imageUrl) => {
 
 const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = false, onBack }) => {
   const { accountId } = useParams();
-  const navigate = useNavigate();
+
   const { accounts, transactions = [], loading, plaidItems, refreshAccounts } = useContext(FinancialContext) || {};
   const account = propAccount || accounts?.find(acc => String(acc.id) === String(accountId));
 
@@ -182,25 +174,19 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = f
 
   // Extract color from institution logo when account changes
   useEffect(() => {
-    console.log('[ACCOUNT] Account changed, institution_logo:', account?.institution_logo, 'type:', account?.type, 'institution_name:', account?.institution_name);
-    
     // First try to get brand color from institution name
     const brandColor = getBrandColor(account?.institution_name);
     if (brandColor) {
-      console.log('[ACCOUNT] Using brand color for institution:', account?.institution_name, 'color:', brandColor);
       setCardColor(brandColor);
       return;
     }
     
     // If no brand color, try image extraction
     if (account?.institution_logo) {
-      console.log('[ACCOUNT] Extracting color from logo:', account.institution_logo);
       extractDominantColor(account.institution_logo).then(color => {
-        console.log('[ACCOUNT] Color extraction completed, setting card color to:', color);
         setCardColor(color);
       });
     } else {
-      console.log('[ACCOUNT] No institution logo, using default color based on type:', account?.type);
       // Use default gradient based on account type
       const type = (account?.type || '').toLowerCase();
       if (type === 'depository') {
@@ -233,21 +219,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = f
     t => t.accounts?.account_id === account.account_id
   ).slice(0, 8);
 
-  // Debug: Log transaction icon data
-  if (accountTransactions.length > 0) {
-    console.log('[ACCOUNT] Transaction icon data sample:', {
-      first: {
-        icon_url: accountTransactions[0].icon_url,
-        category_icon_lib: accountTransactions[0].category_icon_lib,
-        category_icon_name: accountTransactions[0].category_icon_name,
-        category_name: accountTransactions[0].category_name,
-        category_color: accountTransactions[0].category_color
-      },
-      total: accountTransactions.length,
-      withIcons: accountTransactions.filter(t => t.icon_url || (t.category_icon_lib && t.category_icon_name)).length,
-      withCategories: accountTransactions.filter(t => t.category_name).length
-    });
-  }
+
 
   const type = (account?.type || '').toLowerCase();
   let gradientStyle = { background: cardColor };

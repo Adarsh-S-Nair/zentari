@@ -25,14 +25,13 @@ export default function LogoutModal({ isOpen, onClose, onLogout }) {
 
   const closeWithDelay = () => {
     setVisible(false);
-    setTimeout(onClose, 200);
+    onClose();
   };
 
   const handleConfirmLogout = async () => {
     setLoading(true);
     try {
       await supabase.auth.signOut();
-      closeWithDelay();
       onLogout?.();
     } catch (err) {
       console.error('Logout failed:', err);

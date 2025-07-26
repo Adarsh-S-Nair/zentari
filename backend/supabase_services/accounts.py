@@ -153,10 +153,10 @@ class AccountService:
     def create_key(self, account: Dict[str, Any]) -> str:
         """Create unique key for account identification"""
         key_parts = [
-            account.get('name', '').lower().strip(),
-            account.get('mask', '').lower().strip(),
-            account.get('type', '').lower().strip(),
-            account.get('subtype', '').lower().strip()
+            (account.get('name') or '').lower().strip(),
+            (account.get('mask') or '').lower().strip(),
+            (account.get('type') or '').lower().strip(),
+            (account.get('subtype') or '').lower().strip()
         ]
         return '|'.join([part for part in key_parts if part])
     
@@ -167,7 +167,7 @@ class AccountService:
     def _prepare_data(self, user_id: str, item_id: str, account: Dict[str, Any], 
                      account_key: str, institution_uuid: Optional[str] = None) -> Dict[str, Any]:
         """Prepare account data for storage"""
-        account_type = account.get('type', '').lower()
+        account_type = (account.get('type') or '').lower()
         should_negate = account_type in ['credit', 'loan']
         
         # Handle balance negation for credit/loan accounts

@@ -92,27 +92,17 @@ async def debug_transactions():
 async def fetch_categories(authorization: Optional[str] = Header(None)):
     """Get all categories from the database"""
     try:
-        print("[CATEGORIES-API] Starting fetch_categories endpoint")
         categories_service = get_categories()
         result = categories_service.get_all()
-        
-        print(f"[CATEGORIES-API] Service result: {result.get('success')}")
         
         if not result["success"]:
             print(f"[CATEGORIES-API] Error getting categories: {result.get('error')}")
             return {"success": True, "categories": []}
         
         categories = result["categories"] if "categories" in result else []
-        print(f"[CATEGORIES-API] Returning {len(categories)} categories")
-        
-        if categories:
-            print(f"[CATEGORIES-API] Sample category: {categories[0]}")
-        
         return {"success": True, "categories": categories}
     except Exception as e:
         print(f"[CATEGORIES-API] Exception in get_categories: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return {"success": True, "categories": []}
 
 @router.delete("/plaid-item/{item_id}")

@@ -19,7 +19,7 @@ class CategoryService:
                 return result['data'][0]['id']
             
             # If not found, return None (categories should be pre-populated)
-            print(f"Category '{formatted_name}' not found in system_categories table")
+            # Don't print error for every missing category to avoid log spam
             return None
             
         except Exception as e:
@@ -29,17 +29,13 @@ class CategoryService:
     def get_all(self) -> Dict[str, Any]:
         """Get all system categories with their colors and group info"""
         try:
-            print("[CATEGORIES] Starting get_all() method")
-            
             # Complex query with joins
             query = self.client.client.table('system_categories').select(
                 'id, group_id, label, description, hex_color, '
                 'category_groups:group_id(id, name, icon_lib, icon_name)'
             ).order('label')
             
-            print("[CATEGORIES] Executing query...")
             response = query.execute()
-            print(f"[CATEGORIES] Query response: {len(response.data) if response.data else 0} categories found")
             
             if response.data:
                 categories = []
@@ -59,22 +55,14 @@ class CategoryService:
                         category_data['group_name'] = group.get('name')
                         category_data['icon_lib'] = group.get('icon_lib')
                         category_data['icon_name'] = group.get('icon_name')
-                    else:
-                        print(f"[CATEGORIES] Category {category['label']} has NO group info")
                     
                     categories.append(category_data)
                 
-                print(f"[CATEGORIES] Final result: {len(categories)} categories processed")
-                print(f"[CATEGORIES] Sample category: {categories[0] if categories else 'None'}")
-                
                 return {"success": True, "categories": categories}
             else:
-                print("[CATEGORIES] No categories found in database")
                 return {"success": True, "categories": []}
         except Exception as e:
             print(f"[CATEGORIES] Error in get_all(): {e}")
-            import traceback
-            traceback.print_exc()
             return {"success": False, "error": str(e)}
     
     def get_by_group(self, group_id: str) -> Dict[str, Any]:

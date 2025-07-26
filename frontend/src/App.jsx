@@ -16,6 +16,7 @@ import {
   Topbar,
   AccountsPanel,
   TransactionsPanel,
+  DashboardPanel,
   MobileBottomBar,
   LoginModal,
   LogoutModal,
@@ -28,7 +29,7 @@ import {
 import { Button, RightDrawer, BottomSheet, Modal } from './components/ui';
 import { PlaidLinkModal } from './components/modals';
 import { useMediaQuery } from 'react-responsive';
-import { FaChartArea, FaSearch } from 'react-icons/fa';
+import { FaChartArea, FaSearch, FaTachometerAlt } from 'react-icons/fa';
 import { IoFolderOpen } from 'react-icons/io5';
 import { FaReceipt } from 'react-icons/fa';
 import { FiArrowLeft, FiFilter } from 'react-icons/fi';
@@ -36,6 +37,9 @@ import { FinancialContext } from './contexts/FinancialContext';
 
 // Modal Context
 const ModalContext = createContext();
+
+// Global Drawer Context
+const DrawerContext = createContext();
 
 export function ModalProvider({ children }) {
   const [modalConfig, setModalConfig] = useState({
@@ -100,12 +104,87 @@ export const useModal = () => {
   return context;
 }
 
+export function DrawerProvider({ children }) {
+  const [drawerConfig, setDrawerConfig] = useState({
+    isOpen: false,
+    title: '',
+    content: null,
+    onClose: null,
+    type: 'drawer' // 'drawer' or 'sheet'
+  });
+
+  const openDrawer = React.useCallback((config) => {
+    setDrawerConfig({
+      ...config,
+      isOpen: true,
+    });
+  }, []);
+
+  const closeDrawer = React.useCallback(() => {
+    if (drawerConfig.onClose) {
+      drawerConfig.onClose();
+    }
+    setDrawerConfig(prev => ({ ...prev, isOpen: false }));
+  }, [drawerConfig.onClose]);
+
+  return (
+    <DrawerContext.Provider value={{ openDrawer, closeDrawer }}>
+      {children}
+      <GlobalDrawer config={drawerConfig} onClose={closeDrawer} />
+    </DrawerContext.Provider>
+  );
+}
+
+export const useDrawer = () => {
+  const context = useContext(DrawerContext);
+  if (!context) {
+    throw new Error('useDrawer must be used within a DrawerProvider');
+  }
+  return context;
+}
+
+// Global Drawer/Sheet Component
+function GlobalDrawer({ config, onClose }) {
+  const isMobile = useMediaQuery({ maxWidth: 670 });
+  const { isOpen, title, content, type } = config;
+
+  // Memoize the content to prevent unnecessary re-renders
+  const memoizedContent = React.useMemo(() => content, [content]);
+
+  if (!isOpen) return null;
+
+  // On mobile, always use bottom sheet
+  if (isMobile) {
+    return (
+      <BottomSheet 
+        isOpen={isOpen} 
+        onClose={onClose}
+        maxHeight="80vh"
+        header={title}
+      >
+        {memoizedContent}
+      </BottomSheet>
+    );
+  }
+
+  // On desktop, use right drawer
+  return (
+    <RightDrawer 
+      isOpen={isOpen} 
+      onClose={onClose}
+      header={title}
+    >
+      {memoizedContent}
+    </RightDrawer>
+  );
+}
+
 function App() {
   const [loading, setLoading] = useState(false);
   const [loadingPhase, setLoadingPhase] = useState('');
   const [loginOpen, setLoginOpen] = useState(false);
   const [user, setUser] = useState(null);
-  const [userChecked, setUserChecked] = useState(false); // <-- NEW
+  const [userChecked, setUserChecked] = useState(false);
   const [result, setResult] = useState(null);
   const [toast, setToast] = useState({ message: '', type: 'default' });
   const [currentSimDate, setCurrentSimDate] = useState(null);
@@ -115,6 +194,7 @@ function App() {
   const [circleUsers, setCircleUsers] = useState([]);
 
   const allTabs = [
+    { label: 'Dashboard', icon: <FaTachometerAlt size={18} />, route: '/dashboard', hasContent: false, requiresAuth: true },
     { label: 'Accounts', icon: <IoFolderOpen size={18} />, route: '/accounts', hasContent: false, requiresAuth: true },
     { label: 'Transactions', icon: <FaReceipt size={18} />, route: '/transactions', hasContent: false, requiresAuth: true },
   ];
@@ -220,7 +300,7 @@ function App() {
       if (!error && data?.user) {
         setUser(data.user);
       }
-      setUserChecked(true); // <-- ✅ Set once auth check completes
+      setUserChecked(true);
     };
 
     fetchUser();
@@ -275,39 +355,41 @@ function App() {
   return (
     <FinancialProvider setToast={setToast}>
       <ModalProvider>
-        <LoginModal
-          isOpen={loginOpen}
-          onClose={() => setLoginOpen(false)}
-          onLoginSuccess={handleLoginSuccess}
-        />
-        <Router>
-          <AppContent
-            loading={loading}
-            loadingPhase={loadingPhase}
-            loginOpen={loginOpen}
-            setLoginOpen={setLoginOpen}
-            user={user}
-            userChecked={userChecked}
-            setUser={setUser}
-            result={result}
-            setResult={setResult}
-            toast={toast}
-            setToast={setToast}
-            currentSimDate={currentSimDate}
-            setCurrentSimDate={setCurrentSimDate}
-            logoutOpen={logoutOpen}
-            setLogoutOpen={setLogoutOpen}
-            isTablet={isTablet}
-            isMobile={isMobile}
-            allTabs={allTabs}
-            visibleTabs={visibleTabs}
-            form={form}
-            setForm={setForm}
-            handleChange={handleChange}
-            handleSubmit={handleSubmit}
-            circleUsers={circleUsers}
+        <DrawerProvider>
+          <LoginModal
+            isOpen={loginOpen}
+            onClose={() => setLoginOpen(false)}
+            onLoginSuccess={handleLoginSuccess}
           />
-        </Router>
+          <Router>
+            <AppContent
+              loading={loading}
+              loadingPhase={loadingPhase}
+              loginOpen={loginOpen}
+              setLoginOpen={setLoginOpen}
+              user={user}
+              userChecked={userChecked}
+              setUser={setUser}
+              result={result}
+              setResult={setResult}
+              toast={toast}
+              setToast={setToast}
+              currentSimDate={currentSimDate}
+              setCurrentSimDate={setCurrentSimDate}
+              logoutOpen={logoutOpen}
+              setLogoutOpen={setLogoutOpen}
+              isTablet={isTablet}
+              isMobile={isMobile}
+              allTabs={allTabs}
+              visibleTabs={visibleTabs}
+              form={form}
+              setForm={setForm}
+              handleChange={handleChange}
+              handleSubmit={handleSubmit}
+              circleUsers={circleUsers}
+            />
+          </Router>
+        </DrawerProvider>
       </ModalProvider>
     </FinancialProvider>
   );
@@ -321,7 +403,6 @@ function AppContent({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { accountId } = useParams();
   const { accounts } = useContext(FinancialContext) || {};
   const maxWidth = 700;
 
@@ -332,10 +413,10 @@ function AppContent({
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const authenticatedRoutes = ['/accounts', '/transactions'];
+  const authenticatedRoutes = ['/dashboard', '/accounts', '/transactions'];
 
   useEffect(() => {
-    if (!userChecked) return; // ⏳ wait until auth check is done
+    if (!userChecked) return;
 
     const routeRequiresAuth = authenticatedRoutes.includes(location.pathname);
 
@@ -346,38 +427,75 @@ function AppContent({
 
   let currentPage = 'Zentari';
   let currentTab = null;
-  if (location.pathname === '/accounts') {
+  if (location.pathname === '/dashboard') {
+    currentPage = 'Dashboard';
+    currentTab = '/dashboard';
+  } else if (location.pathname === '/accounts') {
     currentPage = 'Accounts';
     currentTab = '/accounts';
   } else if (location.pathname === '/transactions') {
     currentPage = 'Transactions';
     currentTab = '/transactions';
-  } else if (matchPath('/accounts/:accountId', location.pathname)) {
-    const account = accounts?.find(acc => String(acc.id) === String(accountId));
-    if (account) {
-      const lastFour = account.mask ? String(account.mask).slice(-4) : '';
-      currentPage = `${account.name}${lastFour ? ' ••••' + lastFour : ''}`;
-    } else {
-      currentPage = 'Account';
-    }
-    currentTab = '/accounts';
   }
 
   const handleLoginSuccess = () => {
-    navigate('/accounts');
+    navigate('/dashboard');
   };
 
   const handleLogoutSuccess = () => {
     navigate('/simulate');
   };
 
-  useEffect(() => {
-    if (loginOpen) {
-    }
-  }, [loginOpen]);
-
   return (
     <Routes>
+      <Route
+        path="/dashboard"
+        element={user ? (
+          <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
+            {!isMobile && (
+              <CollapsibleSidebar
+                visibleTabs={visibleTabs}
+                form={form}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                onLoginClick={() => setLoginOpen(true)}
+                user={user}
+                isTablet={isTablet}
+                isMobile={isMobile}
+                currentTab={'/dashboard'}
+              />
+            )}
+            <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+              <Topbar 
+                user={user} 
+                onLoginClick={() => setLoginOpen(true)} 
+                currentPage={'Dashboard'} 
+                maxWidth={maxWidth} 
+                isMobile={isMobile}
+                toolbarItems={
+                  <CircleUserToggle
+                    users={circleUsers}
+                    selectedUser={selectedCircleUser}
+                    onSelectUser={setSelectedCircleUser}
+                  />
+                }
+              />
+              <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
+                <DashboardPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
+              </div>
+              {isMobile && (
+                <MobileBottomBar
+                  user={user}
+                  onLoginClick={() => setLoginOpen(true)}
+                  setLogoutOpen={() => {}}
+                  visibleTabs={visibleTabs}
+                  currentTab={'/dashboard'}
+                />
+              )}
+            </div>
+          </div>
+        ) : null}
+      />
       <Route
         path="/accounts"
         element={user ? (
@@ -516,391 +634,20 @@ function AppContent({
                   onLoginClick={() => setLoginOpen(true)}
                   setLogoutOpen={() => {}}
                   visibleTabs={visibleTabs}
-                  currentTab={'/accounts'}
+                  currentTab={'/transactions'}
                 />
               )}
             </div>
           </div>
         ) : null}
       />
-      <Route
-        path="/accounts/:accountId"
-        element={user ? (
-          <AccountDrawerLayout
-            user={user}
-            isMobile={isMobile}
-            isTablet={isTablet}
-            visibleTabs={visibleTabs}
-            form={form}
-            handleChange={handleChange}
-            handleSubmit={handleSubmit}
-            setLoginOpen={setLoginOpen}
-            maxWidth={maxWidth}
-            circleUsers={circleUsers}
-          />
-        ) : null}
-      />
-
-      <Route
-        path="/transaction/:transactionId"
-        element={user ? (
-          <TransactionDrawerLayout
-            user={user}
-            isMobile={isMobile}
-            isTablet={isTablet}
-            visibleTabs={visibleTabs}
-            form={form}
-            handleChange={handleChange}
-            handleSubmit={handleSubmit}
-            setLoginOpen={setLoginOpen}
-            maxWidth={maxWidth}
-            circleUsers={circleUsers}
-          />
-        ) : null}
-      />
-      <Route path="/" element={user ? <Navigate to="/accounts" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
-      <Route path="/login" element={user ? <Navigate to="/accounts" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
+      <Route path="/" element={user ? <Navigate to="/dashboard" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
+      <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LandingPage setLoginOpen={setLoginOpen} />} />
       <Route
         path="*"
-        element={user ? <Navigate to="/accounts" replace /> : <Navigate to="/simulate" replace />}
+        element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/simulate" replace />}
       />
     </Routes>
-  );
-}
-
-
-
-// Layout for transaction drawer
-function TransactionDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth, circleUsers }) {
-  const { transactionId } = useParams();
-  const navigate = useNavigate();
-  const { transactions } = useContext(FinancialContext) || {};
-  const transaction = transactions?.find(txn => String(txn.id) === String(transactionId));
-  
-  // Toolbar state
-  const [selectedCircleUser, setSelectedCircleUser] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // Disable main page scroll when drawer is open on desktop
-  useEffect(() => {
-    if (!isMobile) {
-      // Prevent background scrolling
-      document.body.style.overflow = 'hidden';
-      
-      return () => {
-        // Restore background scrolling
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isMobile, transactionId]);
-  
-  // On mobile, show as bottom sheet
-  if (isMobile) {
-    return (
-      <>
-        <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
-          <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
-            <Topbar 
-              user={user} 
-              onLoginClick={() => setLoginOpen(true)} 
-              currentPage={'Transactions'} 
-              maxWidth={maxWidth} 
-              isMobile={isMobile}
-              toolbarItems={
-                <>
-                  <div className="flex items-center justify-between w-full gap-3">
-                    <CircleUserToggle
-                      users={circleUsers}
-                      selectedUser={selectedCircleUser}
-                      onSelectUser={setSelectedCircleUser}
-                      onAddAccounts={() => {}}
-                      addLoading={false}
-                      maxWidth={maxWidth - 120}
-                    />
-                    <Button
-                      label="Filters"
-                      icon={<FiFilter size={16} />}
-                      width="w-32"
-                      className="h-8"
-                      color="networth"
-                    />
-                  </div>
-                  <div className="mt-2">
-                    <div 
-                      className="flex items-center py-2.5 px-3 min-h-[40px] w-full" 
-                      style={{ 
-                        background: 'var(--color-bg-secondary)',
-                        borderRadius: '8px',
-                        boxShadow: '0 1px 2px 0 var(--color-shadow-light)'
-                      }}
-                    >
-                      <FaSearch size={14} className="mr-3" style={{ color: 'var(--color-text-muted)' }} />
-                      <input
-                        type="text"
-                        placeholder="Search transactions"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="border-none outline-none flex-1 text-[14px] bg-transparent min-w-0 h-6 w-full"
-                        style={{ 
-                          fontFamily: 'inherit', 
-                          color: 'var(--color-text-primary)',
-                          fontSize: '14px'
-                        }}
-                      />
-                    </div>
-                  </div>
-                </>
-              }
-            />
-            <div className="flex-1 pb-[60px]">
-              <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
-            </div>
-            <MobileBottomBar
-              user={user}
-              onLoginClick={() => setLoginOpen(true)}
-              setLogoutOpen={() => {}}
-              visibleTabs={visibleTabs}
-              currentTab={'/transactions'}
-            />
-          </div>
-        </div>
-        
-                <BottomSheet 
-          isOpen={true} 
-          onClose={() => navigate('/transactions')}
-          maxHeight="80vh"
-        >
-          <TransactionDetail maxWidth={maxWidth} transaction={transaction} inBottomSheet={true} />
-        </BottomSheet>
-      </>
-    );
-  }
-  
-  // On desktop/tablet, show as drawer
-  return (
-    <>
-      <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
-        <CollapsibleSidebar
-          visibleTabs={visibleTabs}
-          form={form}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          onLoginClick={() => setLoginOpen(true)}
-          user={user}
-          isTablet={isTablet}
-          isMobile={isMobile}
-          currentTab={'/transactions'}
-        />
-        <div className="flex-1 flex flex-col sm:pb-0 ml-[55px]">
-          <Topbar 
-            user={user} 
-            onLoginClick={() => setLoginOpen(true)} 
-            currentPage={'Transactions'} 
-            maxWidth={maxWidth} 
-            isMobile={isMobile}
-            toolbarItems={
-              <>
-                <div className="flex items-center justify-between w-full gap-3">
-                  <CircleUserToggle
-                    users={circleUsers}
-                    selectedUser={selectedCircleUser}
-                    onSelectUser={setSelectedCircleUser}
-                    onAddAccounts={() => {}}
-                    addLoading={false}
-                    maxWidth={maxWidth - 120}
-                  />
-                  <Button
-                    label="Filters"
-                    icon={<FiFilter size={16} />}
-                    width="w-32"
-                    className="h-8"
-                    color="networth"
-                  />
-                </div>
-                <div className="mt-2">
-                  <div 
-                    className="flex items-center py-2.5 px-3 min-h-[40px] w-full" 
-                    style={{ 
-                      background: 'var(--color-bg-secondary)',
-                      borderRadius: '8px',
-                      boxShadow: '0 1px 2px 0 var(--color-shadow-light)'
-                    }}
-                  >
-                    <FaSearch size={14} className="mr-3" style={{ color: 'var(--color-text-muted)' }} />
-                    <input
-                      type="text"
-                      placeholder="Search transactions"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="border-none outline-none flex-1 text-[14px] bg-transparent min-w-0 h-6 w-full"
-                      style={{ 
-                        fontFamily: 'inherit', 
-                        color: 'var(--color-text-primary)',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                </div>
-              </>
-            }
-          />
-          <div className="flex-1">
-            <TransactionsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
-          </div>
-        </div>
-      </div>
-      
-      <RightDrawer 
-        isOpen={true} 
-        onClose={() => navigate('/transactions')}
-      >
-        <TransactionDetail maxWidth={maxWidth} transaction={transaction} />
-      </RightDrawer>
-    </>
-  );
-}
-
-// Layout for account drawer
-function AccountDrawerLayout({ user, isMobile, isTablet, visibleTabs, form, handleChange, handleSubmit, setLoginOpen, maxWidth, circleUsers }) {
-  const { accountId } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { accounts } = useContext(FinancialContext) || {};
-  const account = accounts?.find(acc => String(acc.id) === String(accountId));
-  
-  // Toolbar state
-  const [selectedCircleUser, setSelectedCircleUser] = useState(null);
-  const [plaidModalOpen, setPlaidModalOpen] = useState(false);
-  const [plaidLoading, setPlaidLoading] = useState(false);
-  
-  // Go back to accounts page
-  const getBackPath = () => {
-    return '/accounts';
-  };
-  
-  // Disable main page scroll when drawer is open on desktop
-  useEffect(() => {
-    if (!isMobile) {
-      // Prevent background scrolling
-      document.body.style.overflow = 'hidden';
-      
-      return () => {
-        // Restore background scrolling
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isMobile, accountId]);
-  
-  // On mobile, show as bottom sheet
-  if (isMobile) {
-    return (
-      <>
-        <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
-          <div className="flex-1 flex flex-col sm:pb-0 ml-[0px]">
-            <Topbar 
-              user={user} 
-              onLoginClick={() => setLoginOpen(true)} 
-              currentPage={'Accounts'} 
-              maxWidth={maxWidth} 
-              isMobile={isMobile}
-              toolbarItems={
-                <div className="flex items-center justify-between gap-3">
-                  <CircleUserToggle
-                    users={circleUsers}
-                    selectedUser={selectedCircleUser}
-                    onSelectUser={setSelectedCircleUser}
-                  />
-                  <Button
-                    label="Add Accounts"
-                    onClick={() => setPlaidModalOpen(true)}
-                    width="w-32"
-                    loading={plaidLoading}
-                    disabled={plaidLoading}
-                    className="h-8"
-                    color="networth"
-                  />
-                </div>
-              }
-            />
-            <div className="flex-1 pb-[60px]">
-              <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
-            </div>
-            <MobileBottomBar
-              user={user}
-              onLoginClick={() => setLoginOpen(true)}
-              setLogoutOpen={() => {}}
-              visibleTabs={visibleTabs}
-              currentTab={'/accounts'}
-            />
-          </div>
-        </div>
-        
-        <BottomSheet 
-          isOpen={true} 
-          onClose={() => navigate(getBackPath())}
-          maxHeight="80vh"
-        >
-          <AccountDetail account={account} inBottomSheet={true} />
-        </BottomSheet>
-      </>
-    );
-  }
-  
-  // On desktop/tablet, show as drawer
-  return (
-    <>
-      <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
-        <CollapsibleSidebar
-          visibleTabs={visibleTabs}
-          form={form}
-          handleChange={handleChange}
-          handleSubmit={handleSubmit}
-          onLoginClick={() => setLoginOpen(true)}
-          user={user}
-          isTablet={isTablet}
-          isMobile={isMobile}
-          currentTab={'/accounts'}
-        />
-        <div className="flex-1 flex flex-col sm:pb-0 ml-[55px]">
-          <Topbar 
-            user={user} 
-            onLoginClick={() => setLoginOpen(true)} 
-            currentPage={'Accounts'} 
-            maxWidth={maxWidth} 
-            isMobile={isMobile}
-            toolbarItems={
-              <div className="flex items-center justify-between gap-3">
-                <CircleUserToggle
-                  users={circleUsers}
-                  selectedUser={selectedCircleUser}
-                  onSelectUser={setSelectedCircleUser}
-                />
-                <Button
-                  label="Add Accounts"
-                  onClick={() => setPlaidModalOpen(true)}
-                  width="w-32"
-                  loading={plaidLoading}
-                  disabled={plaidLoading}
-                  className="h-8"
-                  color="networth"
-                />
-              </div>
-            }
-          />
-          <div className="flex-1">
-            <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
-          </div>
-        </div>
-      </div>
-      
-      <RightDrawer 
-        isOpen={true} 
-        onClose={() => navigate(getBackPath())}
-        header={account?.name || 'Account Details'}
-      >
-        <AccountDetail account={account} />
-      </RightDrawer>
-    </>
   );
 }
 

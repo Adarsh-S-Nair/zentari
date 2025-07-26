@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { formatCurrency, formatDate, toTitleCase } from '../../utils/formatters'
 import { useFinancial } from '../../contexts/FinancialContext'
-import { useNavigate } from 'react-router-dom'
 import { useModal } from '../../App'
 import { FaPencilRuler } from 'react-icons/fa'
 import { FiChevronRight } from 'react-icons/fi'
@@ -28,7 +27,6 @@ const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColo
 
 const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false }) => {
   const { accounts, updateTransactionCategory, setToast, categories } = useFinancial()
-  const navigate = useNavigate()
   const { showModal } = useModal()
   const [note, setNote] = useState(transaction?.notes || '')
   const [showCategoryList, setShowCategoryList] = useState(false)
