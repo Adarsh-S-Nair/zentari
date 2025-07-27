@@ -1,19 +1,33 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Button } from '../ui';
+import { Button, CustomCheckbox } from '../ui';
 import { formatCurrency } from '../../utils/formatters';
 import { FinancialContext } from '../../contexts/FinancialContext';
 import { FaTimes } from 'react-icons/fa';
 import { FiSearch, FiChevronDown } from 'react-icons/fi';
 
-const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
+const TransactionFilterForm = ({ onApply, onReset, onClose, currentFilters }) => {
   const { categories } = useContext(FinancialContext);
-  const [filters, setFilters] = useState({
-    dateRange: 'all',
-    amountRange: 'all',
-    categories: [],
-    accounts: [],
-    searchQuery: '',
-    transactionType: 'all' // 'all', 'income', 'expense'
+  
+  // Initialize filters with current filters or defaults
+  const [filters, setFilters] = useState(() => {
+    if (currentFilters) {
+      return {
+        dateRange: currentFilters.dateRange || 'all',
+        amountRange: currentFilters.amountRange || 'all',
+        categories: currentFilters.categories || [],
+        accounts: currentFilters.accounts || [],
+        searchQuery: currentFilters.searchQuery || '',
+        transactionType: currentFilters.transactionType || 'all'
+      };
+    }
+    return {
+      dateRange: 'all',
+      amountRange: 'all',
+      categories: [],
+      accounts: [],
+      searchQuery: '',
+      transactionType: 'all'
+    };
   });
 
   // Category search and expansion state
@@ -55,6 +69,23 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
       setExpandedCategoryGroups(new Set());
     }
   }, [categorySearchQuery, categories]);
+
+  // Auto-expand groups that contain selected categories when form opens
+  useEffect(() => {
+    if (filters.categories.length > 0 && categories) {
+      const groupsToExpand = new Set();
+      
+      filters.categories.forEach(categoryId => {
+        const category = categories.find(c => c.id === categoryId);
+        if (category) {
+          const groupName = category.group_name || 'Other';
+          groupsToExpand.add(groupName);
+        }
+      });
+      
+      setExpandedCategoryGroups(prev => new Set([...prev, ...groupsToExpand]));
+    }
+  }, [filters.categories, categories]);
 
   const toggleCategoryGroup = (groupName) => {
     setExpandedCategoryGroups(prev => {
@@ -107,13 +138,6 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-          Filter Transactions
-        </h2>
-      </div>
-
       {/* Date Range */}
       <div className="space-y-2">
         <label className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
@@ -289,7 +313,7 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
                   }}
                 >
                   {group.categories.map((category, index) => (
-                    <label
+                    <div
                       key={category.id}
                       className="w-full flex items-center py-3 min-h-[48px] transition-all duration-200 cursor-pointer"
                       style={{
@@ -307,13 +331,12 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
                           e.currentTarget.style.background = 'transparent';
                         }
                       }}
+                      onClick={() => handleCategoryToggle(category.id)}
                     >
-                      <input
-                        type="checkbox"
+                      <CustomCheckbox
                         checked={filters.categories.includes(category.id)}
                         onChange={() => handleCategoryToggle(category.id)}
-                        className="mr-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        style={{ borderColor: 'var(--color-border-primary)' }}
+                        className="mr-3"
                       />
                       
                       {/* Category color dot */}
@@ -327,7 +350,7 @@ const TransactionFilterForm = ({ onApply, onReset, onClose }) => {
                           {category.name}
                         </div>
                       </div>
-                    </label>
+                    </div>
                   ))}
                 </div>
               </div>

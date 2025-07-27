@@ -9,7 +9,7 @@ import CircleUserToggle from './CircleUserToggle';
 import { useDrawer } from '../../App';
 import TransactionDetail from './TransactionDetail';
 
-const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTransactions, activeFilters }) => {
+const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTransactions, activeFilters, isApplyingFilters }) => {
   const { 
     transactions, 
     transactionsLoading, 
@@ -90,7 +90,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
 
   return (
     <>
-      <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-12 box-border mb-4 overflow-x-hidden" style={{ background: 'var(--color-bg-primary)' }}>
+      <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-16 box-border mb-4 overflow-x-hidden" style={{ background: 'var(--color-bg-primary)' }}>
         {/* Background update indicator */}
         {transactionsUpdating && (
           <div className="fixed top-4 right-4 z-50">
@@ -101,52 +101,13 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
           </div>
         )}
         
-        {/* Filter indicator */}
-        {activeFilters && (
-          <div className="mb-4 p-3 rounded-lg border" style={{ 
-            borderColor: 'var(--color-border-primary)',
-            background: 'var(--color-bg-secondary)'
-          }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                  Filters Applied
-                </span>
-                {activeFilters.categories?.length > 0 && (
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ 
-                    background: 'var(--color-primary)',
-                    color: 'white'
-                  }}>
-                    {activeFilters.categories.length} categories
-                  </span>
-                )}
-                {activeFilters.transactionType !== 'all' && (
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ 
-                    background: 'var(--color-primary)',
-                    color: 'white'
-                  }}>
-                    {activeFilters.transactionType}
-                  </span>
-                )}
-                {activeFilters.amountRange !== 'all' && (
-                  <span className="text-xs px-2 py-1 rounded-full" style={{ 
-                    background: 'var(--color-primary)',
-                    color: 'white'
-                  }}>
-                    {activeFilters.amountRange}
-                  </span>
-                )}
-              </div>
-              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                {filteredTransactionsList.length} transactions
-              </span>
-            </div>
-          </div>
-        )}
-        
         {/* Transactions Card - styled like recent transactions */}
         <div className="w-full box-border mx-auto max-w-full sm:max-w-[700px] overflow-x-hidden px-2">
-          {transactionsLoading && transactions.length === 0 ? (
+          {isApplyingFilters ? (
+            <div className="h-full flex items-center justify-center min-h-[120px]">
+              <Spinner size={28} />
+            </div>
+          ) : transactionsLoading && transactions.length === 0 ? (
             <div className="h-full flex items-center justify-center min-h-[120px]">
               <Spinner size={28} />
             </div>

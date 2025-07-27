@@ -72,6 +72,7 @@ function Button({
   className = '',
   type = 'button',
   icon = null,
+  badge = null,
   ...props
 }) {
   const [isHovering, setIsHovering] = useState(false)
@@ -167,6 +168,19 @@ function Button({
         <span className="whitespace-nowrap flex items-center">
           {icon && <span className="inline-flex items-center mr-1">{icon}</span>}
           {label || children}
+        </span>
+      )}
+      {/* Badge */}
+      {badge !== null && (
+        <span 
+          className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
+          style={{ 
+            background: 'var(--color-white)',
+            color: 'var(--color-text-primary)',
+            border: '2px solid var(--color-border-primary)'
+          }}
+        >
+          {badge}
         </span>
       )}
       {/* Invisible text for width preservation when loading */}

@@ -8,6 +8,7 @@ import {
   useNavigate,
   useParams,
   matchPath,
+  useSearchParams,
 } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { FinancialProvider } from './contexts/FinancialContext';
@@ -412,6 +413,7 @@ function AppContent({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { fetchFilteredTransactions } = useContext(FinancialContext);
   const { openDrawer } = useDrawer();
   const maxWidth = 700;
@@ -423,7 +425,105 @@ function AppContent({
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredTransactions, setFilteredTransactions] = useState(null);
-  const [activeFilters, setActiveFilters] = useState(null);
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
+  const [activeFilters, setActiveFilters] = useState(() => {
+    // Load filters from localStorage on component mount
+    const saved = localStorage.getItem('transactionFilters');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  // Handle URL parameters for filters
+  useEffect(() => {
+    if (location.pathname === '/transactions') {
+      const categories = searchParams.get('categories');
+      const transactionType = searchParams.get('transactionType');
+      const amountRange = searchParams.get('amountRange');
+      const dateRange = searchParams.get('dateRange');
+      const searchQuery = searchParams.get('searchQuery');
+      const accounts = searchParams.get('accounts');
+      
+      // Only create filters if there are URL parameters
+      if (categories || transactionType || amountRange || dateRange || searchQuery || accounts) {
+        setIsApplyingFilters(true);
+        
+        const urlFilters = {
+          categories: categories ? [categories] : [],
+          transactionType: transactionType || 'all',
+          amountRange: amountRange || 'all',
+          dateRange: dateRange || 'all',
+          searchQuery: searchQuery || '',
+          accounts: accounts ? accounts.split(',') : []
+        };
+        
+        // Apply URL filters
+        setActiveFilters(urlFilters);
+        setFilteredTransactions(null); // Reset to trigger new fetch
+      }
+    }
+  }, [location.pathname, searchParams]);
+
+  // Function to update URL with current filters
+  const updateURLWithFilters = (filters) => {
+    const params = new URLSearchParams();
+    
+    if (filters) {
+      if (filters.categories?.length > 0) {
+        // For now, just use the first category ID
+        params.set('categories', filters.categories[0]);
+      }
+      if (filters.transactionType && filters.transactionType !== 'all') {
+        params.set('transactionType', filters.transactionType);
+      }
+      if (filters.amountRange && filters.amountRange !== 'all') {
+        params.set('amountRange', filters.amountRange);
+      }
+      if (filters.dateRange && filters.dateRange !== 'all') {
+        params.set('dateRange', filters.dateRange);
+      }
+      if (filters.searchQuery?.trim()) {
+        params.set('searchQuery', filters.searchQuery);
+      }
+      if (filters.accounts?.length > 0) {
+        params.set('accounts', filters.accounts.join(','));
+      }
+    }
+    
+    const newURL = params.toString() ? `/transactions?${params.toString()}` : '/transactions';
+    navigate(newURL, { replace: true });
+  };
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    if (activeFilters) {
+      localStorage.setItem('transactionFilters', JSON.stringify(activeFilters));
+    } else {
+      localStorage.removeItem('transactionFilters');
+    }
+  }, [activeFilters]);
+
+  // Apply saved filters when user is available
+  useEffect(() => {
+    if (user?.id && activeFilters && !filteredTransactions) {
+      // Apply saved filters on page load
+      fetchFilteredTransactions(user.id, activeFilters).then(filtered => {
+        setFilteredTransactions(filtered);
+        setIsApplyingFilters(false);
+      });
+    }
+  }, [user?.id, activeFilters, filteredTransactions]);
+
+  // Function to count active filters for badge
+  const getActiveFilterCount = () => {
+    if (!activeFilters) return 0;
+    let count = 0;
+    if (activeFilters.categories?.length > 0) count++;
+    if (activeFilters.transactionType !== 'all') count++;
+    if (activeFilters.amountRange !== 'all') count++;
+    if (activeFilters.dateRange !== 'all') count++;
+    if (activeFilters.searchQuery?.trim()) count++;
+    if (activeFilters.accounts?.length > 0) count++;
+    return count;
+  };
 
   const authenticatedRoutes = ['/dashboard', '/accounts', '/transactions'];
 
@@ -463,9 +563,13 @@ function AppContent({
       title: 'Filter Transactions',
       content: (
         <TransactionFilterForm
+          currentFilters={activeFilters}
           onApply={async (filters) => {
             console.log('Applied filters:', filters);
             setActiveFilters(filters);
+            
+            // Update URL with filters
+            updateURLWithFilters(filters);
             
             // Fetch filtered transactions
             if (user?.id) {
@@ -477,6 +581,9 @@ function AppContent({
             console.log('Reset filters');
             setActiveFilters(null);
             setFilteredTransactions(null);
+            
+            // Clear URL parameters
+            navigate('/transactions', { replace: true });
           }}
           onClose={() => {
             // Drawer will close automatically
@@ -637,9 +744,10 @@ function AppContent({
                         label="Filters"
                         icon={<FiFilter size={16} />}
                         width="w-32"
-                        className="h-8"
+                        className="h-8 relative"
                         color="networth"
                         onClick={handleFilterClick}
+                        badge={getActiveFilterCount() > 0 ? getActiveFilterCount() : null}
                       />
                     </div>
                     <div className="mt-2">
@@ -676,6 +784,7 @@ function AppContent({
                   circleUsers={circleUsers}
                   filteredTransactions={filteredTransactions}
                   activeFilters={activeFilters}
+                  isApplyingFilters={isApplyingFilters}
                 />
               </div>
               {isMobile && (
