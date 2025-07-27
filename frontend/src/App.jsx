@@ -29,6 +29,7 @@ import {
 } from './components';
 import { Button, RightDrawer, BottomSheet, Modal } from './components/ui';
 import { TransactionFilterForm } from './components/forms';
+import { PlaidLinkModal } from './components/modals';
 import { useMediaQuery } from 'react-responsive';
 import { FaChartArea, FaSearch, FaTachometerAlt } from 'react-icons/fa';
 import { IoFolderOpen } from 'react-icons/io5';
@@ -188,11 +189,13 @@ function App() {
   const [userChecked, setUserChecked] = useState(false);
   const [result, setResult] = useState(null);
   const [toast, setToast] = useState({ message: '', type: 'default' });
-  const [currentSimDate, setCurrentSimDate] = useState(null);
+  const [currentSimDate, setCurrentSimDate] = useState(new Date());
   const [logoutOpen, setLogoutOpen] = useState(false);
   const isTablet = useMediaQuery({ maxWidth: 1024 });
   const isMobile = useMediaQuery({ maxWidth: 670 });
   const [circleUsers, setCircleUsers] = useState([]);
+  const [plaidModalOpen, setPlaidModalOpen] = useState(false);
+  const [plaidLoading, setPlaidLoading] = useState(false);
 
   const allTabs = [
     { label: 'Dashboard', icon: <FaTachometerAlt size={18} />, route: '/dashboard', hasContent: false, requiresAuth: true },
@@ -350,7 +353,19 @@ function App() {
   }, [user]);
 
   const handleLoginSuccess = () => {
-    navigate('/dashboard');
+    setLoginOpen(false);
+    setUserChecked(true);
+  };
+
+  const handlePlaidSuccess = () => {
+    setPlaidModalOpen(false);
+    setPlaidLoading(false);
+    setToast({ message: 'Accounts added successfully!', type: 'success' });
+  };
+
+  const handlePlaidClose = () => {
+    setPlaidModalOpen(false);
+    setPlaidLoading(false);
   };
 
   return (
@@ -383,6 +398,12 @@ function App() {
               handleChange={handleChange}
               handleSubmit={handleSubmit}
               circleUsers={circleUsers}
+              plaidModalOpen={plaidModalOpen}
+              setPlaidModalOpen={setPlaidModalOpen}
+              plaidLoading={plaidLoading}
+              setPlaidLoading={setPlaidLoading}
+              handlePlaidSuccess={handlePlaidSuccess}
+              handlePlaidClose={handlePlaidClose}
             />
             <LoginModal
               isOpen={loginOpen}
@@ -397,6 +418,15 @@ function App() {
                 setLogoutOpen(false);
               }}
             />
+            <PlaidLinkModal
+              isOpen={plaidModalOpen}
+              onClose={handlePlaidClose}
+              onSuccess={handlePlaidSuccess}
+              onError={(error) => {
+                setToast({ message: error, type: 'error' });
+                setPlaidLoading(false);
+              }}
+            />
             <Toast message={toast.message} type={toast.type} />
           </Router>
         </ModalProvider>
@@ -409,7 +439,9 @@ function AppContent({
   loading, loadingPhase, loginOpen, setLoginOpen, user, userChecked, setUser,
   result, setResult, toast, setToast, currentSimDate, setCurrentSimDate,
   logoutOpen, setLogoutOpen, isTablet, isMobile, allTabs, visibleTabs,
-  form, setForm, handleChange, handleSubmit, circleUsers
+  form, setForm, handleChange, handleSubmit, circleUsers,
+  plaidModalOpen, setPlaidModalOpen, plaidLoading, setPlaidLoading,
+  handlePlaidSuccess, handlePlaidClose
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -420,8 +452,6 @@ function AppContent({
 
   // Toolbar state
   const [selectedCircleUser, setSelectedCircleUser] = useState(null);
-  const [plaidModalOpen, setPlaidModalOpen] = useState(false);
-  const [plaidLoading, setPlaidLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredTransactions, setFilteredTransactions] = useState(null);
@@ -690,7 +720,17 @@ function AppContent({
                 }
               />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
-                <AccountsPanel isMobile={isMobile} maxWidth={maxWidth} circleUsers={circleUsers} />
+                <AccountsPanel 
+                  isMobile={isMobile} 
+                  maxWidth={maxWidth} 
+                  circleUsers={circleUsers}
+                  plaidModalOpen={plaidModalOpen}
+                  setPlaidModalOpen={setPlaidModalOpen}
+                  plaidLoading={plaidLoading}
+                  setPlaidLoading={setPlaidLoading}
+                  onPlaidSuccess={handlePlaidSuccess}
+                  onPlaidClose={handlePlaidClose}
+                />
               </div>
               {isMobile && (
                 <MobileBottomBar

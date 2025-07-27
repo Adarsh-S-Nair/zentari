@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { FinancialContext } from '../../contexts/FinancialContext';
 import { AccountsSummaryCard, AccountsList, CircleUserToggle } from './';
 import { Button, Spinner } from '../ui';
-import { PlaidLinkModal } from '../modals';
 import { groupAccountsByType, getRawBalance } from './accountsUtils';
 import noAccountsImage from '../../assets/no-accounts.png';
 import { FaCreditCard, FaChartLine } from 'react-icons/fa6';
@@ -11,11 +10,19 @@ import InfoBubble from '../ui/InfoBubble';
 import { useDrawer } from '../../App';
 import AccountDetail from './AccountDetail';
 
-function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
+function AccountsPanel({ 
+  isMobile, 
+  maxWidth = 700, 
+  circleUsers,
+  plaidModalOpen,
+  setPlaidModalOpen,
+  plaidLoading,
+  setPlaidLoading,
+  onPlaidSuccess,
+  onPlaidClose
+}) {
   const navigate = useNavigate();
   const { openDrawer } = useDrawer();
-  const [plaidModalOpen, setPlaidModalOpen] = useState(false);
-  const [plaidLoading, setPlaidLoading] = useState(false);
   const { accounts, loading, accountsUpdating, error, refreshAccounts, fetchTransactions, user, setToast } = useContext(FinancialContext);
   const [selectedCircleUser, setSelectedCircleUser] = useState(user?.id || 'combined');
 
@@ -38,14 +45,11 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
     if (user) {
       fetchTransactions(user.id);
     }
-    setPlaidModalOpen(false);
-    setPlaidLoading(false);
-    setToast({ message: 'Accounts added successfully!', type: 'success' });
+    onPlaidSuccess();
   };
 
   const handlePlaidClose = () => {
-    setPlaidModalOpen(false);
-    setPlaidLoading(false);
+    onPlaidClose();
   };
 
   const handleAddAccounts = () => {
@@ -140,15 +144,6 @@ function AccountsPanel({ isMobile, maxWidth = 700, circleUsers }) {
         )}
         </div>
       </main>
-      <PlaidLinkModal
-        isOpen={plaidModalOpen}
-        onClose={handlePlaidClose}
-        onSuccess={handlePlaidSuccess}
-        onError={(error) => {
-          setToast({ message: error, type: 'error' });
-          setPlaidLoading(false);
-        }}
-      />
     </>
   );
 }
