@@ -44,8 +44,8 @@ class TransactionService:
                         print(f"Error converting personal_finance_category: {e}")
                         personal_finance_category = None
 
-                # Only use merchant logo for icon_url
-                icon_url = getattr(transaction, 'icon_url', None)
+                # Use logo_url instead of icon_url (Plaid API field name)
+                logo_url = getattr(transaction, 'logo_url', None)
 
                 # Get the primary category from personal finance category
                 primary_category = None
@@ -77,7 +77,7 @@ class TransactionService:
                     "category": primary_category,
                     "category_id": getattr(transaction, 'category_id', None),
                     "merchant_name": getattr(transaction, 'merchant_name', None),
-                    "icon_url": icon_url,
+                    "icon_url": logo_url,
                     "personal_finance_category": personal_finance_category,
                     "amount": float(transaction.amount),
                     "currency_code": transaction.iso_currency_code or "USD",
@@ -144,8 +144,8 @@ class TransactionService:
             for transaction in response.added:
                 # Debug logging for recent transactions
                 print(f"[SYNC] Processing transaction: {transaction.name} (ID: {transaction.transaction_id})")
-                print(f"[SYNC] - Has icon_url: {hasattr(transaction, 'icon_url')}")
-                print(f"[SYNC] - Icon URL value: {getattr(transaction, 'icon_url', None)}")
+                print(f"[SYNC] - Has logo_url: {hasattr(transaction, 'logo_url')}")
+                print(f"[SYNC] - Logo URL value: {getattr(transaction, 'logo_url', None)}")
                 print(f"[SYNC] - Has personal_finance_category: {hasattr(transaction, 'personal_finance_category')}")
                 print(f"[SYNC] - Has merchant_name: {hasattr(transaction, 'merchant_name')}")
                 print(f"[SYNC] - Merchant name: {getattr(transaction, 'merchant_name', None)}")
@@ -166,8 +166,9 @@ class TransactionService:
                 else:
                     print(f"[SYNC] - No personal_finance_category found")
                 
-                icon_url = getattr(transaction, 'icon_url', None)
-                print(f"[SYNC] - Icon URL: {icon_url}")
+                # Use logo_url instead of icon_url (Plaid API field name)
+                logo_url = getattr(transaction, 'logo_url', None)
+                print(f"[SYNC] - Logo URL: {logo_url}")
                 
                 primary_category = None
                 if personal_finance_category and isinstance(personal_finance_category, dict):
@@ -199,7 +200,7 @@ class TransactionService:
                     "category": primary_category,
                     "category_id": getattr(transaction, 'category_id', None),
                     "merchant_name": getattr(transaction, 'merchant_name', None),
-                    "icon_url": icon_url,
+                    "icon_url": logo_url,  # Store logo_url as icon_url in our database
                     "personal_finance_category": personal_finance_category,
                     "amount": float(transaction.amount),
                     "currency_code": transaction.iso_currency_code or "USD",
@@ -275,9 +276,9 @@ class TransactionService:
                             print(f"Error converting personal_finance_category: {e}")
                             personal_finance_category = None
                     
-                    # Get icon URL if available
-                    icon_url = getattr(transaction, 'icon_url', None)
-                    print(f"[PLAID] Transaction {transaction.transaction_id} icon_url: {icon_url}")
+                    # Get logo URL if available (Plaid API field name)
+                    logo_url = getattr(transaction, 'logo_url', None)
+                    print(f"[PLAID] Transaction {transaction.transaction_id} logo_url: {logo_url}")
                     
                     # Get primary category from personal finance category (consistent with other methods)
                     primary_category = None
@@ -309,7 +310,7 @@ class TransactionService:
                         "category": primary_category,
                         "category_id": getattr(transaction, 'category_id', None),
                         "merchant_name": getattr(transaction, 'merchant_name', None),
-                        "icon_url": icon_url,
+                        "icon_url": logo_url,  # Store logo_url as icon_url in our database
                         "personal_finance_category": personal_finance_category,
                         "amount": float(transaction.amount),
                         "currency_code": transaction.iso_currency_code or "USD",
