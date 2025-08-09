@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FinancialContext } from '../../contexts/FinancialContext';
-import { AccountsSummaryCard, AccountsList, CircleUserToggle } from './';
-import { Button, Spinner } from '../ui';
+import { AccountsList, CircleUserToggle } from './';
+import { Button, Spinner, Container } from '../ui';
 import { groupAccountsByType, getRawBalance } from './accountsUtils';
 import noAccountsImage from '../../assets/no-accounts.png';
 import { FaCreditCard, FaChartLine } from 'react-icons/fa6';
@@ -41,7 +41,6 @@ function AccountsPanel({
 
   const handlePlaidSuccess = () => {
     refreshAccounts();
-    // Also refresh transactions since new accounts will have new transactions
     if (user) {
       fetchTransactions(user.id);
     }
@@ -60,30 +59,21 @@ function AccountsPanel({
   const handleAccountClick = React.useCallback((account) => {
     const lastFour = account.mask ? String(account.mask).slice(-4) : '';
     const title = `${account.name}${lastFour ? ' ••••' + lastFour : ''}`;
-    
-    // Create a wrapper component that shows loading initially
     const AccountDetailWrapper = () => {
       const [isLoading, setIsLoading] = useState(true);
-      
       React.useEffect(() => {
-        // Hide loading after a short delay to allow component to render
         const timer = setTimeout(() => setIsLoading(false), 50);
         return () => clearTimeout(timer);
       }, []);
-      
       if (isLoading) {
         return <Spinner label="Loading..." />;
       }
-      
       return <AccountDetail account={account} />;
     };
-    
     openDrawer({
       title,
       content: <AccountDetailWrapper />,
-      onClose: () => {
-        // No navigation needed since we're using the global drawer
-      }
+      onClose: () => {}
     });
   }, [openDrawer]);
 
@@ -93,17 +83,9 @@ function AccountsPanel({
     !grouped?.investment?.length &&
     !grouped?.loan?.length;
 
-  // Calculate total balance (same as AccountsSummaryCard)
-  const assets = [...(grouped.cash || []), ...(grouped.investment || [])];
-  const liabilities = [...(grouped.credit || []), ...(grouped.loan || [])];
-  const assetTotal = assets.reduce((sum, a) => sum + getRawBalance(a), 0);
-  const liabilityTotal = liabilities.reduce((sum, a) => sum + getRawBalance(a), 0);
-  const totalBalance = assetTotal + liabilityTotal;
-
   return (
     <>
-      <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-4 box-border mb-4" style={{ background: 'var(--color-bg-primary)' }}>
-        {/* Background update indicator */}
+      <main className="w-full mx-auto box-border mb-4" style={{ background: 'var(--color-bg-primary)' }}>
         {accountsUpdating && (
           <div className="fixed top-4 right-4 z-50">
             <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">
@@ -113,7 +95,7 @@ function AccountsPanel({
           </div>
         )}
         
-        <div className={`flex flex-col items-center ${allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''} w-full box-border ${allAccountsEmpty ? 'px-3' : ''}`}>
+        <Container size="xl" className={`flex flex-col items-center ${allAccountsEmpty ? 'justify-center min-h-[calc(100vh-100px)]' : ''} w-full box-border ${allAccountsEmpty ? 'px-3' : ''} pt-4 md:pt-6`}>
         {loading && accounts.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)]">
             <Spinner size={28} />
@@ -134,15 +116,13 @@ function AccountsPanel({
           </div>
         ) : (
           <>
-            {/* Unified Net Worth Card with Breakdown Bars */}
-            <AccountsSummaryCard grouped={grouped} />
-            {/* Grouped Accounts List */}
-            <div className="w-full max-w-[700px] mx-auto box-border mb-4">
+            {/* Removed AccountsSummaryCard for a cleaner accounts page */}
+            <div className="w-full mx-auto box-border mb-4">
               <AccountsList grouped={grouped} onAccountClick={handleAccountClick} />
             </div>
           </>
         )}
-        </div>
+        </Container>
       </main>
     </>
   );

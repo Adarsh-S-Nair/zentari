@@ -5,6 +5,7 @@ import { FaUser } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
 import { LogoutModal } from '../modals';
 import ContextMenu from '../ui/ContextMenu';
+import { Container } from '../ui';
 
 const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack, institutionLogo, isMobile, toolbarItems }) => {
   const [userName, setUserName] = useState('');
@@ -23,13 +24,10 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
     if (user) {
       const name = user.user_metadata?.display_name || user.email || 'User';
       setUserName(name);
-      
-      // Check if we already have the avatar URL cached
       const cachedAvatarUrl = user.user_metadata?.avatar_url;
       if (cachedAvatarUrl) {
         setAvatarUrl(cachedAvatarUrl);
       } else {
-        // Only fetch from database if not cached
         supabase
           .from('profiles')
           .select('avatar_url')
@@ -38,7 +36,6 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
           .then(({ data }) => {
             if (data?.avatar_url) {
               setAvatarUrl(data.avatar_url);
-              // Cache the avatar URL in user metadata for future use
               if (user.user_metadata) {
                 user.user_metadata.avatar_url = data.avatar_url;
               }
@@ -52,7 +49,7 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
       setUserName('');
       setAvatarUrl(null);
     }
-  }, [user?.id]); // Only depend on user ID, not the entire user object
+  }, [user?.id]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -85,7 +82,7 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
       >
         {/* Main Topbar */}
         <div className="h-[56px] min-h-[56px] max-h-[56px] flex items-center">
-          <div className="max-w-[700px] mx-auto flex justify-between items-center w-full px-3 sm:px-4 md:px-6">
+          <Container size="xl" className="flex justify-between items-center w-full">
             {/* Left: Back, Logo, Title */}
             <div className="flex items-center gap-2 min-w-0 truncate">
               {showBackArrow && (
@@ -178,15 +175,13 @@ const Topbar = ({ user, onLoginClick, currentPage, showBackArrow = false, onBack
                 </div>
               )}
             </div>
-          </div>
+          </Container>
         </div>
 
         {/* Toolbar Section - integrated into topbar */}
         {toolbarItems && (
           <div className="w-full py-3 px-0 border-t" style={{ borderColor: 'var(--color-border-primary)' }}>
-            <div className="max-w-[700px] mx-auto px-3 sm:px-4 md:px-6">
-              {toolbarItems}
-            </div>
+            <Container size="xl">{toolbarItems}</Container>
           </div>
         )}
       </div>

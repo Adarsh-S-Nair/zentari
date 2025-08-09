@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@fontsource/inter": "^5.0.12",
+    "@nivo/bar": "^0.99.0",
     "@nivo/core": "^0.99.0",
+    "@nivo/line": "^0.99.0",
     "@nivo/pie": "^0.99.0",
     "@supabase/supabase-js": "^2.50.0",
     "@tailwindcss/vite": "^4.1.10",
@@ -27,6 +29,7 @@
     "react-responsive": "^10.0.1",
     "react-router-dom": "^7.6.2",
     "react-window": "^1.8.11",
+    "recharts": "^3.1.0",
     "victory": "^37.3.6"
   },
   "devDependencies": {

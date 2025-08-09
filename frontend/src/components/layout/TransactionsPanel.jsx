@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FinancialContext } from '../../contexts/FinancialContext';
-import { Spinner } from '../ui';
+import { Spinner, Container } from '../ui';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { FaSearch, FaChevronRight } from 'react-icons/fa';
 import CategoryIcon from '../ui/CategoryIcon';
@@ -90,7 +90,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
 
   return (
     <>
-      <main className="w-full max-w-full sm:max-w-[700px] mx-auto px-3 pt-16 box-border mb-4 overflow-x-hidden" style={{ background: 'var(--color-bg-primary)' }}>
+      <main className="w-full box-border mb-4" style={{ background: 'var(--color-bg-primary)' }}>
         {/* Background update indicator */}
         {transactionsUpdating && (
           <div className="fixed top-4 right-4 z-50">
@@ -102,7 +102,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
         )}
         
         {/* Transactions Card - styled like recent transactions */}
-        <div className="w-full box-border mx-auto max-w-full sm:max-w-[700px] overflow-x-hidden px-2">
+        <Container size="xl" className="box-border mx-auto px-2">
           {isApplyingFilters ? (
             <div className="h-full flex items-center justify-center min-h-[120px]">
               <Spinner size={28} />
@@ -222,7 +222,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
               )}
             </>
           )}
-        </div>
+        </Container>
       </main>
     </>
   );

@@ -8,6 +8,7 @@ import { FinancialContext } from '../../contexts/FinancialContext';
 import { formatCurrency, capitalizeWords, formatDate } from '../../utils/formatters';
 import Spinner from '../ui/Spinner';
 import BalanceTabs from '../ui/BalanceTabs';
+import { AccountCard } from '../ui/AccountCardsCarousel';
 import SlideOver from '../ui/SlideOver';
 import { getApiBaseUrl } from '../../utils/api';
 
@@ -302,78 +303,7 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = f
           <div className="w-full m-0">
             <div className="flex flex-col items-center pt-5 pb-2">
               <div className="w-full flex flex-wrap gap-4 mb-7">
-                <div
-                  className="w-full min-w-0 rounded-2xl text-white px-4 py-7 sm:px-7 shadow-lg transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl relative overflow-hidden flex flex-col gap-4 overflow-x-hidden"
-                  style={gradientStyle}
-                >
-                  <div className="absolute -bottom-16 -left-16 w-48 h-52 rounded-full opacity-20 pointer-events-none" style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '45% 55% 52% 48% / 48% 52% 48% 52%' }} />
-                  <div className="absolute -top-12 -right-12 w-56 h-48 rounded-full opacity-15 pointer-events-none" style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '52% 48% 48% 52% / 52% 48% 52% 48%' }} />
-                  <div className="absolute -bottom-34 -right-20 w-60 h-56 rounded-full opacity-15 pointer-events-none" style={{ background: 'rgba(0,0,0,0.22)', borderRadius: '60% 40% 55% 45% / 50% 60% 40% 50%' }} />
-
-                  <div className="flex justify-between w-full items-start">
-                    <div className="flex-1 max-w-full overflow-hidden">
-                      <BalanceTabs balances={balances} />
-                    </div>
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ml-4 mt-[2px]" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                      {account.institution_logo && (
-                        <img
-                          src={account.institution_logo}
-                          alt={account.institution_name || 'Bank'}
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-end justify-between w-full mt-auto flex-wrap gap-y-3">
-                    <div className="flex flex-col min-w-0 flex-1 mr-4">
-                      <div className="flex items-center min-w-0 h-[28px] max-h-[28px]" style={{ color: 'var(--color-text-white)' }}>
-                        {editingName ? (
-                          <form onSubmit={(e) => { e.preventDefault(); handleNameSubmit(); }}>
-                            <input
-                              className="px-3 py-1.5 text-[17px] font-semibold focus:ring-2 outline-none min-w-0 flex-1 shadow-none transition-all duration-150 h-[28px] max-h-[28px]"
-                              style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--color-text-white)', borderColor: 'var(--color-primary)' }}
-                              value={editedName}
-                              autoFocus
-                              onChange={e => setEditedName(e.target.value)}
-                              onBlur={handleNameSubmit}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  handleNameSubmit();
-                                } else if (e.key === 'Escape') {
-                                  handleNameCancel();
-                                }
-                              }}
-                            />
-                          </form>
-                        ) : (
-                          <div
-                            className="flex items-center min-w-0 cursor-pointer group"
-                            onClick={handleNameEditStart}
-                          >
-                            <span className="text-[17px] font-semibold -tracking-[0.5px] overflow-hidden text-ellipsis whitespace-nowrap flex-shrink-0 group-hover:underline max-w-[200px] sm:max-w-[300px]">
-                              {localName}
-                            </span>
-                            <IconButton className="ml-2 flex-shrink-0">
-                              <MdEdit size={18} style={{ color: 'var(--color-text-white)', opacity: 0.85 }} />
-                            </IconButton>
-                          </div>
-                        )}
-                      </div>
-                      {account.subtype && (
-                        <span className="text-[12px] font-medium rounded-full px-3 py-1 inline-block tracking-wide w-fit mt-1" style={{ color: 'var(--color-text-white)', background: 'rgba(255,255,255,0.15)' }}>
-                          {capitalizeWords(account.subtype)}
-                        </span>
-                      )}
-                    </div>
-                    {lastFour && (
-                      <span className="text-[13px] font-semibold rounded-full px-4 py-1 tracking-widest inline-block min-w-[36px] text-center font-mono shadow-sm" style={{ color: 'var(--color-text-white)', background: 'rgba(255,255,255,0.15)' }}>
-                        {'●'.repeat(4)}{lastFour}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <AccountCard account={account} index={0} fitWidth className="w-full" />
               </div>
 
               <div className="w-full mb-2">

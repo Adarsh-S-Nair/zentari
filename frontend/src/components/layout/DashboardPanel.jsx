@@ -1,119 +1,391 @@
-import React, { useContext, useMemo } from 'react';
-import { FinancialContext } from '../../contexts/FinancialContext';
-import { Card, Spinner, Pill } from '../ui';
-import { DonutChart } from '../charts';
-import { FaChartLine, FaWallet, FaExchangeAlt } from 'react-icons/fa';
-import { formatCurrency, formatPercentage } from '../../utils/formatters';
+import React, { useContext, useMemo, useRef, useState, useEffect } from 'react'
+import { FinancialContext } from '../../contexts/FinancialContext'
+import { Card, Container, Button, Spinner, Pill, AccountCardsCarousel } from '../ui'
+import { SpendingEarningChart } from '../charts'
+import { FaWallet, FaChartPie, FaChartBar, FaReceipt, FaCalendarAlt, FaPiggyBank } from 'react-icons/fa'
+import { formatCurrency, formatDate } from '../../utils/formatters'
+import { groupAccountsByType, getRawBalance } from './accountsUtils'
 
-export default function DashboardPanel({ isMobile, maxWidth, circleUsers }) {
-  const { accounts, transactions, loading } = useContext(FinancialContext);
+function hexToRgba(hex, alpha = 1) {
+  const h = hex?.replace('#', '')
+  if (!h || (h.length !== 6 && h.length !== 3)) return `rgba(0,0,0,${alpha})`
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+  const r = parseInt(full.substring(0, 2), 16)
+  const g = parseInt(full.substring(2, 4), 16)
+  const b = parseInt(full.substring(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
 
-  // Calculate summary stats
-  const summaryStats = useMemo(() => {
-    // Calculate assets (positive balances from deposit accounts, investment accounts, etc.)
-    const assets = accounts.reduce((sum, account) => {
-      const balance = account.balances?.current || 0;
-      const assetTypes = ['depository', 'investment', 'loan'];
-      if (assetTypes.includes(account.type?.toLowerCase()) && balance > 0) {
-        return sum + balance;
-      }
-      return sum;
-    }, 0);
+function ProgressBar({ value = 0, max = 100, color = 'var(--color-primary)' }) {
+  const pct = Math.min(100, Math.max(0, (value / max) * 100))
+  return (
+    <div className="w-full h-2 rounded-md" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)' }}>
+      <div className="h-full rounded-md" style={{ width: `${pct}%`, background: color }} />
+    </div>
+  )
+}
 
-    // Calculate liabilities (negative balances and credit accounts)
-    const liabilities = accounts.reduce((sum, account) => {
-      const balance = account.balances?.current || 0;
-      if (account.type?.toLowerCase() === 'credit' || balance < 0) {
-        return sum + Math.abs(balance);
-      }
-      return sum;
-    }, 0);
+function SegmentedBar({ items = [], total = 0, height = 16, gap = 3, radius = 6 }) {
+  const safeTotal = total > 0 ? total : items.reduce((s, i) => s + (i.value || 0), 0)
+  const count = items.length
+  const containerRef = useRef(null)
+  const [tt, setTt] = useState({ visible: false, x: 0, label: '', value: 0, pct: 0, color: '#999' })
 
-    // Net worth = assets - liabilities
-    const netWorth = assets - liabilities;
-
-    // Mock percentage changes for now (replace with real data if available)
-    const netWorthChange = 2.4;
-    const assetsChange = 3.1;
-    const liabilitiesChange = -0.8;
-
-    return {
-      netWorth,
-      assets,
-      liabilities,
-      netWorthChange,
-      assetsChange,
-      liabilitiesChange,
-    };
-  }, [accounts]);
-
-  // Calculate spending by category
-  const spendingByCategory = useMemo(() => {
-    // Group transactions by category and sum amounts
-    const categorySpending = {};
-    
-    transactions.forEach(transaction => {
-      if (transaction.amount < 0) { // Only spending transactions
-        const categoryName = transaction.category_name || 'Uncategorized';
-        const categoryId = transaction.category_id;
-        
-        if (!categorySpending[categoryName]) {
-          categorySpending[categoryName] = {
-            value: 0,
-            icon_lib: transaction.category_icon_lib,
-            icon_name: transaction.category_icon_name,
-            color: transaction.category_color,
-            category_id: categoryId
-          };
-        }
-        
-        categorySpending[categoryName].value += Math.abs(transaction.amount);
-      }
-    });
-
-    // Convert to array and sort by amount
-    const sortedCategories = Object.entries(categorySpending)
-      .map(([label, data]) => ({ 
-        label, 
-        value: data.value,
-        icon_lib: data.icon_lib,
-        icon_name: data.icon_name,
-        color: data.color,
-        category_id: data.category_id
-      }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8); // Top 8 categories
-
-    // If no spending data, show mock data
-    if (sortedCategories.length === 0) {
-      return [
-        { label: 'Food & Dining', value: 850, icon_lib: 'fa', icon_name: 'utensils', color: '#16a34a', category_id: 'mock-food' },
-        { label: 'Transportation', value: 650, icon_lib: 'fa', icon_name: 'car', color: '#3b82f6', category_id: 'mock-transport' },
-        { label: 'Shopping', value: 520, icon_lib: 'fa', icon_name: 'shopping-bag', color: '#8b5cf6', category_id: 'mock-shopping' },
-        { label: 'Entertainment', value: 380, icon_lib: 'fa', icon_name: 'film', color: '#f59e0b', category_id: 'mock-entertainment' },
-        { label: 'Utilities', value: 320, icon_lib: 'fa', icon_name: 'bolt', color: '#dc2626', category_id: 'mock-utilities' },
-        { label: 'Healthcare', value: 280, icon_lib: 'fa', icon_name: 'heartbeat', color: '#ec4899', category_id: 'mock-healthcare' },
-      ];
-    }
-
-    return sortedCategories;
-  }, [transactions]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+  const handleLeave = () => setTt((p) => ({ ...p, visible: false }))
 
   return (
-    <div className="w-full max-w-full mx-auto px-4 py-6" style={{ maxWidth: maxWidth }}>
-      <div className="flex items-center justify-center">
-        <DonutChart 
-          data={spendingByCategory}
-        />
+    <div ref={containerRef} className="relative w-full rounded-[10px]" style={{ background: 'var(--color-bg-tertiary)', border: '1px solid var(--color-border-primary)', padding: 2 }} onMouseLeave={handleLeave}>
+      {tt.visible && (
+        <div style={{ position: 'absolute', left: tt.x, top: -36, background: 'var(--color-bg-primary)', border: '1px solid var(--color-border-primary)', borderRadius: 10, padding: '8px 10px', fontSize: 11, boxShadow: '0 6px 14px rgba(0,0,0,0.14)', pointerEvents: 'none', whiteSpace: 'nowrap', zIndex: 5 }}>
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: tt.color, marginRight: 8, verticalAlign: 'middle' }} />
+          <span style={{ color: 'var(--color-text-secondary)' }}>{tt.label}</span>
+          <span style={{ marginLeft: 8, color: 'var(--color-text-primary)', fontWeight: 600 }}>{formatCurrency(tt.value)}</span>
+          <span style={{ marginLeft: 6, color: 'var(--color-text-muted)' }}>({((tt.value / safeTotal) * 100 || 0).toFixed(1)}%)</span>
+        </div>
+      )}
+      <div className="flex items-stretch w-full" style={{ gap: `${gap}px`, height }}>
+        {items.map((seg, idx) => {
+          const widthPct = safeTotal ? (seg.value / safeTotal) * 100 : 0
+          const isFirst = idx === 0
+          const isLast = idx === count - 1
+          const br = `${isFirst ? radius : 0}px ${isLast ? radius : 0}px ${isLast ? radius : 0}px ${isFirst ? radius : 0}px`
+          const onMove = (e) => {
+            const rect = containerRef.current?.getBoundingClientRect()
+            const x = Math.min(Math.max(10, e.clientX - (rect?.left || 0)), (rect?.width || 0) - 10)
+            setTt({ visible: true, x, label: seg.label || 'Category', value: seg.value || 0, pct: widthPct, color: seg.color || '#999' })
+          }
+          const isActive = tt.visible && tt.label === (seg.label || 'Category')
+          const glow = hexToRgba(seg.color || '#000000', 0.25)
+          return (
+            <div
+              key={idx}
+              onMouseEnter={onMove}
+              onMouseMove={onMove}
+              onMouseLeave={handleLeave}
+              className="transition-all"
+              style={{
+                width: `${widthPct}%`,
+                background: seg.color,
+                height: '100%',
+                borderRadius: br,
+                cursor: 'pointer',
+                outline: '1px solid var(--color-border-primary)',
+                filter: isActive ? 'brightness(1.06) saturate(1.05)' : 'none',
+                boxShadow: isActive ? `0 0 0 3px ${glow}, 0 2px 8px rgba(0,0,0,0.12)` : 'none'
+              }}
+            />
+          )
+        })}
       </div>
     </div>
-  );
+  )
+}
+
+export default function DashboardPanel() {
+  const { accounts, transactions, loading } = useContext(FinancialContext)
+  const carouselRef = useRef(null)
+  const [carouselIndex, setCarouselIndex] = useState(0)
+  const [carouselPages, setCarouselPages] = useState(1)
+  const detectNetwork = (nameOrSubtype = '') => {
+    const s = (nameOrSubtype || '').toLowerCase()
+    if (/(visa)/.test(s)) return 'visa'
+    if (/(mastercard|master card|mc)/.test(s)) return 'mastercard'
+    if (/(amex|american express)/.test(s)) return 'amex'
+    if (/(discover)/.test(s)) return 'discover'
+    return 'generic'
+  }
+  const networkBadge = (network) => {
+    // simple text badge; could be replaced by svgs if added later
+    const label = network === 'visa' ? 'VISA' : network === 'mastercard' ? 'MASTERCARD' : network === 'amex' ? 'AMEX' : network === 'discover' ? 'DISCOVER' : 'CARD'
+    return (
+      <span className="text-[12px] font-semibold tracking-widest" style={{ letterSpacing: '0.08em', color: 'rgba(255,255,255,0.92)' }}>{label}</span>
+    )
+  }
+  useEffect(() => {
+    const el = carouselRef.current
+    if (!el) return
+    const CARD_W = 280
+    const GAP = 12 // gap-3
+    const compute = () => {
+      const containerW = el.clientWidth || 1
+      const perView = Math.max(1, Math.floor((containerW + GAP) / (CARD_W + GAP)))
+      setCarouselPages(Math.max(1, Math.ceil((Array.isArray(accounts)?accounts.length:0) / perView)))
+      const idx = Math.round(el.scrollLeft / ((CARD_W + GAP) * perView))
+      setCarouselIndex(idx)
+    }
+    const onScroll = () => {
+      const containerW = el.clientWidth || 1
+      const perView = Math.max(1, Math.floor((containerW + GAP) / (CARD_W + GAP)))
+      const idx = Math.round(el.scrollLeft / ((CARD_W + GAP) * perView))
+      setCarouselIndex(idx)
+    }
+    compute()
+    el.addEventListener('scroll', onScroll)
+    window.addEventListener('resize', compute)
+    return () => { el.removeEventListener('scroll', onScroll); window.removeEventListener('resize', compute) }
+  }, [accounts])
+
+  const { totalBalance, topAccounts, monthCategories, spendingThisMonth, spendingLastMonth, assetTotal, liabilityTotal, accountsCount } = useMemo(() => {
+    const balances = accounts.map(a => ({
+      name: a.name || a.subtype || 'Account',
+      balance: a.balances?.current || 0,
+      logo: a.institution_logo || a.institution?.logo || null,
+      type: a.type || a.subtype || ''
+    }))
+    let total = balances.reduce((s, a) => s + a.balance, 0)
+    const top = balances.sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance)).slice(0, 2)
+
+    // Assets vs Liabilities using existing utils
+    const grouped = groupAccountsByType(accounts || [])
+    const assetTotal = ([...(grouped.cash || []), ...(grouped.investment || [])]).reduce((s, a) => s + getRawBalance(a), 0)
+    const liabilityTotal = ([...(grouped.credit || []), ...(grouped.loan || [])]).reduce((s, a) => s + getRawBalance(a), 0)
+    const accountsCount = accounts?.length || 0
+
+    // Current month window
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+    const startThis = new Date(year, month, 1)
+    const endThis = new Date(year, month + 1, 1)
+    const startPrev = new Date(year, month - 1, 1)
+    const endPrev = new Date(year, month, 1)
+
+    // Category totals for THIS month only
+    const catTotals = new Map()
+    let thisSp = 0
+    let lastSp = 0
+    for (const t of transactions) {
+      if (t.amount < 0) {
+        const d = new Date(t.datetime)
+        const amt = Math.abs(t.amount)
+        if (d >= startThis && d < endThis) {
+          thisSp += amt
+          const key = t.category_id || t.personal_finance_category?.primary || t.category_name || 'Other'
+          catTotals.set(key, {
+            label: t.category_name || t.personal_finance_category?.primary || 'Other',
+            value: (catTotals.get(key)?.value || 0) + amt
+          })
+        } else if (d >= startPrev && d < endPrev) {
+          lastSp += amt
+        }
+      }
+    }
+    const solids = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b']
+    const monthCategories = Array.from(catTotals.values())
+      .sort((a, b) => b.value - a.value)
+      .map((c, i) => ({ ...c, color: solids[i % solids.length] }))
+
+    total = assetTotal - Math.abs(liabilityTotal);
+    return { totalBalance: total, topAccounts: top, monthCategories, spendingThisMonth: thisSp, spendingLastMonth: lastSp, assetTotal, liabilityTotal, accountsCount }
+  }, [accounts, transactions])
+
+  const monthlySeries = useMemo(() => {
+    const now = new Date()
+    const labels = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      labels.push(d.toLocaleString('en-US', { month: 'short' }))
+    }
+    const income = Object.fromEntries(labels.map(l => [l, 0]))
+    const spend = Object.fromEntries(labels.map(l => [l, 0]))
+    for (const t of transactions) {
+      const d = new Date(t.datetime)
+      if (isNaN(d)) continue
+      const l = d.toLocaleString('en-US', { month: 'short' })
+      if (!(l in income)) continue
+      if (t.amount > 0) income[l] += t.amount
+      else spend[l] += Math.abs(t.amount)
+    }
+    return [
+      { id: 'Income', color: '#16a34a', data: labels.map(x => ({ x, y: Math.round(income[x]) })) },
+      { id: 'Spending', color: '#6366f1', data: labels.map(x => ({ x, y: Math.round(spend[x]) })) }
+    ]
+  }, [transactions])
+
+  const recent = useMemo(() => [...transactions].sort((a, b) => new Date(b.datetime) - new Date(a.datetime)).slice(0, 5), [transactions])
+
+  if (loading) return (<div className="flex items-center justify-center h-64"><Spinner size="lg" /></div>)
+
+  // Build segments for bar and list
+  const MIN_SEG_PCT = 1.5
+  const MAX_BAR_SEGS = 4
+  const totalSp = spendingThisMonth || 0
+  const ranked = (monthCategories || []).map((c) => ({ ...c, pct: totalSp ? (c.value / totalSp) * 100 : 0 }))
+  const barCandidates = ranked.filter((c) => c.pct >= MIN_SEG_PCT).slice(0, MAX_BAR_SEGS)
+  const shownSum = barCandidates.reduce((s, c) => s + (c.value || 0), 0)
+  const otherValue = Math.max(0, totalSp - shownSum)
+  const segs = otherValue > 0 ? [...barCandidates, { label: 'Other', value: otherValue, color: '#94a3b8' }] : [...barCandidates]
+  const listItems = (ranked || []).slice(0, 5)
+  const deltaPct = spendingLastMonth > 0 ? ((spendingThisMonth - spendingLastMonth) / spendingLastMonth) * 100 : 0
+  const isPositive = deltaPct >= 0
+
+  return (
+    <Container size="xl" className="py-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Total Balance - gradient theme with stats */}
+            <Card
+               className="p-0 border"
+               style={{
+                 background: 'var(--color-bg-secondary)',
+                 borderColor: 'var(--color-border-primary)',
+                 overflow: 'visible',
+                 boxShadow: '0 6px 16px rgba(0,0,0,0.12)'
+               }}
+            >
+              <div className="p-5 pb-0 flex items-center justify-between">
+                 <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-secondary)' }}>
+                   <FaWallet size={14} />
+                   <span>Total Balance</span>
+                 </div>
+                 <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Accounts: {accountsCount}</div>
+               </div>
+              <div className="px-5 pb-4 space-y-3">
+                <div className="text-[28px] font-semibold" style={{ color: 'var(--color-text-primary)', opacity: 0.95 }}>{formatCurrency(totalBalance)}</div>
+                {/* Assets vs Liabilities bar */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                     <span>Assets {formatCurrency(assetTotal)}</span>
+                     <span>Liabilities {formatCurrency(Math.abs(liabilityTotal))}</span>
+                   </div>
+                   <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
+                      <div className="h-full" style={{ width: `${(assetTotal + Math.abs(liabilityTotal)) ? (assetTotal / (assetTotal + Math.abs(liabilityTotal))) * 100 : 0}%`, background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)' }} />
+                    </div>
+                </div>
+                {/* Accounts carousel (credit-card style) */}
+                <AccountCardsCarousel accounts={accounts} className="pt-2 pb-2" />
+              </div>
+            </Card>
+
+            {/* Spending Overview */}
+            <Card className="p-0">
+              <div className="px-5 pt-5 pb-0 flex items-center justify-between">
+                <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+                  <FaChartPie size={14} />
+                  <span>Spending Overview</span>
+                </div>
+                <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>This Month</div>
+              </div>
+              <div className="px-5 pt-2 pb-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-[32px] leading-[32px] font-medium tracking-[-0.01em]" style={{ color: 'var(--color-text-primary)', opacity: 0.9 }}>{formatCurrency(spendingThisMonth)}</div>
+                    <Pill value={Math.abs(deltaPct)} isPositive={isPositive} />
+                  </div>
+                </div>
+                <SegmentedBar items={segs} total={spendingThisMonth} height={16} gap={3} radius={6} />
+                <div className="space-y-1">
+                  {listItems.map((c) => (
+                    <div key={c.label} className="grid grid-cols-2 items-center rounded-md px-2 py-1 cursor-pointer transition"
+                      style={{ outline: '1px solid transparent' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = hexToRgba(c.color || '#64748b', 0.10); e.currentTarget.style.outline = `1px solid ${hexToRgba(c.color || '#64748b', 0.25)}`; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${hexToRgba(c.color || '#64748b', 0.8)}` }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.outline = '1px solid transparent'; e.currentTarget.style.boxShadow = 'none' }}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} />
+                        <span className="text-[12px] truncate" style={{ color: 'var(--color-text-secondary)' }}>{c.label}</span>
+                      </div>
+                      <div className="text-right text-[12px] font-medium" style={{ color: 'var(--color-text-primary)', opacity: 0.92, fontVariantNumeric: 'tabular-nums' }}>
+                        {formatCurrency(c.value)}
+                        <span className="ml-2" style={{ color: 'var(--color-text-muted)' }}>({((c.value / totalSp) * 100 || 0).toFixed(1)}%)</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Spending vs Earnings */}
+          <Card className="p-0">
+            <div className="p-5 pb-0 flex items-center justify-between">
+              <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+                <FaChartBar size={14} />
+                <span>Spending vs Earnings</span>
+              </div>
+              <div className="flex items-center gap-4 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 rounded-full" style={{ background: '#667eea' }} />
+                  <span>Income</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 rounded-full" style={{ background: '#a78bfa' }} />
+                  <span>Spending</span>
+                </div>
+              </div>
+            </div>
+            <div className="px-2 pb-4 flex items-center justify-center">
+              <SpendingEarningChart series={monthlySeries} height={320} />
+            </div>
+          </Card>
+
+          <Card className="p-0">
+            <div className="p-5 pb-3 flex items-center justify-between">
+              <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+                <FaReceipt size={14} />
+                <span>Recent Transaction</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input placeholder="Search here.." className="text-[12px] px-3 py-1.5 rounded-md border" style={{ borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }} />
+                <Button label="Filter" className="h-8" width="w-20" />
+              </div>
+            </div>
+            <div className="px-3 pb-4">
+              <div className="grid grid-cols-5 text-[11px] font-medium py-2" style={{ color: 'var(--color-text-muted)' }}>
+                <div>Name</div><div>Transaction</div><div>Date & Time</div><div>Amount</div><div className="text-right">Status</div>
+              </div>
+              {recent.map((t, i) => {
+                const isPositiveAmount = t.amount > 0
+                const status = t.pending ? 'Pending' : 'Completed'
+                return (
+                  <div key={t.id || i} className="grid grid-cols-5 items-center py-2 border-top" style={{ borderTop: '1px solid var(--color-border-primary)' }}>
+                    <div className="truncate text-[13px]" style={{ color: 'var(--color-text-primary)' }}>{t.merchant_name || t.description || 'Transaction'}</div>
+                    <div className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t.payment_channel || 'Bank Transfer'}</div>
+                    <div className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(t.datetime)}</div>
+                    <div className="text-[13px] font-medium" style={{ color: isPositiveAmount ? 'var(--color-success)' : 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{isPositiveAmount ? '+' : ''}{formatCurrency(Math.abs(t.amount))}</div>
+                    <div className="text-right text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{status}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+        </div>
+
+        <div className="space-y-4">
+          <Card className="p-0">
+            <div className="p-5 pb-0"><div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}><FaCalendarAlt size={14} /><span>Payment Schedule</span></div></div>
+            <div className="px-3 pb-3">
+              {recent.map((t, i) => (
+                <div key={t.id || i} className="flex items-center justify-between py-3 border-top" style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)' }}>
+                  <div>
+                    <div className="text-[13px]" style={{ color: 'var(--color-text-primary)' }}>{t.merchant_name || t.description || 'Payment'}</div>
+                    <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{formatDate(t.datetime)}</div>
+                  </div>
+                  <div className="text-[13px] font-medium" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(Math.abs(t.amount))}</div>
+                </div>
+              ))}
+              <Button label="View all upcoming payment" className="h-8 w-full mt-2" />
+            </div>
+          </Card>
+
+          <Card className="p-0">
+            <div className="p-5 pb-0"><div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}><FaPiggyBank size={14} /><span>My Savings Plan</span></div></div>
+            <div className="px-5 pb-5 space-y-4">
+              {[{ name: 'Financial Saving', current: 8000, goal: 20000, color: '#22c55e' }, { name: 'Retirement Plan', current: 5000, goal: 20000, color: '#6366f1' }, { name: 'Education Plan', current: 800, goal: 1000, color: '#f59e0b' }].map((p) => (
+                <div key={p.name} className="p-3 rounded-lg border" style={{ borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-secondary)' }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[12px]" style={{ color: 'var(--color-text-primary)' }}>{p.name}</div>
+                    <div className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{Math.round((p.current / p.goal) * 100)}%</div>
+                  </div>
+                  <div className="text-[11px] mb-2" style={{ color: 'var(--color-text-muted)' }}>{formatCurrency(p.current)}/{formatCurrency(p.goal)}</div>
+                  <ProgressBar value={p.current} max={p.goal} color={p.color} />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </Container>
+  )
 } 
