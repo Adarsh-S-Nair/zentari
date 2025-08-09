@@ -9,7 +9,18 @@ import CircleUserToggle from './CircleUserToggle';
 import { useDrawer } from '../../App';
 import TransactionDetail from './TransactionDetail';
 
-const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTransactions, activeFilters, isApplyingFilters }) => {
+// helper to tint hover by category color
+function hexToRgba(hex, alpha = 1) {
+  const h = hex?.replace('#', '');
+  if (!h || (h.length !== 6 && h.length !== 3)) return `rgba(0,0,0,${alpha})`;
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const r = parseInt(full.substring(0, 2), 16);
+  const g = parseInt(full.substring(2, 4), 16);
+  const b = parseInt(full.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTransactions, activeFilters, isApplyingFilters, searchQuery }) => {
   const { 
     transactions, 
     transactionsLoading, 
@@ -18,12 +29,12 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
     isLoadingMoreTransactions,
     accounts, 
     user,
-    loadMoreTransactions
+    loadMoreTransactions,
+    allTransactions
   } = useContext(FinancialContext);
   const { openDrawer } = useDrawer();
   const navigate = useNavigate();
   const [selectedAccount, setSelectedAccount] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(user?.id || 'combined');
   const listRef = useRef(null);
 
@@ -36,10 +47,11 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
   // Use filtered transactions if available, otherwise use regular transactions
   const baseTransactions = filteredTransactions !== null ? filteredTransactions : transactions;
 
-  const filteredTransactionsList = baseTransactions.filter(
+  const searchable = allTransactions && allTransactions.length > 0 ? allTransactions : baseTransactions
+  const filteredTransactionsList = searchable.filter(
     (txn) =>
       (selectedAccount === 'all' || txn.accounts?.account_id === selectedAccount) &&
-      txn.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      txn.description?.toLowerCase().includes((searchQuery || '').toLowerCase())
   );
 
   // Group transactions by date
@@ -134,23 +146,31 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
                     const isPositive = txn.amount > 0;
                     const amountColor = isPositive ? 'var(--color-success)' : 'var(--color-text-secondary)';
                     const amountPrefix = isPositive ? '+' : '';
+                    const color = txn.category_color || '#64748b'
+                    const showPending = !!txn.pending
+                    const pendingStyles = { bg: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: 'rgba(245,158,11,0.35)' }
                     return (
                       <div
                         key={txn.id || i}
-                        className="flex items-center px-3 py-4 min-h-[70px] box-border border-b transition-all duration-200 cursor-pointer w-full max-w-full overflow-x-hidden"
+                        className="flex items-center px-3 py-4 min-h-[70px] box-border border-b transition-colors duration-150 cursor-pointer w-full max-w-full overflow-x-hidden"
                         style={{ 
-                          background: 'var(--color-bg-primary)', 
-                          borderColor: 'var(--color-border-primary)'
+                          background: 'transparent', 
+                          borderColor: 'var(--color-border-primary)',
+                          outline: '1px solid transparent'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'var(--color-bg-hover)';
+                          e.currentTarget.style.background = hexToRgba(color, 0.08);
+                          e.currentTarget.style.outline = `1px solid ${hexToRgba(color, 0.20)}`;
+                          e.currentTarget.style.boxShadow = `inset 3px 0 0 ${hexToRgba(color, 0.8)}`;
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'var(--color-bg-primary)';
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.outline = '1px solid transparent';
+                          e.currentTarget.style.boxShadow = 'none';
                         }}
                         onClick={() => handleTransactionClick(txn)}
                       >
-                        {/* Icon/avatar - made smaller */}
+                        {/* Icon/avatar */}
                         <div className="flex-shrink-0 mr-3 sm:mr-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center overflow-hidden self-center" style={{ 
                           background: txn.icon_url ? 'transparent' : (txn.category_color || 'var(--color-bg-primary)'), 
                           border: 'none'
@@ -163,15 +183,21 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
                             <FaChevronRight size={14} style={{ color: 'var(--color-text-white)' }} />
                           )}
                         </div>
-                        {/* Main info and category */}
+                        {/* Main info and category + status */}
                         <div className="flex-1 min-w-0 flex flex-col justify-center px-3">
                           <div className="text-[14px] sm:text-[16px] truncate max-w-[160px] sm:max-w-[200px] lg:max-w-none" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
-                          {txn.category_name && (
-                            <div className="flex items-center gap-1 sm:gap-2 mt-1">
-                              <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0" style={{ background: txn.category_color || 'var(--color-primary)' }} />
-                              <span className="text-[9px] sm:text-[10px] tracking-wide truncate max-w-[100px] sm:max-w-none" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0" style={{ background: txn.category_color || 'var(--color-primary)' }} />
+                            {txn.category_name && (
+                              <span className="text-[10px] tracking-wide truncate max-w-[120px] sm:max-w-none" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
+                            )}
+                            {showPending && (
+                              <>
+                                <span className="inline-block w-1 h-1 rounded-full" style={{ background: 'var(--color-border-primary)' }} />
+                                <span className="inline-block text-[10px] px-2 py-0.5 rounded-full" style={{ background: pendingStyles.bg, color: pendingStyles.color, border: `1px solid ${pendingStyles.border}` }}>Pending</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                         {/* Amount */}
                         <div className="flex-shrink-0 text-right text-[12px] sm:text-[14px] min-w-[70px] sm:min-w-[90px] ml-3 whitespace-nowrap transition-colors duration-150 flex items-center justify-center self-center" style={{ color: amountColor }}>

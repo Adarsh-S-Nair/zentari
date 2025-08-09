@@ -41,6 +41,15 @@ export const FinancialProvider = ({ children, setToast }) => {
   // Aggregated series for dashboard charts (last 6 months)
   const [spendingEarningSeries, setSpendingEarningSeries] = useState(null)
   const [spendingEarningLoading, setSpendingEarningLoading] = useState(false)
+  // Recurring payments (detected client-side over ~4 months)
+  const [recurringPayments, setRecurringPayments] = useState([])
+  const [recurringLoading, setRecurringLoading] = useState(false)
+  // Full transaction cache for global search
+  const [allTransactions, setAllTransactions] = useState([])
+  const [allTransactionsLoading, setAllTransactionsLoading] = useState(false)
+  // Time series of total account value (from snapshots)
+  const [accountValueSeries, setAccountValueSeries] = useState(null)
+  const [accountValueSeriesLoading, setAccountValueSeriesLoading] = useState(false)
 
   useEffect(() => {
     const getUser = async () => {
@@ -123,6 +132,12 @@ export const FinancialProvider = ({ children, setToast }) => {
 
     // Build spending vs earning aggregates in background
     buildSpendingEarningAggregates(userId)
+
+    // Detect recurring payments in background
+    buildRecurringPayments(userId)
+
+    // Load all transactions in background for global search
+    loadAllTransactions(userId)
   }
 
   // Load recent transactions (last 30 days) without blocking UI
@@ -284,6 +299,153 @@ export const FinancialProvider = ({ children, setToast }) => {
     }
   }
 
+  const buildRecurringPayments = async (userId) => {
+    if (!userId) return
+    try {
+      setRecurringLoading(true)
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+
+      const normalize = (str) => {
+        if (!str) return ''
+        let s = String(str).toLowerCase()
+        // remove typical noise
+        s = s.replace(/ach hold|ach|ppd|des:|co id:|id:|indn:|conf#|conf\b|trx\b|visa|debit|credit|pos|msp/gi, '')
+        // remove numbers and extra spaces
+        s = s.replace(/[0-9]/g, ' ').replace(/\s+/g, ' ').trim()
+        return s
+      }
+      const banned = /(nsf|fee|overdraft|charge|atm|interest|transfer|zelle|venmo|cash app|apple cash|refund|reversal)/i
+
+      const limit = 500
+      let offset = 0
+      const maxPages = 200
+      const now = new Date()
+      const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      cutoff.setDate(cutoff.getDate() - 130)
+
+      const keyToTxns = new Map()
+
+      for (let page = 0; page < maxPages; page++) {
+        const url = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?limit=${limit}&offset=${offset}`
+        const resp = await fetch(url)
+        if (!resp.ok) break
+        const result = await resp.json()
+        const batch = result?.transactions || []
+        if (!batch.length) break
+        for (const t of batch) {
+          // only expenses and within last ~130 days
+          if (!(t?.amount < 0)) continue
+          const d = new Date(t.datetime)
+          if (isNaN(d) || d < cutoff) continue
+          const label = t.merchant_name || t.description || 'Payment'
+          if (banned.test(label)) continue
+          const key = normalize(label)
+          // skip too generic keys
+          if (!key || key.length < 4 || key.split(' ').length < 1) continue
+          const accId = t.accounts?.account_id || t.account_id || 'unknown'
+          const composite = `${accId}::${key}`
+          const arr = keyToTxns.get(composite) || []
+          arr.push({ date: d, amount: Math.abs(t.amount), raw: t, label, accountId: accId })
+          keyToTxns.set(composite, arr)
+        }
+        if (batch.length < limit) break
+        offset += limit
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, 0))
+      }
+
+      const candidates = []
+      for (const [composite, arr] of keyToTxns.entries()) {
+        if (arr.length < 3) continue
+        // sort by date ascending
+        arr.sort((a, b) => a.date - b.date)
+        // compute gaps in days
+        const gaps = []
+        for (let i = 1; i < arr.length; i++) {
+          const ms = arr[i].date - arr[i - 1].date
+          gaps.push(ms / (1000 * 60 * 60 * 24))
+        }
+        if (!gaps.length) continue
+        const median = gaps.sort((a, b) => a - b)[Math.floor(gaps.length / 2)]
+        // detect monthly cadence ~28-33 days
+        const isMonthly = median >= 27 && median <= 33
+        // optionally detect biweekly/weekly later
+        if (!isMonthly) continue
+        // amount stability within 20%
+        const amts = arr.map(x => x.amount)
+        const avg = amts.reduce((s, v) => s + v, 0) / amts.length
+        const within = amts.filter(v => Math.abs(v - avg) / avg <= 0.2).length >= Math.max(3, Math.floor(arr.length * 0.6))
+        if (!within) continue
+        const last = arr[arr.length - 1]
+        // next date = last date + round(median) days, roll forward if in past
+        let next = new Date(last.date)
+        const step = Math.round(Math.min(31, Math.max(28, median)))
+        next.setDate(next.getDate() + step)
+        while (next < now) {
+          next.setDate(next.getDate() + step)
+        }
+        candidates.push({
+          key: composite,
+          label: last.label,
+          cadence: 'Monthly',
+          averageAmount: Math.round(avg),
+          lastDate: last.date.toISOString(),
+          nextDate: next.toISOString(),
+          imageUrl: last.raw?.icon_url || null,
+          categoryColor: last.raw?.category_color || null,
+          categoryIconLib: last.raw?.category_icon_lib || null,
+          categoryIconName: last.raw?.category_icon_name || null
+        })
+      }
+
+      candidates.sort((a, b) => new Date(a.nextDate) - new Date(b.nextDate))
+      setRecurringPayments(candidates.slice(0, 10))
+    } catch (e) {
+      console.error('Error building recurring payments:', e)
+      setRecurringPayments([])
+    } finally {
+      setRecurringLoading(false)
+    }
+  }
+
+  const loadAllTransactions = async (userId) => {
+    if (!userId) return
+    try {
+      setAllTransactionsLoading(true)
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+      const limit = 500
+      let offset = 0
+      const maxPages = 400
+      let collected = []
+      for (let page = 0; page < maxPages; page++) {
+        const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+        const url = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?${params.toString()}`
+        const resp = await fetch(url)
+        if (!resp.ok) break
+        const result = await resp.json()
+        const batch = result?.transactions || []
+        if (!batch.length) break
+        collected = collected.concat(batch)
+        if (batch.length < limit) break
+        offset += limit
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise(r => setTimeout(r, 0))
+      }
+      // Sort desc by datetime for consistency
+      collected.sort((a, b) => new Date(b.datetime) - new Date(a.datetime))
+      setAllTransactions(collected)
+    } catch (e) {
+      console.error('Error loading all transactions:', e)
+      setAllTransactions([])
+    } finally {
+      setAllTransactionsLoading(false)
+    }
+  }
+
   const fetchAccounts = async (userId) => {
     if (!userId) return
     
@@ -338,34 +500,92 @@ export const FinancialProvider = ({ children, setToast }) => {
       const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
       const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
       
-      // Build query parameters
-      const params = new URLSearchParams({
-        limit: '100',
-        offset: '0'
-      })
-      
-      // Add category filter if provided
-      if (filters.categories && filters.categories.length > 0) {
-        params.append('category_ids', filters.categories.join(','))
+      // Helper for date boundaries
+      const now = new Date()
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      let rangeStart = null
+      let rangeEnd = null
+      if (filters.dateRange && filters.dateRange !== 'all') {
+        switch (filters.dateRange) {
+          case 'today':
+            rangeStart = today; rangeEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999); break
+          case 'week':
+            rangeStart = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000); rangeEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999); break
+          case 'month':
+            rangeStart = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate()); rangeEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999); break
+          case 'quarter':
+            rangeStart = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate()); rangeEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999); break
+          case 'year':
+            rangeStart = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()); rangeEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999); break
+          case 'custom':
+            if (filters.customStartDate) rangeStart = new Date(filters.customStartDate)
+            if (filters.customEndDate) rangeEnd = new Date(filters.customEndDate + 'T23:59:59.999')
+            break
+          default: break
+        }
       }
       
-      const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?${params.toString()}`
-      
-      const response = await fetch(fullUrl)
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`)
+      // If a date range is applied, page through results so we don't miss older months
+      let fetched = []
+      if (rangeStart || rangeEnd) {
+        const limit = 500
+        let offset = 0
+        const maxPages = 200
+        for (let page = 0; page < maxPages; page++) {
+          const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+          if (filters.categories && filters.categories.length > 0) {
+            params.append('category_ids', filters.categories.join(','))
+          }
+          const pageUrl = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?${params.toString()}`
+          const resp = await fetch(pageUrl)
+          if (!resp.ok) break
+          const pageResult = await resp.json()
+          const batch = pageResult?.transactions || []
+          if (!batch.length) break
+          fetched = fetched.concat(batch)
+          // Early break when the oldest txn in this page is older than start, assuming desc order
+          if (rangeStart) {
+            let oldest = null
+            for (const t of batch) {
+              const d = new Date(t.datetime)
+              if (!isNaN(d.getTime())) {
+                if (oldest === null || d < oldest) oldest = d
+              }
+            }
+            if (oldest && oldest < rangeStart) {
+              // Next pages will be older; stop
+              break
+            }
+          }
+          if (batch.length < limit) break
+          offset += limit
+          // yield
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise(r => setTimeout(r, 0))
+        }
+      } else {
+        // No explicit date range: fetch first page
+        const params = new URLSearchParams({ limit: '100', offset: '0' })
+        if (filters.categories && filters.categories.length > 0) {
+          params.append('category_ids', filters.categories.join(','))
+        }
+        const fullUrl = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?${params.toString()}`
+        const response = await fetch(fullUrl)
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`)
+        }
+        const result = await response.json()
+        if (!result.success) throw new Error(result.error || 'Failed to fetch transactions')
+        fetched = result.transactions || []
       }
       
-      const result = await response.json()
-      
-      if (result.success) {
-        const filteredTransactions = result.transactions || []
-        
+      if (fetched) {
+        const filteredTransactions = fetched
+         
         // Apply additional client-side filters
         let processedTransactions = filteredTransactions
-        
+         
         // Filter by transaction type (income/expense)
         if (filters.transactionType && filters.transactionType !== 'all') {
           processedTransactions = processedTransactions.filter(txn => {
@@ -374,7 +594,7 @@ export const FinancialProvider = ({ children, setToast }) => {
             return true
           })
         }
-        
+         
         // Filter by search query
         if (filters.searchQuery && filters.searchQuery.trim()) {
           const query = filters.searchQuery.toLowerCase().trim()
@@ -383,7 +603,7 @@ export const FinancialProvider = ({ children, setToast }) => {
             txn.merchant_name?.toLowerCase().includes(query)
           )
         }
-        
+         
         // Filter by amount range
         if (filters.amountRange && filters.amountRange !== 'all') {
           processedTransactions = processedTransactions.filter(txn => {
@@ -396,48 +616,33 @@ export const FinancialProvider = ({ children, setToast }) => {
             }
           })
         }
-        
+         
         // Filter by date range (client-side for now)
         if (filters.dateRange && filters.dateRange !== 'all') {
-          const now = new Date()
-          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-          
           processedTransactions = processedTransactions.filter(txn => {
             const txnDate = new Date(txn.datetime)
             switch (filters.dateRange) {
               case 'today':
-                return txnDate >= today
+                return rangeStart ? txnDate >= rangeStart : true
               case 'week':
-                const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-                return txnDate >= weekAgo
+                return rangeStart ? txnDate >= rangeStart : true
               case 'month':
-                const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
-                return txnDate >= monthAgo
+                return rangeStart ? txnDate >= rangeStart : true
               case 'quarter':
-                const quarterAgo = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate())
-                return txnDate >= quarterAgo
+                return rangeStart ? txnDate >= rangeStart : true
               case 'year':
-                const yearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
-                return txnDate >= yearAgo
+                return rangeStart ? txnDate >= rangeStart : true
               case 'custom':
-                if (!filters.customStartDate && !filters.customEndDate) return true
-                let start = filters.customStartDate ? new Date(filters.customStartDate) : null
-                let end = filters.customEndDate ? new Date(filters.customEndDate) : null
-                if (start) {
-                  start = new Date(start.getFullYear(), start.getMonth(), start.getDate())
-                  if (txnDate < start) return false
-                }
-                if (end) {
-                  const endOfDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999)
-                  if (txnDate > endOfDay) return false
-                }
+                if (!rangeStart && !rangeEnd) return true
+                if (rangeStart && txnDate < rangeStart) return false
+                if (rangeEnd && txnDate > rangeEnd) return false
                 return true
               default:
                 return true
             }
           })
         }
-        
+         
         return processedTransactions
       } else {
         throw new Error(result.error || 'Failed to fetch filtered transactions')
@@ -511,6 +716,31 @@ export const FinancialProvider = ({ children, setToast }) => {
     } catch (error) {
       console.error('Error fetching plaid items:', error)
       setPlaidItems({})
+    }
+  }
+
+  const fetchAccountValueSeries = async (userId, { startDate = null, endDate = null } = {}) => {
+    if (!userId) return []
+    try {
+      setAccountValueSeriesLoading(true)
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+      const params = new URLSearchParams()
+      if (startDate) params.set('start_date', startDate)
+      if (endDate) params.set('end_date', endDate)
+      const url = `${protocol}://${cleanBaseUrl}/database/user-account-snapshots/${userId}${params.toString() ? '?' + params.toString() : ''}`
+      const resp = await fetch(url)
+      const data = await resp.json()
+      const series = data?.series || []
+      setAccountValueSeries(series)
+      return series
+    } catch (e) {
+      console.error('Error fetching account value series:', e)
+      setAccountValueSeries([])
+      return []
+    } finally {
+      setAccountValueSeriesLoading(false)
     }
   }
 
@@ -620,6 +850,12 @@ export const FinancialProvider = ({ children, setToast }) => {
       transactionsLoading,
       spendingEarningSeries,
       spendingEarningLoading,
+      recurringPayments,
+      recurringLoading,
+      allTransactions,
+      allTransactionsLoading,
+      accountValueSeries,
+      accountValueSeriesLoading,
       error,
       user,
       plaidItems,
@@ -644,6 +880,9 @@ export const FinancialProvider = ({ children, setToast }) => {
       fetchFilteredTransactions,
       // Expose builder if we need to force a refresh
       buildSpendingEarningAggregates,
+      buildRecurringPayments,
+      loadAllTransactions,
+      fetchAccountValueSeries,
       setToast
     }}>
       {children}

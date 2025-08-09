@@ -107,32 +107,57 @@ export const useModal = () => {
 }
 
 export function DrawerProvider({ children }) {
-  const [drawerConfig, setDrawerConfig] = useState({
+  const [drawerState, setDrawerState] = useState({
     isOpen: false,
-    title: '',
-    content: null,
-    onClose: null,
-    type: 'drawer' // 'drawer' or 'sheet'
+    type: 'drawer', // 'drawer' or 'sheet'
+    stack: [] // [{ title, content }]
   });
 
   const openDrawer = React.useCallback((config) => {
-    setDrawerConfig({
-      ...config,
+    // open with a fresh stack
+    setDrawerState({
       isOpen: true,
+      type: config?.type || 'drawer',
+      stack: [{ title: config?.title || '', content: config?.content || null }],
     });
   }, []);
 
+  const pushDrawer = React.useCallback((config) => {
+    setDrawerState(prev => ({
+      ...prev,
+      isOpen: true,
+      stack: [...(prev.stack || []), { title: config?.title || '', content: config?.content || null }]
+    }));
+  }, []);
+
+  const replaceTop = React.useCallback((config) => {
+    setDrawerState(prev => {
+      const next = [...(prev.stack || [])]
+      if (next.length === 0) return { ...prev, stack: [{ title: config?.title || '', content: config?.content || null }], isOpen: true }
+      next[next.length - 1] = { title: config?.title || '', content: config?.content || null }
+      return { ...prev, stack: next }
+    })
+  }, [])
+
+  const goBack = React.useCallback(() => {
+    setDrawerState(prev => {
+      const next = [...(prev.stack || [])]
+      next.pop()
+      const stillOpen = next.length > 0
+      return { ...prev, isOpen: stillOpen, stack: next }
+    })
+  }, [])
+
   const closeDrawer = React.useCallback(() => {
-    if (drawerConfig.onClose) {
-      drawerConfig.onClose();
-    }
-    setDrawerConfig(prev => ({ ...prev, isOpen: false }));
-  }, [drawerConfig.onClose]);
+    setDrawerState(prev => ({ ...prev, isOpen: false }))
+  }, [])
+
+  const top = drawerState.stack[drawerState.stack.length - 1] || { title: '', content: null }
 
   return (
-    <DrawerContext.Provider value={{ openDrawer, closeDrawer }}>
+    <DrawerContext.Provider value={{ openDrawer, closeDrawer, pushDrawer, replaceTop, goBack }}>
       {children}
-      <GlobalDrawer config={drawerConfig} onClose={closeDrawer} />
+      <GlobalDrawer config={{ ...drawerState, top }} onClose={closeDrawer} onBack={goBack} />
     </DrawerContext.Provider>
   );
 }
@@ -146,12 +171,25 @@ export const useDrawer = () => {
 }
 
 // Global Drawer/Sheet Component
-function GlobalDrawer({ config, onClose }) {
+function GlobalDrawer({ config, onClose, onBack }) {
   const isMobile = useMediaQuery({ maxWidth: 670 });
-  const { isOpen, title, content, type } = config;
+  const { isOpen, type, stack, top } = config;
 
   // Memoize the content to prevent unnecessary re-renders
-  const memoizedContent = React.useMemo(() => content, [content]);
+  const memoizedContent = React.useMemo(() => top?.content, [top]);
+  const title = top?.title || ''
+  const canGoBack = (stack?.length || 0) > 1
+
+  // Determine nav direction for animations
+  const [navDir, setNavDir] = React.useState('forward')
+  const prevLenRef = React.useRef(stack?.length || 0)
+  React.useEffect(() => {
+    const len = stack?.length || 0
+    const prev = prevLenRef.current
+    if (len > prev) setNavDir('forward')
+    else if (len < prev) setNavDir('back')
+    prevLenRef.current = len
+  }, [stack?.length])
 
   if (!isOpen) return null;
 
@@ -163,6 +201,9 @@ function GlobalDrawer({ config, onClose }) {
         onClose={onClose}
         maxHeight="80vh"
         header={title}
+        onBack={canGoBack ? onBack : null}
+        viewKey={stack?.length || 0}
+        navDirection={navDir}
       >
         {memoizedContent}
       </BottomSheet>
@@ -175,6 +216,9 @@ function GlobalDrawer({ config, onClose }) {
       isOpen={isOpen} 
       onClose={onClose}
       header={title}
+      onBack={canGoBack ? onBack : null}
+      viewKey={stack?.length || 0}
+      navDirection={navDir}
     >
       {memoizedContent}
     </RightDrawer>
@@ -447,7 +491,7 @@ function AppContent({
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { fetchFilteredTransactions } = useContext(FinancialContext);
-  const { openDrawer } = useDrawer();
+  const { openDrawer, pushDrawer, replaceTop, goBack } = useDrawer();
   const maxWidth = 700;
 
   // Toolbar state
@@ -833,6 +877,7 @@ function AppContent({
                   filteredTransactions={filteredTransactions}
                   activeFilters={activeFilters}
                   isApplyingFilters={isApplyingFilters}
+                  searchQuery={searchQuery}
                 />
               </div>
               {isMobile && (

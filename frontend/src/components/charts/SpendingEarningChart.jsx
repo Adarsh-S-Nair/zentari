@@ -173,14 +173,14 @@ export default function SpendingEarningChart({ series, title = 'Spending vs Earn
             tooltip.month
           }</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#667eea' }} />
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--brand-income-hex)' }} />
             <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Income:</span>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>
               {formatCurrency(tooltip.income)}
             </span>
               </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#a78bfa' }} />
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--brand-spending-hex)' }} />
             <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Spending:</span>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>
               {formatCurrency(tooltip.spending)}
@@ -193,12 +193,12 @@ export default function SpendingEarningChart({ series, title = 'Spending vs Earn
         {/* Gradients */}
         <defs>
           <linearGradient id="brandBarSolid" x1="0" y1={margin.top} x2="0" y2={margin.top + innerHeight} gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#667eea" stopOpacity="1" />
-            <stop offset="100%" stopColor="#764ba2" stopOpacity="1" />
+            <stop offset="0%" stopColor={'var(--brand-income-hex)'} stopOpacity="1" />
+            <stop offset="100%" stopColor={'var(--brand-spending-hex)'} stopOpacity="1" />
           </linearGradient>
           <linearGradient id="brandBarLight" x1="0" y1={margin.top} x2="0" y2={margin.top + innerHeight} gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#667eea" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#764ba2" stopOpacity="0.6" />
+            <stop offset="0%" stopColor={'var(--brand-income-hex)'} stopOpacity="0.6" />
+            <stop offset="100%" stopColor={'var(--brand-spending-hex)'} stopOpacity="0.6" />
           </linearGradient>
         </defs>
 

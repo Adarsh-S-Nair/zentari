@@ -6,8 +6,10 @@ import { FinancialContext } from '../../contexts/FinancialContext'
 import { Card, Container, Button, Spinner, Pill, AccountCardsCarousel } from '../ui'
 import { SpendingEarningChart } from '../charts'
 import { FaWallet, FaChartPie, FaChartBar, FaReceipt, FaCalendarAlt, FaPiggyBank } from 'react-icons/fa'
+import CategoryIcon from '../ui/CategoryIcon'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import { groupAccountsByType, getRawBalance } from './accountsUtils'
+import AccountsListDrawer from './AccountsListDrawer'
 
 function hexToRgba(hex, alpha = 1) {
   const h = hex?.replace('#', '')
@@ -68,7 +70,7 @@ function SegmentedBar({ items = [], total = 0, height = 16, gap = 3, radius = 6 
               className="transition-all"
               style={{
                 width: `${widthPct}%`,
-                background: seg.color,
+                background: seg.background || seg.color,
                 height: '100%',
                 borderRadius: br,
                 cursor: 'pointer',
@@ -85,17 +87,20 @@ function SegmentedBar({ items = [], total = 0, height = 16, gap = 3, radius = 6 
 }
 
 export default function DashboardPanel() {
-  const { accounts, transactions, loading, spendingEarningSeries } = useContext(FinancialContext)
+  const { accounts, transactions, loading, spendingEarningSeries, recurringPayments } = useContext(FinancialContext)
   const carouselRef = useRef(null)
   const [carouselIndex, setCarouselIndex] = useState(0)
   const [carouselPages, setCarouselPages] = useState(1)
-  const brandSolid = '#667eea'
-  const brandLight = '#a78bfa'
+  // Match Spending vs Earnings colors exactly
+  const brandPrimary = 'var(--brand-income-hex)'
+  const brandSecondary = 'var(--brand-spending-hex)'
+  const gradientSolid = 'var(--brand-income-gradient-x)'
+  const gradientLight = 'var(--brand-spending-gradient-x)'
   const [alTab, setAlTab] = useState('assets') // 'assets' | 'liabilities'
   const tabIndicator = 'linear-gradient(90deg, #6e7ff1 0%, #735ec6 100%)'
   const [hoverTab, setHoverTab] = useState(null)
   const [animTab, setAnimTab] = useState(null)
-  const { openDrawer } = useDrawer()
+  const { openDrawer, pushDrawer } = useDrawer()
   const navigate = useNavigate()
   const handleAccountCardClick = React.useCallback((account) => {
     const lastFour = account?.mask ? String(account.mask).slice(-4) : ''
@@ -106,7 +111,7 @@ export default function DashboardPanel() {
       if (isLoading) return (<Spinner label="Loading..." />)
       return (<AccountDetail account={account} />)
     }
-    openDrawer({ title, content: <AccountDetailWrapper />, onClose: () => {} })
+    openDrawer({ title: 'Account Details', content: <AccountDetailWrapper />, onClose: () => {} })
   }, [openDrawer])
   const detectNetwork = (nameOrSubtype = '') => {
     const s = (nameOrSubtype || '').toLowerCase()
@@ -243,7 +248,7 @@ export default function DashboardPanel() {
   const segs = otherValue > 0 ? [...barCandidates, { label: 'Other', value: otherValue, color: '#94a3b8' }] : [...barCandidates]
   const listItems = (ranked || []).slice(0, 3)
   const deltaPct = spendingLastMonth > 0 ? ((spendingThisMonth - spendingLastMonth) / spendingLastMonth) * 100 : 0
-  const isPositive = deltaPct >= 0
+  const isPositive = deltaPct < 0
 
   return (
     <Container size="xl" className="py-6">
@@ -265,28 +270,39 @@ export default function DashboardPanel() {
                  </div>
                  <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Accounts: {accountsCount}</div>
                </div>
-                <div className="px-5 pb-4 space-y-5">
-                  <div className="text-[28px] font-medium tracking-[-0.01em]" style={{ color: 'var(--color-text-secondary)', opacity: 0.95 }}>{formatCurrency(totalBalance)}</div>
+                <div className="px-5 pb-3">
+                  <div className="text-[28px] font-medium tracking-[-0.01em] mb-2" style={{ color: 'var(--color-text-secondary)', opacity: 0.95 }}>{formatCurrency(totalBalance)}</div>
                   {/* Tabs: Assets | Liabilities */}
-                  <div className="w-full">
-                    <div className="w-full max-w-[320px] mx-auto">
-                      <div className="relative grid grid-cols-2 rounded-md border overflow-hidden" style={{ borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-primary)' }}>
-                        {/* Indicator */}
-                        <span aria-hidden className="absolute inset-y-0 w-1/2 rounded-md transition-transform duration-200 ease-out" style={{ background: tabIndicator, transform: alTab === 'assets' ? 'translateX(0%)' : 'translateX(100%)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                        <button
-                          className={`py-1.5 text-[11px] z-10 transition-all ${alTab==='assets' ? 'font-medium' : ''}`}
-                          style={{ color: alTab==='assets' ? '#ffffff' : (hoverTab==='assets' ? 'var(--color-text-secondary)' : 'var(--color-text-muted)'), cursor: 'pointer', transform: animTab==='assets' ? 'translateY(-1px) scale(1.02)' : 'none' }}
-                          onMouseEnter={()=>setHoverTab('assets')}
-                          onMouseLeave={()=>setHoverTab(null)}
-                          onClick={() => { setAnimTab('assets'); setTimeout(()=>setAnimTab(null),120); setAlTab('assets') }}
-                        >Assets</button>
-                        <button
-                          className={`py-1.5 text-[11px] z-10 transition-all ${alTab==='liabilities' ? 'font-medium' : ''}`}
-                          style={{ color: alTab==='liabilities' ? '#ffffff' : (hoverTab==='liabilities' ? 'var(--color-text-secondary)' : 'var(--color-text-muted)'), cursor: 'pointer', transform: animTab==='liabilities' ? 'translateY(-1px) scale(1.02)' : 'none' }}
-                          onMouseEnter={()=>setHoverTab('liabilities')}
-                          onMouseLeave={()=>setHoverTab(null)}
-                          onClick={() => { setAnimTab('liabilities'); setTimeout(()=>setAnimTab(null),120); setAlTab('liabilities') }}
-                        >Liabilities</button>
+                  <div className="w-full mb-3">
+                    <div className="w-full max-w-[360px] mx-auto">
+                      <div className="relative">
+                        <div className="grid grid-cols-2">
+                          <button
+                            className={`py-2 text-[12px] ${alTab==='assets' ? 'font-medium' : ''} transition-colors transition-transform text-center cursor-pointer select-none`}
+                            style={{ color: alTab==='assets' ? 'var(--color-text-primary)' : 'var(--color-text-muted)', borderRadius: 6 }}
+                            onMouseEnter={(e)=>{ e.currentTarget.style.transform='scale(1.03) translateY(-1px)'; }}
+                            onMouseLeave={(e)=>{ e.currentTarget.style.transform='none'; }}
+                            onMouseDown={(e)=>{ e.currentTarget.style.transform='scale(0.98) translateY(0px)'; }}
+                            onMouseUp={(e)=>{ e.currentTarget.style.transform='scale(1.03) translateY(-1px)'; }}
+                            onClick={() => setAlTab('assets')}
+                          >Assets</button>
+                          <button
+                            className={`py-2 text-[12px] ${alTab==='liabilities' ? 'font-medium' : ''} transition-colors transition-transform text-center cursor-pointer select-none`}
+                            style={{ color: alTab==='liabilities' ? 'var(--color-text-primary)' : 'var(--color-text-muted)', borderRadius: 6 }}
+                            onMouseEnter={(e)=>{ e.currentTarget.style.transform='scale(1.03) translateY(-1px)'; }}
+                            onMouseLeave={(e)=>{ e.currentTarget.style.transform='none'; }}
+                            onMouseDown={(e)=>{ e.currentTarget.style.transform='scale(0.98) translateY(0px)'; }}
+                            onMouseUp={(e)=>{ e.currentTarget.style.transform='scale(1.03) translateY(-1px)'; }}
+                            onClick={() => setAlTab('liabilities')}
+                          >Liabilities</button>
+                        </div>
+                        {/* Animated bottom border indicator */}
+                        <span
+                          aria-hidden
+                          className="absolute bottom-0 left-0 h-[4px] w-1/2 transition-transform duration-200 ease-out"
+                          style={{ background: '#a78bfa', transform: alTab === 'assets' ? 'translateX(0%)' : 'translateX(100%)', boxShadow: '0 0 0 1px rgba(167,139,250,0.25)' }}
+                        />
+                        <span aria-hidden className="absolute bottom-0 left-0 right-0 h-[1px]" style={{ background: 'var(--color-border-primary)', opacity: 0.7 }} />
                       </div>
                     </div>
                   </div>
@@ -300,8 +316,8 @@ export default function DashboardPanel() {
                       </div>
                       <SegmentedBar
                         items={[
-                          { label: 'Cash', value: cashTotal, color: brandSolid },
-                          { label: 'Investments', value: investTotal, color: brandLight }
+                          { label: 'Cash', value: cashTotal, color: brandPrimary, background: brandPrimary },
+                          { label: 'Investments', value: investTotal, color: brandSecondary, background: brandSecondary }
                         ]}
                         total={assetTotal}
                         height={12}
@@ -309,8 +325,8 @@ export default function DashboardPanel() {
                         radius={8}
                       />
                       <div className="flex items-center gap-4 mt-1 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandSolid }} />Cash</span>
-                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandLight }} />Investments</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandPrimary }} />Cash</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandSecondary }} />Investments</span>
                       </div>
                     </div>
                   ) : (
@@ -321,8 +337,8 @@ export default function DashboardPanel() {
                       </div>
                       <SegmentedBar
                         items={[
-                          { label: 'Credit', value: Math.abs(creditTotal), color: brandSolid },
-                          { label: 'Loans', value: Math.abs(loanTotal), color: brandLight }
+                          { label: 'Credit', value: Math.abs(creditTotal), color: brandPrimary, background: brandPrimary },
+                          { label: 'Loans', value: Math.abs(loanTotal), color: brandSecondary, background: brandSecondary }
                         ]}
                         total={Math.abs(liabilityTotal)}
                         height={12}
@@ -330,8 +346,8 @@ export default function DashboardPanel() {
                         radius={8}
                       />
                       <div className="flex items-center gap-4 mt-1 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandSolid }} />Credit</span>
-                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandLight }} />Loans</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandPrimary }} />Credit</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandSecondary }} />Loans</span>
                       </div>
                     </div>
                   )}
@@ -386,11 +402,11 @@ export default function DashboardPanel() {
               </div>
               <div className="flex items-center gap-4 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
                 <div className="flex items-center gap-2">
-                  <span className="inline-block w-3 h-3 rounded-full" style={{ background: '#667eea' }} />
+                  <span className="inline-block w-3 h-3 rounded-full" style={{ background: 'var(--brand-income-hex)' }} />
                   <span>Income</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-block w-3 h-3 rounded-full" style={{ background: '#a78bfa' }} />
+                  <span className="inline-block w-3 h-3 rounded-full" style={{ background: 'var(--brand-spending-hex)' }} />
                   <span>Spending</span>
                 </div>
               </div>
@@ -422,22 +438,51 @@ export default function DashboardPanel() {
               </div>
             </div>
             <div className="px-3 pb-4">
-              <div className="grid grid-cols-5 text-[11px] font-medium py-2" style={{ color: 'var(--color-text-muted)' }}>
-                <div>Name</div><div>Transaction</div><div>Date & Time</div><div>Amount</div><div className="text-right">Status</div>
+              <div className="flex items-center justify-between text-[11px] font-medium py-2" style={{ color: 'var(--color-text-muted)' }}>
+                <div className="flex-1 pl-2">Name</div>
+                <div className="w-[120px] hidden sm:block">Type</div>
+                <div className="w-[150px] hidden md:block">Date</div>
+                <div className="w-[100px] text-right">Amount</div>
+                <div className="w-[100px] text-right">Status</div>
               </div>
-              {recent.map((t, i) => {
-                const isPositiveAmount = t.amount > 0
-                const status = t.pending ? 'Pending' : 'Completed'
-                return (
-                  <div key={t.id || i} className="grid grid-cols-5 items-center py-2 border-top" style={{ borderTop: '1px solid var(--color-border-primary)' }}>
-                    <div className="truncate text-[13px]" style={{ color: 'var(--color-text-primary)' }}>{t.merchant_name || t.description || 'Transaction'}</div>
-                    <div className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t.payment_channel || 'Bank Transfer'}</div>
-                    <div className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(t.datetime)}</div>
-                    <div className="text-[13px] font-medium" style={{ color: isPositiveAmount ? 'var(--color-success)' : 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{isPositiveAmount ? '+' : ''}{formatCurrency(Math.abs(t.amount))}</div>
-                    <div className="text-right text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{status}</div>
-                  </div>
-                )
-              })}
+              <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--color-border-primary)' }}>
+                {recent.map((t, i) => {
+                  const isPositiveAmount = t.amount > 0
+                  const status = t.pending ? 'Pending' : 'Completed'
+                  const color = t.category_color || '#64748b'
+                  return (
+                    <div
+                      key={t.id || i}
+                      className="flex items-center justify-between py-3 px-3 transition-colors"
+                      style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)', outline: '1px solid transparent' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = hexToRgba(color, 0.08); e.currentTarget.style.outline = `1px solid ${hexToRgba(color, 0.20)}`; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${hexToRgba(color, 0.8)}` }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.outline = '1px solid transparent'; e.currentTarget.style.boxShadow = 'none' }}
+                    >
+                      <div className="flex-1 flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center" style={{ background: t.icon_url ? 'transparent' : (t.category_color || 'var(--color-bg-secondary)') }}>
+                          {t.icon_url ? (
+                            <img src={t.icon_url} alt="icon" className="w-full h-full object-cover" />
+                          ) : t.category_icon_lib && t.category_icon_name ? (
+                            <CategoryIcon lib={t.category_icon_lib} name={t.category_icon_name} size={16} color={'var(--color-text-white)'} />
+                          ) : (
+                            <FaReceipt size={14} style={{ color: 'var(--color-text-white)' }} />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{t.merchant_name || t.description || 'Transaction'}</div>
+                          <div className="text-[11px] mt-0.5 hidden md:block" style={{ color: 'var(--color-text-muted)' }}>{formatDate(t.datetime)}</div>
+                        </div>
+                      </div>
+                      <div className="w-[120px] hidden sm:block text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t.payment_channel || 'Bank Transfer'}</div>
+                      <div className="w-[150px] hidden md:block text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(t.datetime)}</div>
+                      <div className="w-[100px] text-right text-[13px] font-medium" style={{ color: isPositiveAmount ? 'var(--color-success)' : 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{isPositiveAmount ? '+' : ''}{formatCurrency(Math.abs(t.amount))}</div>
+                      <div className="w-[100px] text-right">
+                        <span className="inline-block text-[11px] px-2 py-1 rounded-full" style={{ background: t.pending ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)', color: t.pending ? '#f59e0b' : '#10b981', border: `1px solid ${t.pending ? 'rgba(245,158,11,0.35)' : 'rgba(16,185,129,0.35)'}` }}>{status}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </Card>
         </div>
@@ -445,22 +490,111 @@ export default function DashboardPanel() {
         <div className="space-y-4">
           {/* Accounts card with carousel */}
           <Card className="p-0" elevation="md">
-            <div className="p-5 pb-0"><div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}><FaWallet size={14} /><span>Accounts</span></div></div>
+            <div className="p-5 pb-0 flex items-center justify-between">
+              <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+                <FaWallet size={14} />
+                <span>Accounts</span>
+              </div>
+              <button
+                type="button"
+                className="text-[11px] font-medium px-2 py-1 rounded-sm cursor-pointer"
+                style={{ color: 'var(--color-text-secondary)', background: 'transparent' }}
+                onClick={() => {
+                  openDrawer({
+                    title: 'All Accounts',
+                    content: (
+                      <AccountsListDrawer
+                        accounts={accounts}
+                        onAccountClick={(acc) => {
+                          pushDrawer({
+                            title: 'Account Details',
+                            content: <AccountDetail account={acc} />
+                          })
+                        }}
+                      />
+                    ),
+                    onClose: () => {}
+                  })
+                }}
+                onMouseEnter={(e)=>{ e.currentTarget.style.textDecoration='underline'; e.currentTarget.style.color='var(--color-text-primary)'; }}
+                onMouseLeave={(e)=>{ e.currentTarget.style.textDecoration='none'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+              >View all</button>
+            </div>
             <div className="px-3 pt-4 pb-4"><AccountCardsCarousel accounts={accounts} onCardClick={handleAccountCardClick} /></div>
           </Card>
           <Card className="p-0" elevation="md">
             <div className="p-5 pb-0"><div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}><FaCalendarAlt size={14} /><span>Payment Schedule</span></div></div>
-            <div className="px-3 pb-3">
-              {recent.map((t, i) => (
-                <div key={t.id || i} className="flex items-center justify-between py-3 border-top" style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)' }}>
-                  <div>
-                    <div className="text-[13px]" style={{ color: 'var(--color-text-primary)' }}>{t.merchant_name || t.description || 'Payment'}</div>
-                    <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{formatDate(t.datetime)}</div>
+            <div className="px-3 pt-3 pb-3">
+              {(recurringPayments && recurringPayments.length > 0 ? recurringPayments.slice(0,5) : []).map((p, i) => (
+                <div
+                  key={p.key + i}
+                  className="flex items-center justify-between py-3 px-4 border-top transition-colors duration-150"
+                  style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)', cursor: 'default', outline: '1px solid transparent' }}
+                  onMouseEnter={(e) => {
+                    const color = p.categoryColor || '#64748b'
+                    e.currentTarget.style.background = hexToRgba(color, 0.10)
+                    e.currentTarget.style.outline = `1px solid ${hexToRgba(color, 0.25)}`
+                    e.currentTarget.style.boxShadow = `inset 3px 0 0 ${hexToRgba(color, 0.8)}`
+                  }}
+                  onMouseLeave={(e) => { 
+                    e.currentTarget.style.background = 'transparent'
+                    e.currentTarget.style.outline = '1px solid transparent'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center" style={{ background: p.imageUrl ? 'transparent' : (p.categoryColor || 'var(--color-bg-secondary)') }}>
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt="icon" className="w-full h-full object-cover" />
+                      ) : p.categoryIconLib && p.categoryIconName ? (
+                        <CategoryIcon lib={p.categoryIconLib} name={p.categoryIconName} size={14} color={'var(--color-text-white)'} />
+                      ) : (
+                        <FaCalendarAlt size={14} style={{ color: 'var(--color-text-white)' }} />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[13px]" style={{ color: 'var(--color-text-primary)' }}>{p.label}</div>
+                      <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Due {formatDate(p.nextDate)}</div>
+                    </div>
+                  </div>
+                  <div className="text-[13px] font-medium" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(p.averageAmount)}</div>
+                </div>
+              ))}
+              {(!recurringPayments || recurringPayments.length === 0) && recent.map((t, i) => (
+                <div
+                  key={t.id || i}
+                  className="flex items-center justify-between py-3 px-4 border-top transition-colors duration-150"
+                  style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)', cursor: 'default', outline: '1px solid transparent' }}
+                  onMouseEnter={(e) => { 
+                    const color = t.category_color || '#64748b'
+                    e.currentTarget.style.background = hexToRgba(color, 0.10)
+                    e.currentTarget.style.outline = `1px solid ${hexToRgba(color, 0.25)}`
+                    e.currentTarget.style.boxShadow = `inset 3px 0 0 ${hexToRgba(color, 0.8)}`
+                  }}
+                  onMouseLeave={(e) => { 
+                    e.currentTarget.style.background = 'transparent'
+                    e.currentTarget.style.outline = '1px solid transparent'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center" style={{ background: t.icon_url ? 'transparent' : (t.category_color || 'var(--color-bg-secondary)') }}>
+                      {t.icon_url ? (
+                        <img src={t.icon_url} alt="icon" className="w-full h-full object-cover" />
+                      ) : t.category_icon_lib && t.category_icon_name ? (
+                        <CategoryIcon lib={t.category_icon_lib} name={t.category_icon_name} size={14} color={'var(--color-text-white)'} />
+                      ) : (
+                        <FaCalendarAlt size={14} style={{ color: 'var(--color-text-white)' }} />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[13px]" style={{ color: 'var(--color-text-primary)' }}>{t.merchant_name || t.description || 'Payment'}</div>
+                      <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{formatDate(t.datetime)}</div>
+                    </div>
                   </div>
                   <div className="text-[13px] font-medium" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(Math.abs(t.amount))}</div>
                 </div>
               ))}
-              <Button label="View all upcoming payment" className="h-8 w-full mt-2" />
             </div>
           </Card>
 

@@ -22,8 +22,8 @@ function Pill({ value, isPositive, isZero = false, type = 'percentage', customTe
   } else {
     // Default percentage behavior
     if (isZero) {
-      bgColor = 'var(--color-gray-100)' // light gray
-      textColor = 'var(--color-text-muted)' // neutral gray
+      bgColor = 'var(--color-warning-bg)'
+      textColor = 'var(--color-warning)'
     } else {
       bgColor = isPositive ? 'var(--color-success-bg)' : 'var(--color-danger-bg)'
       textColor = isPositive ? 'var(--color-success)' : 'var(--color-danger)'

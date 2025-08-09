@@ -3,6 +3,7 @@ from typing import Optional
 from supabase_services import get_accounts, get_transactions, get_categories, get_sync, get_institutions
 from plaid_services import get_items
 import os
+from supabase_services import get_client
 
 router = APIRouter(prefix="/database", tags=["Database Operations"])
 
@@ -241,6 +242,60 @@ async def update_account_auto_sync(account_id: str, request: Request, authorizat
     except Exception as e:
         print(f"Exception in update_account_auto_sync for account {account_id}: {str(e)}")
         return {"success": False, "error": str(e)}
+
+@router.get("/user-account-snapshots/{user_id}")
+async def get_user_account_snapshots(
+    user_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    limit: int = 2000,
+    authorization: Optional[str] = Header(None)
+):
+    """Aggregate account snapshots across all user accounts into a daily total time series.
+
+    Returns items like [{"date": "2024-01-01", "total": 12345.67}]
+    """
+    try:
+        accounts_service = get_accounts()
+        result = accounts_service.get_by_user(user_id)
+        if not result.get("success"):
+            return {"success": True, "series": []}
+        accounts = result.get("data") or []
+        account_ids = [a.get('id') for a in accounts if a.get('id')]
+        if not account_ids:
+            return {"success": True, "series": []}
+
+        client = get_client().client
+        query = client.table('account_snapshots').select('account_id, current_balance, available_balance, recorded_at')
+        # Supabase Python client supports the in_ method
+        query = query.in_('account_id', account_ids)
+        if start_date:
+            query = query.gte('recorded_at', start_date)
+        if end_date:
+            query = query.lte('recorded_at', end_date)
+        # Order ascending for client-side charting
+        resp = query.order('recorded_at', desc=False).limit(limit).execute()
+        rows = resp.data or []
+
+        # Aggregate by date (YYYY-MM-DD)
+        daily = {}
+        for r in rows:
+            ts = r.get('recorded_at') or ''
+            day = str(ts)[:10]
+            val = r.get('current_balance')
+            if val is None:
+                val = r.get('available_balance')
+            try:
+                val = float(val) if val is not None else 0.0
+            except Exception:
+                val = 0.0
+            daily[day] = daily.get(day, 0.0) + val
+
+        series = [{"date": k, "total": round(v, 2)} for k, v in sorted(daily.items(), key=lambda x: x[0])]
+        return {"success": True, "series": series}
+    except Exception as e:
+        print(f"[DB] Exception in get_user_account_snapshots for user {user_id}: {e}")
+        return {"success": True, "series": []}
 
 @router.get("/account/{account_id}/plaid-item")
 async def get_account_plaid_item(account_id: str, authorization: Optional[str] = Header(None)):

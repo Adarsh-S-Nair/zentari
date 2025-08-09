@@ -148,6 +148,15 @@
   --color-gradient-networth: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --color-gradient-assets: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a855f7 100%);
   --color-gradient-liabilities: linear-gradient(135deg, #f472b6 0%, #ec4899 50%, #d946ef 100%);
+
+  /* Brand (Spending vs Earnings) Colors */
+  --brand-income-hex: #667eea; /* darker in light */
+  --brand-spending-hex: #a78bfa; /* lighter in light */
+  --brand-income-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  --brand-spending-gradient: linear-gradient(180deg, rgba(102,126,234,0.6) 0%, rgba(118,75,162,0.6) 100%);
+  /* Horizontal variants for UI elements that flow left-to-right */
+  --brand-income-gradient-x: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  --brand-spending-gradient-x: linear-gradient(90deg, rgba(102,126,234,0.6) 0%, rgba(118,75,162,0.6) 100%);
 }
 
 /* Utility classes for common color combinations */
@@ -335,6 +344,15 @@
   --color-gradient-networth: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --color-gradient-assets: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a855f7 100%);
   --color-gradient-liabilities: linear-gradient(135deg, #f472b6 0%, #ec4899 50%, #d946ef 100%);
+
+  /* Brand (Spending vs Earnings) Colors - Dark */
+  --brand-income-hex: #a78bfa; /* lighter in dark */
+  --brand-spending-hex: #667eea; /* darker in dark */
+  --brand-income-gradient: linear-gradient(180deg, rgba(102,126,234,0.6) 0%, rgba(118,75,162,0.6) 100%);
+  --brand-spending-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  /* Horizontal variants for UI elements that flow left-to-right */
+  --brand-income-gradient-x: linear-gradient(90deg, rgba(102,126,234,0.6) 0%, rgba(118,75,162,0.6) 100%);
+  --brand-spending-gradient-x: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
 } 
 
 /* Light theme scrollbar */
