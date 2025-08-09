@@ -90,7 +90,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
 
   return (
     <>
-      <main className="w-full box-border mb-4" style={{ background: 'var(--color-bg-primary)' }}>
+      <main className="w-full box-border mb-4 pt-12 sm:pt-12" style={{ background: 'var(--color-bg-primary)' }}>
         {/* Background update indicator */}
         {transactionsUpdating && (
           <div className="fixed top-4 right-4 z-50">

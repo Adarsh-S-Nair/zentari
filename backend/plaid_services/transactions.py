@@ -208,17 +208,79 @@ class TransactionService:
                     "account_id": transaction.account_id,
                     "location": location,
                     "payment_channel": getattr(transaction, 'payment_channel', None),
-                    "website": getattr(transaction, 'website', None)
+                    "website": getattr(transaction, 'website', None),
+                    "pending_plaid_transaction_id": getattr(transaction, 'pending_transaction_id', None)
                 }
                 transactions.append(transaction_data)
             
+            # Build modified transactions in our normalized shape
+            modified_transactions = []
+            for transaction in response.modified or []:
+                # Convert PersonalFinanceCategory object to dict if it exists
+                personal_finance_category = getattr(transaction, 'personal_finance_category', None)
+                if personal_finance_category:
+                    try:
+                        personal_finance_category = {
+                            'confidence_level': str(personal_finance_category.confidence_level) if hasattr(personal_finance_category, 'confidence_level') else None,
+                            'detailed': str(personal_finance_category.detailed) if hasattr(personal_finance_category, 'detailed') else None,
+                            'primary': str(personal_finance_category.primary) if hasattr(personal_finance_category, 'primary') else None
+                        }
+                    except Exception:
+                        personal_finance_category = None
+                logo_url = getattr(transaction, 'logo_url', None)
+                location = getattr(transaction, 'location', None)
+                if location:
+                    try:
+                        location = {
+                            'address': getattr(location, 'address', None),
+                            'city': getattr(location, 'city', None),
+                            'region': getattr(location, 'region', None),
+                            'postal_code': getattr(location, 'postal_code', None),
+                            'country': getattr(location, 'country', None),
+                            'lat': getattr(location, 'lat', None),
+                            'lon': getattr(location, 'lon', None),
+                            'store_number': getattr(location, 'store_number', None)
+                        }
+                    except Exception:
+                        location = None
+                primary_category = None
+                if personal_finance_category and isinstance(personal_finance_category, dict):
+                    primary_category = personal_finance_category.get('primary')
+                modified_transactions.append({
+                    "plaid_transaction_id": transaction.transaction_id,
+                    "datetime": transaction.datetime.isoformat() if hasattr(transaction, 'datetime') and transaction.datetime else (transaction.date.isoformat() if transaction.date else None),
+                    "description": transaction.name,
+                    "category": primary_category,
+                    "category_id": getattr(transaction, 'category_id', None),
+                    "merchant_name": getattr(transaction, 'merchant_name', None),
+                    "icon_url": logo_url,
+                    "personal_finance_category": personal_finance_category,
+                    "amount": float(transaction.amount),
+                    "currency_code": transaction.iso_currency_code or "USD",
+                    "pending": transaction.pending,
+                    "account_id": transaction.account_id,
+                    "location": location,
+                    "payment_channel": getattr(transaction, 'payment_channel', None),
+                    "website": getattr(transaction, 'website', None),
+                    "pending_plaid_transaction_id": getattr(transaction, 'pending_transaction_id', None)
+                })
+
+            # Map removed transactions to IDs
+            removed_ids = []
+            for rem in response.removed or []:
+                try:
+                    removed_ids.append(getattr(rem, 'transaction_id', None) or rem.get('transaction_id'))
+                except Exception:
+                    pass
+            removed_ids = [rid for rid in removed_ids if rid]
+
             # Get response dict for accounts data
             response_dict = response.to_dict()
             result = {
                 "success": True,
                 "added": transactions,
-                "modified": response.modified,  # List of modified transaction IDs
-                "removed": response.removed,    # List of removed transaction IDs
+                "modified": modified_transactions,
+                "removed": removed_ids,
                 "has_more": response.has_more,
                 "next_cursor": response.next_cursor,
                 "request_id": response.request_id,

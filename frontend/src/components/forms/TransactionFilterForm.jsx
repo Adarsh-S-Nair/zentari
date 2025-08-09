@@ -13,6 +13,8 @@ const TransactionFilterForm = ({ onApply, onReset, onClose, currentFilters }) =>
     if (currentFilters) {
       return {
         dateRange: currentFilters.dateRange || 'all',
+        customStartDate: currentFilters.customStartDate || '',
+        customEndDate: currentFilters.customEndDate || '',
         amountRange: currentFilters.amountRange || 'all',
         categories: currentFilters.categories || [],
         accounts: currentFilters.accounts || [],
@@ -22,6 +24,8 @@ const TransactionFilterForm = ({ onApply, onReset, onClose, currentFilters }) =>
     }
     return {
       dateRange: 'all',
+      customStartDate: '',
+      customEndDate: '',
       amountRange: 'all',
       categories: [],
       accounts: [],
@@ -107,6 +111,8 @@ const TransactionFilterForm = ({ onApply, onReset, onClose, currentFilters }) =>
   const handleReset = () => {
     setFilters({
       dateRange: 'all',
+      customStartDate: '',
+      customEndDate: '',
       amountRange: 'all',
       categories: [],
       accounts: [],
@@ -161,6 +167,40 @@ const TransactionFilterForm = ({ onApply, onReset, onClose, currentFilters }) =>
           <option value="year">This Year</option>
           <option value="custom">Custom Range</option>
         </select>
+        {filters.dateRange === 'custom' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+            <div className="space-y-1">
+              <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Start date</label>
+              <input
+                type="date"
+                value={filters.customStartDate}
+                onChange={(e) => handleFilterChange('customStartDate', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  borderColor: 'var(--color-border-primary)',
+                  color: 'var(--color-text-primary)',
+                  background: 'var(--color-bg-secondary)'
+                }}
+                max={filters.customEndDate || undefined}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>End date</label>
+              <input
+                type="date"
+                value={filters.customEndDate}
+                onChange={(e) => handleFilterChange('customEndDate', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  borderColor: 'var(--color-border-primary)',
+                  color: 'var(--color-text-primary)',
+                  background: 'var(--color-bg-secondary)'
+                }}
+                min={filters.customStartDate || undefined}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Transaction Type */}

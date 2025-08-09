@@ -85,7 +85,7 @@ function SegmentedBar({ items = [], total = 0, height = 16, gap = 3, radius = 6 
 }
 
 export default function DashboardPanel() {
-  const { accounts, transactions, loading } = useContext(FinancialContext)
+  const { accounts, transactions, loading, spendingEarningSeries } = useContext(FinancialContext)
   const carouselRef = useRef(null)
   const [carouselIndex, setCarouselIndex] = useState(0)
   const [carouselPages, setCarouselPages] = useState(1)
@@ -96,6 +96,7 @@ export default function DashboardPanel() {
   const [hoverTab, setHoverTab] = useState(null)
   const [animTab, setAnimTab] = useState(null)
   const { openDrawer } = useDrawer()
+  const navigate = useNavigate()
   const handleAccountCardClick = React.useCallback((account) => {
     const lastFour = account?.mask ? String(account.mask).slice(-4) : ''
     const title = `${account?.name || 'Account'}${lastFour ? ' ••••' + lastFour : ''}`
@@ -240,7 +241,7 @@ export default function DashboardPanel() {
   const shownSum = barCandidates.reduce((s, c) => s + (c.value || 0), 0)
   const otherValue = Math.max(0, totalSp - shownSum)
   const segs = otherValue > 0 ? [...barCandidates, { label: 'Other', value: otherValue, color: '#94a3b8' }] : [...barCandidates]
-  const listItems = (ranked || []).slice(0, 5)
+  const listItems = (ranked || []).slice(0, 3)
   const deltaPct = spendingLastMonth > 0 ? ((spendingThisMonth - spendingLastMonth) / spendingLastMonth) * 100 : 0
   const isPositive = deltaPct >= 0
 
@@ -268,19 +269,19 @@ export default function DashboardPanel() {
                   <div className="text-[28px] font-medium tracking-[-0.01em]" style={{ color: 'var(--color-text-secondary)', opacity: 0.95 }}>{formatCurrency(totalBalance)}</div>
                   {/* Tabs: Assets | Liabilities */}
                   <div className="w-full">
-                    <div className="w-full max-w-[360px] mx-auto">
-                      <div className="relative grid grid-cols-2 rounded-md border overflow-hidden" style={{ borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-tertiary)' }}>
+                    <div className="w-full max-w-[320px] mx-auto">
+                      <div className="relative grid grid-cols-2 rounded-md border overflow-hidden" style={{ borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-primary)' }}>
                         {/* Indicator */}
                         <span aria-hidden className="absolute inset-y-0 w-1/2 rounded-md transition-transform duration-200 ease-out" style={{ background: tabIndicator, transform: alTab === 'assets' ? 'translateX(0%)' : 'translateX(100%)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                         <button
-                          className={`py-2 text-[12px] z-10 transition-all ${alTab==='assets' ? 'font-medium' : ''}`}
+                          className={`py-1.5 text-[11px] z-10 transition-all ${alTab==='assets' ? 'font-medium' : ''}`}
                           style={{ color: alTab==='assets' ? '#ffffff' : (hoverTab==='assets' ? 'var(--color-text-secondary)' : 'var(--color-text-muted)'), cursor: 'pointer', transform: animTab==='assets' ? 'translateY(-1px) scale(1.02)' : 'none' }}
                           onMouseEnter={()=>setHoverTab('assets')}
                           onMouseLeave={()=>setHoverTab(null)}
                           onClick={() => { setAnimTab('assets'); setTimeout(()=>setAnimTab(null),120); setAlTab('assets') }}
                         >Assets</button>
                         <button
-                          className={`py-2 text-[12px] z-10 transition-all ${alTab==='liabilities' ? 'font-medium' : ''}`}
+                          className={`py-1.5 text-[11px] z-10 transition-all ${alTab==='liabilities' ? 'font-medium' : ''}`}
                           style={{ color: alTab==='liabilities' ? '#ffffff' : (hoverTab==='liabilities' ? 'var(--color-text-secondary)' : 'var(--color-text-muted)'), cursor: 'pointer', transform: animTab==='liabilities' ? 'translateY(-1px) scale(1.02)' : 'none' }}
                           onMouseEnter={()=>setHoverTab('liabilities')}
                           onMouseLeave={()=>setHoverTab(null)}
@@ -395,7 +396,17 @@ export default function DashboardPanel() {
               </div>
             </div>
             <div className="px-2 pb-4 flex items-center justify-center">
-              <SpendingEarningChart series={monthlySeries} height={320} />
+              <SpendingEarningChart 
+                series={spendingEarningSeries || monthlySeries} 
+                height={320}
+                onSelectMonth={({ startDate, endDate }) => {
+                  const params = new URLSearchParams()
+                  params.set('dateRange', 'custom')
+                  params.set('start_date', startDate)
+                  params.set('end_date', endDate)
+                  navigate(`/transactions?${params.toString()}`)
+                }}
+              />
             </div>
           </Card>
 

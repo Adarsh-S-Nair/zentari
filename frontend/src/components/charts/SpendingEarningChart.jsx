@@ -31,7 +31,7 @@ function roundedRectPath(x, y, w, h, rTopLeft, rTopRight, rBottomRight, rBottomL
   ].join(' ')
 }
 
-export default function SpendingEarningChart({ series, title = 'Spending vs Earnings', height = 300 }) {
+export default function SpendingEarningChart({ series, title = 'Spending vs Earnings', height = 300, onSelectMonth }) {
   const containerRef = useRef(null)
   const tooltipRef = useRef(null)
   const rafRef = useRef(null)
@@ -100,6 +100,13 @@ export default function SpendingEarningChart({ series, title = 'Spending vs Earn
   const yFromValue = (v) => zeroY - (v / maxAbs) * (innerHeight / 2)
   const hFromValue = (v) => Math.max(1, Math.abs((v / maxAbs) * (innerHeight / 2)))
 
+  const formatDate = (d) => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
   const onMove = (e, month, inc, spd) => {
     const rect = containerRef.current?.getBoundingClientRect()
     const next = {
@@ -132,6 +139,15 @@ export default function SpendingEarningChart({ series, title = 'Spending vs Earn
   const onLeave = () => {
     setActiveMonth(null)
     setTooltip((p) => ({ ...p, visible: false }))
+  }
+
+  const handleMonthClick = (index, label) => {
+    if (!onSelectMonth) return
+    const now = new Date()
+    const monthsBack = months.length - 1 - index
+    const start = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1)
+    const end = new Date(now.getFullYear(), now.getMonth() - monthsBack + 1, 0)
+    onSelectMonth({ month: label, startDate: formatDate(start), endDate: formatDate(end) })
   }
 
   return (
@@ -252,6 +268,7 @@ export default function SpendingEarningChart({ series, title = 'Spending vs Earn
                   onMouseMove={(e) => onMove(e, m, inc, spd)}
                   onMouseEnter={(e) => onMove(e, m, inc, spd)}
                   onMouseLeave={onLeave}
+                  onClick={() => handleMonthClick(i, m)}
                   style={{ cursor: 'pointer' }}
                 />
               </g>

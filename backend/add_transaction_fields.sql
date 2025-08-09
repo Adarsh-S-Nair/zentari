@@ -5,11 +5,13 @@
 ALTER TABLE transactions ADD COLUMN location JSONB;
 ALTER TABLE transactions ADD COLUMN payment_channel TEXT;
 ALTER TABLE transactions ADD COLUMN website TEXT;
+ALTER TABLE transactions ADD COLUMN pending_plaid_transaction_id TEXT;
 
 -- Step 2: Add indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_transactions_payment_channel ON transactions(payment_channel);
 CREATE INDEX IF NOT EXISTS idx_transactions_website ON transactions(website);
 CREATE INDEX IF NOT EXISTS idx_transactions_location ON transactions USING GIN(location);
+CREATE INDEX IF NOT EXISTS idx_transactions_pending_plaid_id ON transactions(pending_plaid_transaction_id);
 
 -- Verify the changes
 SELECT column_name, data_type, is_nullable 

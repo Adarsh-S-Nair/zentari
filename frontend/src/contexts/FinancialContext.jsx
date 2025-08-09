@@ -38,6 +38,9 @@ export const FinancialProvider = ({ children, setToast }) => {
   const [hasMoreTransactions, setHasMoreTransactions] = useState(true)
   const [transactionsPage, setTransactionsPage] = useState(1)
   const [isLoadingMoreTransactions, setIsLoadingMoreTransactions] = useState(false)
+  // Aggregated series for dashboard charts (last 6 months)
+  const [spendingEarningSeries, setSpendingEarningSeries] = useState(null)
+  const [spendingEarningLoading, setSpendingEarningLoading] = useState(false)
 
   useEffect(() => {
     const getUser = async () => {
@@ -117,6 +120,9 @@ export const FinancialProvider = ({ children, setToast }) => {
     
     // Load recent transactions in background (not blocking)
     loadRecentTransactions(userId)
+
+    // Build spending vs earning aggregates in background
+    buildSpendingEarningAggregates(userId)
   }
 
   // Load recent transactions (last 30 days) without blocking UI
@@ -214,6 +220,67 @@ export const FinancialProvider = ({ children, setToast }) => {
       console.error('Error fetching more transactions:', error)
     } finally {
       setIsLoadingMoreTransactions(false)
+    }
+  }
+
+  const buildSpendingEarningAggregates = async (userId) => {
+    if (!userId) return
+    try {
+      setSpendingEarningLoading(true)
+      // Prepare last 6 month labels (e.g., ['Jan','Feb',...])
+      const now = new Date()
+      const labels = []
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        labels.push(d.toLocaleString('en-US', { month: 'short' }))
+      }
+      const income = Object.fromEntries(labels.map(l => [l, 0]))
+      const spend = Object.fromEntries(labels.map(l => [l, 0]))
+
+      // Fetch pages without storing raw transactions in state
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+
+      const limit = 500
+      let offset = 0
+      // Safety cap to avoid excessive requests
+      const maxPages = 200
+      let page = 0
+      while (page < maxPages) {
+        const url = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?limit=${limit}&offset=${offset}`
+        const resp = await fetch(url)
+        if (!resp.ok) {
+          break
+        }
+        const result = await resp.json()
+        const batch = result?.transactions || []
+        if (!batch.length) break
+        for (const t of batch) {
+          const d = new Date(t.datetime)
+          if (isNaN(d)) continue
+          const lbl = d.toLocaleString('en-US', { month: 'short' })
+          if (!(lbl in income)) continue
+          if (t.amount > 0) income[lbl] += t.amount
+          else spend[lbl] += Math.abs(t.amount)
+        }
+        if (batch.length < limit) break
+        offset += limit
+        page += 1
+        // Yield to UI
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise(r => setTimeout(r, 0))
+      }
+
+      setSpendingEarningSeries([
+        { id: 'Income', color: '#16a34a', data: labels.map(x => ({ x, y: Math.round(income[x]) })) },
+        { id: 'Spending', color: '#6366f1', data: labels.map(x => ({ x, y: Math.round(spend[x]) })) }
+      ])
+    } catch (e) {
+      console.error('Error building spending/earning aggregates:', e)
+      setSpendingEarningSeries(null)
+    } finally {
+      setSpendingEarningLoading(false)
     }
   }
 
@@ -352,6 +419,19 @@ export const FinancialProvider = ({ children, setToast }) => {
               case 'year':
                 const yearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
                 return txnDate >= yearAgo
+              case 'custom':
+                if (!filters.customStartDate && !filters.customEndDate) return true
+                let start = filters.customStartDate ? new Date(filters.customStartDate) : null
+                let end = filters.customEndDate ? new Date(filters.customEndDate) : null
+                if (start) {
+                  start = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+                  if (txnDate < start) return false
+                }
+                if (end) {
+                  const endOfDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999)
+                  if (txnDate > endOfDay) return false
+                }
+                return true
               default:
                 return true
             }
@@ -538,6 +618,8 @@ export const FinancialProvider = ({ children, setToast }) => {
       categories,
       loading,
       transactionsLoading,
+      spendingEarningSeries,
+      spendingEarningLoading,
       error,
       user,
       plaidItems,
@@ -560,6 +642,8 @@ export const FinancialProvider = ({ children, setToast }) => {
       fetchPlaidItems,
       loadMoreTransactions,
       fetchFilteredTransactions,
+      // Expose builder if we need to force a refresh
+      buildSpendingEarningAggregates,
       setToast
     }}>
       {children}

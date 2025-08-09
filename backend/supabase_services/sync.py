@@ -56,9 +56,10 @@ class SyncService:
     
     def update_cursor(self, user_id: str, item_id: str, cursor: str) -> Dict[str, Any]:
         """Update transaction cursor for sync state"""
+        from datetime import datetime
         update_data = {
             'transaction_cursor': cursor,
-            'last_transaction_sync': 'now()',
+            'last_transaction_sync': datetime.utcnow().isoformat(),
             'sync_status': 'idle',
             'last_error': None
         }

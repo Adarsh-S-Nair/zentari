@@ -47,78 +47,64 @@ def sync_transactions_for_item(supabase_transactions, plaid_transactions, supaba
     
     # Sync transactions for this item
     print(f"[SYNC] Syncing transactions for item {item_id} with cursor: {cursor}")
-    sync_result = plaid_transactions.sync(access_token, cursor)
-    
-    print(f"[SYNC] Plaid sync result: {sync_result}")
-    
-    if not sync_result.get('success'):
-        print(f"[SYNC] Error syncing transactions for item {item_id}: {sync_result.get('error')}")
-        return {'item_id': item_id, 'success': False, 'error': sync_result.get('error')}
-    
-    # Store new transactions
-    added = sync_result.get('added', [])
-    print(f"[SYNC] {len(added)} transactions to add for item {item_id}")
-    
-    if added:
-        store_result = supabase_transactions.store(added)
-        print(f"[SYNC] Store result: {store_result}")
-    else:
-        print(f"[SYNC] No transactions to store")
-        store_result = {"success": True, "message": "No transactions to store"}
-    
-    # Handle modified transactions
-    modified_ids = sync_result.get('modified', [])
-    modified_count = 0
-    if modified_ids:
-        print(f"[SYNC] {len(modified_ids)} modified transaction IDs for item {item_id}: {modified_ids}")
-        modified_transactions = plaid_transactions.get_by_ids(access_token, modified_ids)
-        if modified_transactions.get('success'):
-            modified_transactions_list = modified_transactions.get('transactions', [])
-            modified_count = len(modified_transactions_list)
-            print(f"[SYNC] Retrieved {modified_count} modified transactions from Plaid")
-            
-            # Log details about each modified transaction
-            for txn in modified_transactions_list:
-                print(f"[SYNC] Modified transaction: {txn.get('description')} (ID: {txn.get('plaid_transaction_id')}) - Pending: {txn.get('pending')}")
-            
-            update_result = supabase_transactions.update(modified_transactions_list)
-            if update_result.get('success'):
-                print(f"[SYNC] Successfully updated {update_result.get('updated_count', 0)} modified transactions")
-            else:
-                print(f"[SYNC] Error updating modified transactions: {update_result.get('error')}")
-        else:
-            print(f"[SYNC] Error retrieving modified transactions: {modified_transactions.get('error')}")
-    else:
-        print(f"[SYNC] No modified transactions for item {item_id}")
-    
-    # Handle removed transactions
-    removed_ids = sync_result.get('removed', [])
-    removed_count = 0
-    if removed_ids:
-        print(f"[SYNC] {len(removed_ids)} removed transaction IDs for item {item_id}")
-        removed_result = supabase_transactions.delete_by_plaid_ids(removed_ids)
-        removed_count = removed_result.get('deleted_count', 0) if removed_result.get('success') else 0
-    
-    # Update account balances if included in response
+    total_added = 0
+    total_modified = 0
+    total_removed = 0
     balance_updates = 0
-    accounts_with_balances = sync_result.get('accounts', [])
-    if accounts_with_balances:
-        supabase_accounts.update_balances(user_id, accounts_with_balances)
-        balance_updates = len(accounts_with_balances)
-    
-    # Update the cursor
-    next_cursor = sync_result.get('next_cursor')
+    next_cursor = cursor
+
+    while True:
+        sync_result = plaid_transactions.sync(access_token, next_cursor)
+        if not sync_result.get('success'):
+            print(f"[SYNC] Error syncing transactions for item {item_id}: {sync_result.get('error')}")
+            return {'item_id': item_id, 'success': False, 'error': sync_result.get('error')}
+
+        # Store new transactions
+        added = sync_result.get('added', [])
+        if added:
+            store_result = supabase_transactions.store(added)
+            if not store_result.get('success'):
+                print(f"[SYNC] Error storing transactions: {store_result.get('error')}")
+            total_added += len(added)
+
+        # Handle modified transactions (already normalized objects)
+        modified_txns = sync_result.get('modified', [])
+        if modified_txns:
+            upd_result = supabase_transactions.update(modified_txns)
+            if not upd_result.get('success'):
+                print(f"[SYNC] Error updating modified transactions: {upd_result.get('error')}")
+            total_modified += len(modified_txns)
+
+        # Handle removed transaction IDs
+        removed_ids = sync_result.get('removed', [])
+        if removed_ids:
+            del_result = supabase_transactions.delete_by_plaid_ids(removed_ids)
+            if not del_result.get('success'):
+                print(f"[SYNC] Error deleting removed transactions: {del_result.get('error')}")
+            total_removed += len(removed_ids)
+
+        # Account balances
+        accounts_with_balances = sync_result.get('accounts', [])
+        if accounts_with_balances:
+            supabase_accounts.update_balances(user_id, accounts_with_balances)
+            balance_updates += len(accounts_with_balances)
+
+        # Paging
+        next_cursor = sync_result.get('next_cursor')
+        if not sync_result.get('has_more'):
+            break
+
+    # Update the cursor only after finishing all pages
     if next_cursor is not None:
         sync_service.update_cursor(user_id, item_id, next_cursor)
-    
+
     return {
         'item_id': item_id,
         'success': True,
-        'added_count': len(added),
-        'modified_count': modified_count,
-        'removed_count': removed_count,
-        'balance_updates': balance_updates,
-        'error': store_result.get('error') if not store_result.get('success') else None
+        'added_count': total_added,
+        'modified_count': total_modified,
+        'removed_count': total_removed,
+        'balance_updates': balance_updates
     }
 
 @router.post("/transactions")

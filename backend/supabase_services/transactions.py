@@ -31,6 +31,29 @@ class TransactionService:
                 # Get category UUID
                 category_uuid = self._get_category_id(transaction)
                 
+                # Merge posted into existing pending row when pending_plaid_transaction_id is present
+                pending_ref = transaction.get('pending_plaid_transaction_id')
+                if pending_ref:
+                    # Try to update existing pending row directly and skip insert path
+                    merge_result = self.client.update('transactions', {
+                        'account_id': account_uuid,
+                        'datetime': transaction['datetime'],
+                        'description': transaction['description'],
+                        'category_id': category_uuid,
+                        'merchant_name': transaction.get('merchant_name'),
+                        'icon_url': transaction.get('icon_url'),
+                        'personal_finance_category': transaction.get('personal_finance_category'),
+                        'amount': -transaction['amount'],
+                        'currency_code': transaction['currency_code'],
+                        'pending': transaction['pending'],
+                        'location': transaction.get('location'),
+                        'payment_channel': transaction.get('payment_channel'),
+                        'website': transaction.get('website')
+                    }, {'plaid_transaction_id': pending_ref})
+                    if merge_result.get('success'):
+                        print(f"[TRANSACTIONS] Merged posted txn into pending row: {pending_ref}")
+                        continue
+
                 transaction_data.append({
                     'account_id': account_uuid,
                     'plaid_transaction_id': transaction['plaid_transaction_id'],
@@ -111,11 +134,24 @@ class TransactionService:
                     'website': transaction.get('website')
                 }
                 
-                # Use upsert to handle both new and existing transactions
-                # This ensures that if a transaction was previously "pending" and is now "posted",
-                # it will update the existing record instead of creating a duplicate
-                result = self.client.upsert('transactions', transaction_data, 
-                                          {'plaid_transaction_id': transaction['plaid_transaction_id']})
+                # If this posted transaction references a pending transaction, merge onto the pending row
+                pending_ref = transaction.get('pending_plaid_transaction_id')
+                if pending_ref:
+                    try:
+                        # Try to update the row whose plaid_transaction_id == pending_ref
+                        result = self.client.update('transactions', {
+                            **transaction_data,
+                            'plaid_transaction_id': pending_ref  # keep original pending ID to preserve conflict key
+                        }, {'plaid_transaction_id': pending_ref})
+                        if result.get('success'):
+                            updated_count += 1
+                            print(f"[TRANSACTIONS] Merged posted txn into pending row: {pending_ref}")
+                            continue
+                    except Exception as e:
+                        print(f"[TRANSACTIONS] Pending merge failed for {pending_ref}: {e}")
+
+                # Fallback: upsert by current plaid_transaction_id
+                result = self.client.upsert('transactions', transaction_data, 'plaid_transaction_id')
                 if result.get('success'):
                     updated_count += 1
                     print(f"[TRANSACTIONS] Successfully upserted transaction: {transaction['description']} (ID: {transaction['plaid_transaction_id']})")

@@ -469,11 +469,13 @@ function AppContent({
       const transactionType = searchParams.get('transactionType');
       const amountRange = searchParams.get('amountRange');
       const dateRange = searchParams.get('dateRange');
+      const startDate = searchParams.get('start_date');
+      const endDate = searchParams.get('end_date');
       const searchQuery = searchParams.get('searchQuery');
       const accounts = searchParams.get('accounts');
       
       // Only create filters if there are URL parameters
-      if (categories || transactionType || amountRange || dateRange || searchQuery || accounts) {
+      if (categories || transactionType || amountRange || dateRange || startDate || endDate || searchQuery || accounts) {
         setIsApplyingFilters(true);
         
         const urlFilters = {
@@ -481,6 +483,8 @@ function AppContent({
           transactionType: transactionType || 'all',
           amountRange: amountRange || 'all',
           dateRange: dateRange || 'all',
+          customStartDate: startDate || '',
+          customEndDate: endDate || '',
           searchQuery: searchQuery || '',
           accounts: accounts ? accounts.split(',') : []
         };
@@ -509,6 +513,10 @@ function AppContent({
       }
       if (filters.dateRange && filters.dateRange !== 'all') {
         params.set('dateRange', filters.dateRange);
+        if (filters.dateRange === 'custom') {
+          if (filters.customStartDate) params.set('start_date', filters.customStartDate);
+          if (filters.customEndDate) params.set('end_date', filters.customEndDate);
+        }
       }
       if (filters.searchQuery?.trim()) {
         params.set('searchQuery', filters.searchQuery);
