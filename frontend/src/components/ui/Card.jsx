@@ -13,6 +13,7 @@ import React from 'react';
  * @param {boolean} hoverable - Whether the card should have hover effects
  * @param {string} padding - Padding classes (default: 'p-6')
  * @param {object} props - Additional props passed to the div element
+ * @param {('none'|'sm'|'md')} elevation - Shadow size; default 'sm'
  */
 const Card = ({ 
   title, 
@@ -24,8 +25,11 @@ const Card = ({
   onClick,
   hoverable = false,
   padding = 'p-6',
+  elevation = 'md',
   ...props 
 }) => {
+  const { style: userStyle, ...restProps } = props || {}
+
   const baseClasses = `
     rounded-xl border
     ${hoverable ? 'cursor-pointer transition-all duration-200 hover:shadow-lg' : ''}
@@ -46,16 +50,23 @@ const Card = ({
     ${bodyClassName}
   `.trim();
 
+  const shadow = elevation === 'none'
+    ? 'none'
+    : elevation === 'md'
+      ? '0 4px 12px rgba(0,0,0,0.10)'
+      : '0 1px 3px 0 var(--color-shadow-light)'
+
   return (
     <div 
       className={cardClasses}
       style={{
         background: 'var(--color-bg-secondary)',
         borderColor: 'var(--color-border-primary)',
-        boxShadow: '0 1px 3px 0 var(--color-shadow-light)'
+        boxShadow: shadow,
+        ...(userStyle || {})
       }}
       onClick={onClick}
-      {...props}
+      {...restProps}
     >
       {header ? (
         <div className="p-6 pb-4">

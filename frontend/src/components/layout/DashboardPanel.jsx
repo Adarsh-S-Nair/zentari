@@ -1,4 +1,7 @@
 import React, { useContext, useMemo, useRef, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useDrawer } from '../../App'
+import AccountDetail from './AccountDetail'
 import { FinancialContext } from '../../contexts/FinancialContext'
 import { Card, Container, Button, Spinner, Pill, AccountCardsCarousel } from '../ui'
 import { SpendingEarningChart } from '../charts'
@@ -86,6 +89,24 @@ export default function DashboardPanel() {
   const carouselRef = useRef(null)
   const [carouselIndex, setCarouselIndex] = useState(0)
   const [carouselPages, setCarouselPages] = useState(1)
+  const brandSolid = '#667eea'
+  const brandLight = '#a78bfa'
+  const [alTab, setAlTab] = useState('assets') // 'assets' | 'liabilities'
+  const tabIndicator = 'linear-gradient(90deg, #6e7ff1 0%, #735ec6 100%)'
+  const [hoverTab, setHoverTab] = useState(null)
+  const [animTab, setAnimTab] = useState(null)
+  const { openDrawer } = useDrawer()
+  const handleAccountCardClick = React.useCallback((account) => {
+    const lastFour = account?.mask ? String(account.mask).slice(-4) : ''
+    const title = `${account?.name || 'Account'}${lastFour ? ' ••••' + lastFour : ''}`
+    const AccountDetailWrapper = () => {
+      const [isLoading, setIsLoading] = useState(true)
+      useEffect(() => { const t = setTimeout(() => setIsLoading(false), 50); return () => clearTimeout(t) }, [])
+      if (isLoading) return (<Spinner label="Loading..." />)
+      return (<AccountDetail account={account} />)
+    }
+    openDrawer({ title, content: <AccountDetailWrapper />, onClose: () => {} })
+  }, [openDrawer])
   const detectNetwork = (nameOrSubtype = '') => {
     const s = (nameOrSubtype || '').toLowerCase()
     if (/(visa)/.test(s)) return 'visa'
@@ -125,7 +146,7 @@ export default function DashboardPanel() {
     return () => { el.removeEventListener('scroll', onScroll); window.removeEventListener('resize', compute) }
   }, [accounts])
 
-  const { totalBalance, topAccounts, monthCategories, spendingThisMonth, spendingLastMonth, assetTotal, liabilityTotal, accountsCount } = useMemo(() => {
+  const { totalBalance, topAccounts, monthCategories, spendingThisMonth, spendingLastMonth, assetTotal, liabilityTotal, accountsCount, cashTotal, investTotal, creditTotal, loanTotal } = useMemo(() => {
     const balances = accounts.map(a => ({
       name: a.name || a.subtype || 'Account',
       balance: a.balances?.current || 0,
@@ -137,8 +158,12 @@ export default function DashboardPanel() {
 
     // Assets vs Liabilities using existing utils
     const grouped = groupAccountsByType(accounts || [])
-    const assetTotal = ([...(grouped.cash || []), ...(grouped.investment || [])]).reduce((s, a) => s + getRawBalance(a), 0)
-    const liabilityTotal = ([...(grouped.credit || []), ...(grouped.loan || [])]).reduce((s, a) => s + getRawBalance(a), 0)
+    const cashTotal = (grouped.cash || []).reduce((s, a) => s + getRawBalance(a), 0)
+    const investTotal = (grouped.investment || []).reduce((s, a) => s + getRawBalance(a), 0)
+    const creditTotal = (grouped.credit || []).reduce((s, a) => s + getRawBalance(a), 0)
+    const loanTotal = (grouped.loan || []).reduce((s, a) => s + getRawBalance(a), 0)
+    const assetTotal = cashTotal + investTotal
+    const liabilityTotal = creditTotal + loanTotal
     const accountsCount = accounts?.length || 0
 
     // Current month window
@@ -176,7 +201,7 @@ export default function DashboardPanel() {
       .map((c, i) => ({ ...c, color: solids[i % solids.length] }))
 
     total = assetTotal - Math.abs(liabilityTotal);
-    return { totalBalance: total, topAccounts: top, monthCategories, spendingThisMonth: thisSp, spendingLastMonth: lastSp, assetTotal, liabilityTotal, accountsCount }
+    return { totalBalance: total, topAccounts: top, monthCategories, spendingThisMonth: thisSp, spendingLastMonth: lastSp, assetTotal, liabilityTotal, accountsCount, cashTotal, investTotal, creditTotal, loanTotal }
   }, [accounts, transactions])
 
   const monthlySeries = useMemo(() => {
@@ -227,11 +252,9 @@ export default function DashboardPanel() {
             {/* Total Balance - gradient theme with stats */}
             <Card
                className="p-0 border"
+               elevation="md"
                style={{
-                 background: 'var(--color-bg-secondary)',
-                 borderColor: 'var(--color-border-primary)',
-                 overflow: 'visible',
-                 boxShadow: '0 6px 16px rgba(0,0,0,0.12)'
+                 overflow: 'visible'
                }}
             >
               <div className="p-5 pb-0 flex items-center justify-between">
@@ -241,25 +264,81 @@ export default function DashboardPanel() {
                  </div>
                  <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Accounts: {accountsCount}</div>
                </div>
-              <div className="px-5 pb-4 space-y-3">
-                <div className="text-[28px] font-semibold" style={{ color: 'var(--color-text-primary)', opacity: 0.95 }}>{formatCurrency(totalBalance)}</div>
-                {/* Assets vs Liabilities bar */}
-                <div>
-                  <div className="flex items-center justify-between text-[11px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                     <span>Assets {formatCurrency(assetTotal)}</span>
-                     <span>Liabilities {formatCurrency(Math.abs(liabilityTotal))}</span>
-                   </div>
-                   <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
-                      <div className="h-full" style={{ width: `${(assetTotal + Math.abs(liabilityTotal)) ? (assetTotal / (assetTotal + Math.abs(liabilityTotal))) * 100 : 0}%`, background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)' }} />
+                <div className="px-5 pb-4 space-y-5">
+                  <div className="text-[28px] font-medium tracking-[-0.01em]" style={{ color: 'var(--color-text-secondary)', opacity: 0.95 }}>{formatCurrency(totalBalance)}</div>
+                  {/* Tabs: Assets | Liabilities */}
+                  <div className="w-full">
+                    <div className="w-full max-w-[360px] mx-auto">
+                      <div className="relative grid grid-cols-2 rounded-md border overflow-hidden" style={{ borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-tertiary)' }}>
+                        {/* Indicator */}
+                        <span aria-hidden className="absolute inset-y-0 w-1/2 rounded-md transition-transform duration-200 ease-out" style={{ background: tabIndicator, transform: alTab === 'assets' ? 'translateX(0%)' : 'translateX(100%)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                        <button
+                          className={`py-2 text-[12px] z-10 transition-all ${alTab==='assets' ? 'font-medium' : ''}`}
+                          style={{ color: alTab==='assets' ? '#ffffff' : (hoverTab==='assets' ? 'var(--color-text-secondary)' : 'var(--color-text-muted)'), cursor: 'pointer', transform: animTab==='assets' ? 'translateY(-1px) scale(1.02)' : 'none' }}
+                          onMouseEnter={()=>setHoverTab('assets')}
+                          onMouseLeave={()=>setHoverTab(null)}
+                          onClick={() => { setAnimTab('assets'); setTimeout(()=>setAnimTab(null),120); setAlTab('assets') }}
+                        >Assets</button>
+                        <button
+                          className={`py-2 text-[12px] z-10 transition-all ${alTab==='liabilities' ? 'font-medium' : ''}`}
+                          style={{ color: alTab==='liabilities' ? '#ffffff' : (hoverTab==='liabilities' ? 'var(--color-text-secondary)' : 'var(--color-text-muted)'), cursor: 'pointer', transform: animTab==='liabilities' ? 'translateY(-1px) scale(1.02)' : 'none' }}
+                          onMouseEnter={()=>setHoverTab('liabilities')}
+                          onMouseLeave={()=>setHoverTab(null)}
+                          onClick={() => { setAnimTab('liabilities'); setTimeout(()=>setAnimTab(null),120); setAlTab('liabilities') }}
+                        >Liabilities</button>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Segmented bar by active tab */}
+                  {alTab === 'assets' ? (
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                        <span>Cash vs Investments</span>
+                        <span>{formatCurrency(cashTotal)} / {formatCurrency(investTotal)}</span>
+                      </div>
+                      <SegmentedBar
+                        items={[
+                          { label: 'Cash', value: cashTotal, color: brandSolid },
+                          { label: 'Investments', value: investTotal, color: brandLight }
+                        ]}
+                        total={assetTotal}
+                        height={12}
+                        gap={0}
+                        radius={8}
+                      />
+                      <div className="flex items-center gap-4 mt-1 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandSolid }} />Cash</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandLight }} />Investments</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                        <span>Credit vs Loans</span>
+                        <span>{formatCurrency(Math.abs(creditTotal))} / {formatCurrency(Math.abs(loanTotal))}</span>
+                      </div>
+                      <SegmentedBar
+                        items={[
+                          { label: 'Credit', value: Math.abs(creditTotal), color: brandSolid },
+                          { label: 'Loans', value: Math.abs(loanTotal), color: brandLight }
+                        ]}
+                        total={Math.abs(liabilityTotal)}
+                        height={12}
+                        gap={0}
+                        radius={8}
+                      />
+                      <div className="flex items-center gap-4 mt-1 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandSolid }} />Credit</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandLight }} />Loans</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {/* Accounts carousel (credit-card style) */}
-                <AccountCardsCarousel accounts={accounts} className="pt-2 pb-2" />
-              </div>
             </Card>
 
             {/* Spending Overview */}
-            <Card className="p-0">
+            <Card className="p-0" elevation="md">
               <div className="px-5 pt-5 pb-0 flex items-center justify-between">
                 <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
                   <FaChartPie size={14} />
@@ -270,7 +349,7 @@ export default function DashboardPanel() {
               <div className="px-5 pt-2 pb-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="text-[32px] leading-[32px] font-medium tracking-[-0.01em]" style={{ color: 'var(--color-text-primary)', opacity: 0.9 }}>{formatCurrency(spendingThisMonth)}</div>
+                    <div className="text-[28px] leading-[28px] font-medium tracking-[-0.01em]" style={{ color: 'var(--color-text-secondary)', opacity: 0.95 }}>{formatCurrency(spendingThisMonth)}</div>
                     <Pill value={Math.abs(deltaPct)} isPositive={isPositive} />
                   </div>
                 </div>
@@ -298,7 +377,7 @@ export default function DashboardPanel() {
           </div>
 
           {/* Spending vs Earnings */}
-          <Card className="p-0">
+          <Card className="p-0" elevation="md">
             <div className="p-5 pb-0 flex items-center justify-between">
               <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
                 <FaChartBar size={14} />
@@ -320,7 +399,7 @@ export default function DashboardPanel() {
             </div>
           </Card>
 
-          <Card className="p-0">
+          <Card className="p-0" elevation="md">
             <div className="p-5 pb-3 flex items-center justify-between">
               <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
                 <FaReceipt size={14} />
@@ -353,7 +432,12 @@ export default function DashboardPanel() {
         </div>
 
         <div className="space-y-4">
-          <Card className="p-0">
+          {/* Accounts card with carousel */}
+          <Card className="p-0" elevation="md">
+            <div className="p-5 pb-0"><div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}><FaWallet size={14} /><span>Accounts</span></div></div>
+            <div className="px-3 pt-4 pb-4"><AccountCardsCarousel accounts={accounts} onCardClick={handleAccountCardClick} /></div>
+          </Card>
+          <Card className="p-0" elevation="md">
             <div className="p-5 pb-0"><div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}><FaCalendarAlt size={14} /><span>Payment Schedule</span></div></div>
             <div className="px-3 pb-3">
               {recent.map((t, i) => (
@@ -369,7 +453,7 @@ export default function DashboardPanel() {
             </div>
           </Card>
 
-          <Card className="p-0">
+          <Card className="p-0" elevation="md">
             <div className="p-5 pb-0"><div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}><FaPiggyBank size={14} /><span>My Savings Plan</span></div></div>
             <div className="px-5 pb-5 space-y-4">
               {[{ name: 'Financial Saving', current: 8000, goal: 20000, color: '#22c55e' }, { name: 'Retirement Plan', current: 5000, goal: 20000, color: '#6366f1' }, { name: 'Education Plan', current: 800, goal: 1000, color: '#f59e0b' }].map((p) => (

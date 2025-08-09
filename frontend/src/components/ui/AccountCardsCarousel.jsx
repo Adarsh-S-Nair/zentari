@@ -122,10 +122,23 @@ export function AccountCard({ account, index = 0, fitWidth = false, className = 
   )
 }
 
-export default function AccountCardsCarousel({ accounts = [], className = '', style = {} }) {
+export default function AccountCardsCarousel({ accounts = [], className = '', style = {}, onCardClick }) {
+  const rootRef = useRef(null)
   const carouselRef = useRef(null)
   const [carouselIndex, setCarouselIndex] = useState(0)
   const [carouselPages, setCarouselPages] = useState(1)
+  const [containerW, setContainerW] = useState(0)
+
+  useEffect(() => {
+    const node = rootRef.current
+    if (!node) return
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect?.width || 0
+      setContainerW(w)
+    })
+    ro.observe(node)
+    return () => ro.disconnect()
+  }, [])
 
   useEffect(() => {
     const el = carouselRef.current
@@ -156,16 +169,31 @@ export default function AccountCardsCarousel({ accounts = [], className = '', st
     .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
     .slice(0, 12), [accounts])
 
+  const CARD_W = 280
+  const CARD_H = 160
+  const scale = useMemo(() => {
+    if (!containerW) return 1
+    const available = containerW - 24 // padding/gaps safety
+    const s = Math.min(1, Math.max(0.78, available / CARD_W))
+    return s
+  }, [containerW])
+  const padLR = useMemo(() => {
+    const scaledW = CARD_W * scale
+    return Math.max(0, (containerW - scaledW) / 2)
+  }, [containerW, scale])
+
   return (
-    <div className={`relative ${className}`} style={style}>
+    <div ref={rootRef} className={`relative ${className}`} style={style}>
       {/* Edge fades for scroll affordance */}
       <div className="pointer-events-none absolute left-0 top-0 bottom-6 w-6 rounded-l-2xl" style={{ background: 'linear-gradient(90deg, var(--color-bg-secondary) 10%, rgba(0,0,0,0))' }} />
       <div className="pointer-events-none absolute right-0 top-0 bottom-6 w-6 rounded-r-2xl" style={{ background: 'linear-gradient(270deg, var(--color-bg-secondary) 10%, rgba(0,0,0,0))' }} />
 
-      <div ref={carouselRef} className="flex gap-3 overflow-x-auto overflow-y-visible hide-scrollbar scroll-smooth" style={{ scrollSnapType: 'x mandatory', paddingTop: 6, paddingBottom: 12, minHeight: 184, overflowY: 'visible' }}>
+      <div ref={carouselRef} className="flex gap-3 overflow-x-auto overflow-y-visible hide-scrollbar scroll-smooth" style={{ scrollSnapType: 'x mandatory', paddingTop: 6, paddingBottom: 12, paddingLeft: padLR, paddingRight: padLR, minHeight: CARD_H * scale + 24, overflowY: 'visible' }}>
         {sorted.map((a, i) => (
-          <div key={i} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)' }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }} style={{ transform: 'translateY(0)', transition: 'transform 150ms ease' }}>
-            <AccountCard account={a} index={i} />
+          <div key={i} onMouseEnter={(e) => { e.currentTarget.style.transform = `translateY(-2px) scale(${scale})` }} onMouseLeave={(e) => { e.currentTarget.style.transform = `translateY(0) scale(${scale})` }} style={{ transform: `translateY(0) scale(${scale})`, transformOrigin: 'left top', transition: 'transform 150ms ease' }}>
+            <div role="button" onClick={() => onCardClick && onCardClick(a)} style={{ cursor: onCardClick ? 'pointer' : 'default' }}>
+              <AccountCard account={a} index={i} />
+            </div>
           </div>
         ))}
       </div>
