@@ -503,17 +503,25 @@ export default function DashboardPanel() {
                   openDrawer({
                     title: 'All Accounts',
                     content: (
-                      <AccountsListDrawer
-                        accounts={accounts}
-                        onAccountClick={(acc) => {
-                          pushDrawer({
-                            title: 'Account Details',
-                            content: <AccountDetail account={acc} />
-                          })
-                        }}
-                      />
+                      <div className="p-4 space-y-3 text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
+                        <div>Dummy List Page</div>
+                        <button
+                          className="px-3 py-1.5 rounded-md border text-[12px]"
+                          style={{ borderColor: 'var(--color-border-primary)' }}
+                          onClick={() => {
+                            pushDrawer({
+                              title: 'Second Page',
+                              content: (
+                                <div className="p-4 space-y-3 text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
+                                  <div>Dummy Detail Page</div>
+                                  <div>This is for testing slide forward/back.</div>
+                                </div>
+                              )
+                            })
+                          }}
+                        >Go to next page</button>
+                      </div>
                     ),
-                    onClose: () => {}
                   })
                 }}
                 onMouseEnter={(e)=>{ e.currentTarget.style.textDecoration='underline'; e.currentTarget.style.color='var(--color-text-primary)'; }}

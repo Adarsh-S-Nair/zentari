@@ -4,7 +4,7 @@ import { FaCircleCheck, FaCircleXmark } from 'react-icons/fa6';
 import { HiOutlineDotsVertical } from 'react-icons/hi';
 import { MdEdit } from 'react-icons/md';
 import { IoMdCash } from 'react-icons/io';
-import { Card, RightDrawer } from '../ui';
+import { Card } from '../ui';
 import ContextMenu from '../ui/ContextMenu';
 import { formatCurrency, formatLastUpdated } from '../../utils/formatters';
 import { useNavigate, useLocation } from 'react-router-dom';

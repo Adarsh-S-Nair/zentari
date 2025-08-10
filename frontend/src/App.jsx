@@ -27,7 +27,7 @@ import {
   LandingPage,
   TransactionDetail,
 } from './components';
-import { Button, RightDrawer, BottomSheet, Modal } from './components/ui';
+import { Button, Modal } from './components/ui';
 import { TransactionFilterForm } from './components/forms';
 import { PlaidLinkModal } from './components/modals';
 import { useMediaQuery } from 'react-responsive';
@@ -110,46 +110,54 @@ export function DrawerProvider({ children }) {
   const [drawerState, setDrawerState] = useState({
     isOpen: false,
     type: 'drawer', // 'drawer' or 'sheet'
-    stack: [] // [{ title, content }]
+    stack: [], // [{ title, content }]
+    lastAction: null // 'open' | 'push' | 'replace' | 'back' | 'close'
   });
 
   const openDrawer = React.useCallback((config) => {
     // open with a fresh stack
+    console.log('[DrawerProvider] openDrawer', { title: config?.title })
     setDrawerState({
       isOpen: true,
       type: config?.type || 'drawer',
       stack: [{ title: config?.title || '', content: config?.content || null }],
+      lastAction: 'open'
     });
   }, []);
 
   const pushDrawer = React.useCallback((config) => {
+    console.log('[DrawerProvider] pushDrawer', { title: config?.title })
     setDrawerState(prev => ({
       ...prev,
       isOpen: true,
-      stack: [...(prev.stack || []), { title: config?.title || '', content: config?.content || null }]
+      stack: [...(prev.stack || []), { title: config?.title || '', content: config?.content || null }],
+      lastAction: 'push'
     }));
   }, []);
 
   const replaceTop = React.useCallback((config) => {
     setDrawerState(prev => {
       const next = [...(prev.stack || [])]
-      if (next.length === 0) return { ...prev, stack: [{ title: config?.title || '', content: config?.content || null }], isOpen: true }
+      if (next.length === 0) return { ...prev, stack: [{ title: config?.title || '', content: config?.content || null }], isOpen: true, lastAction: 'open' }
       next[next.length - 1] = { title: config?.title || '', content: config?.content || null }
-      return { ...prev, stack: next }
+      console.log('[DrawerProvider] replaceTop', { title: config?.title })
+      return { ...prev, stack: next, lastAction: 'replace' }
     })
   }, [])
 
   const goBack = React.useCallback(() => {
+    console.log('[DrawerProvider] goBack')
     setDrawerState(prev => {
       const next = [...(prev.stack || [])]
       next.pop()
       const stillOpen = next.length > 0
-      return { ...prev, isOpen: stillOpen, stack: next }
+      return { ...prev, isOpen: stillOpen, stack: next, lastAction: 'back' }
     })
   }, [])
 
   const closeDrawer = React.useCallback(() => {
-    setDrawerState(prev => ({ ...prev, isOpen: false }))
+    console.log('[DrawerProvider] closeDrawer')
+    setDrawerState(prev => ({ ...prev, isOpen: false, lastAction: 'close' }))
   }, [])
 
   const top = drawerState.stack[drawerState.stack.length - 1] || { title: '', content: null }
@@ -173,56 +181,220 @@ export const useDrawer = () => {
 // Global Drawer/Sheet Component
 function GlobalDrawer({ config, onClose, onBack }) {
   const isMobile = useMediaQuery({ maxWidth: 670 });
-  const { isOpen, type, stack, top } = config;
+  const { isOpen, type, stack, top, lastAction } = config;
 
   // Memoize the content to prevent unnecessary re-renders
   const memoizedContent = React.useMemo(() => top?.content, [top]);
   const title = top?.title || ''
   const canGoBack = (stack?.length || 0) > 1
 
-  // Determine nav direction for animations
-  const [navDir, setNavDir] = React.useState('forward')
-  const prevLenRef = React.useRef(stack?.length || 0)
+  // Determine nav direction based on lastAction
+  const computedDir = lastAction === 'back' ? 'back' : 'forward'
+
+  // Inline unified panel (drawer or sheet) with full-page sliding
+  const TRANSITION_MS = 140
+  const TRANSITION_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
+  const PAGE_TRANSITION_MS = 200
+  const [isVisible, setIsVisible] = React.useState(false)
+  const [isMounted, setIsMounted] = React.useState(false)
+  const [interactionsArmed, setInteractionsArmed] = React.useState(false)
+  const panelRef = React.useRef(null)
+  const overlayRef = React.useRef(null)
+  const closeTimeoutRef = React.useRef(null)
+
+  // Track staged content for transitions
+  const [renderedChild, setRenderedChild] = React.useState(memoizedContent)
+  const [headerTitle, setHeaderTitle] = React.useState(title)
+  const [prevChild, setPrevChild] = React.useState(null)
+  const [incomingChild, setIncomingChild] = React.useState(null)
+  const [isAnimating, setIsAnimating] = React.useState(false)
+  const prevRef = React.useRef(null)
+  const currRef = React.useRef(null)
+
   React.useEffect(() => {
-    const len = stack?.length || 0
-    const prev = prevLenRef.current
-    if (len > prev) setNavDir('forward')
-    else if (len < prev) setNavDir('back')
-    prevLenRef.current = len
-  }, [stack?.length])
+    if (isOpen) {
+      if (closeTimeoutRef.current) { clearTimeout(closeTimeoutRef.current); closeTimeoutRef.current = null }
+      setIsMounted(true)
+      // start hidden, then reveal for slide-in
+      setIsVisible(false)
+      setInteractionsArmed(false)
+      requestAnimationFrame(() => {
+        // double RAF ensures initial style is committed before transition
+        requestAnimationFrame(() => {
+          setIsVisible(true)
+          // arm interactions shortly after mount to avoid initial click closing
+          setTimeout(() => { setInteractionsArmed(true); console.log('[GlobalDrawer] interactions armed') }, 0)
+        })
+      })
+      document.body.style.overflow = 'hidden'
+      console.log('[GlobalDrawer] open mount', { isMobile, stackLen: stack?.length, title })
+    } else if (isMounted) {
+      // trigger slide-out
+      setIsVisible(false)
+      setInteractionsArmed(false)
+      const t = setTimeout(() => {
+        setIsMounted(false)
+        document.body.style.overflow = ''
+      }, TRANSITION_MS + 20)
+      closeTimeoutRef.current = t
+      console.log('[GlobalDrawer] close start')
+      return () => { if (t) clearTimeout(t) }
+    }
+  }, [isOpen, isMounted])
 
-  if (!isOpen) return null;
+  // Animate on stack length change
+  React.useEffect(() => {
+    if (!isOpen) return
+    const stackLen = stack?.length || 0
+    const pageAnimEnabled = (lastAction === 'push' || lastAction === 'replace' || lastAction === 'back')
 
-  // On mobile, always use bottom sheet
-  if (isMobile) {
-    return (
-      <BottomSheet 
-        isOpen={isOpen} 
-        onClose={onClose}
-        maxHeight="80vh"
-        header={title}
-        onBack={canGoBack ? onBack : null}
-        viewKey={stack?.length || 0}
-        navDirection={navDir}
-      >
-        {memoizedContent}
-      </BottomSheet>
-    );
-  }
+    // Snapshot current/next for this transition to avoid stale state
+    const prevChildSnap = renderedChild
+    const nextChild = memoizedContent
+    const nextTitle = title
 
-  // On desktop, use right drawer
+    // Prepare new targets
+    setPrevChild(prevChildSnap)
+    setIncomingChild(nextChild)
+
+    if (!pageAnimEnabled) {
+      // No page-to-page animation on first view; just update and exit
+      setRenderedChild(nextChild)
+      setHeaderTitle(nextTitle)
+      setIsAnimating(false)
+      return
+    }
+
+    setIsAnimating(true)
+    const dir = computedDir === 'forward' ? 1 : -1
+    console.log('[GlobalDrawer] nav start', { dir: computedDir, stackLen, to: nextTitle })
+
+    const attemptRef = { count: 0, max: 20 }
+
+    requestAnimationFrame(() => {
+      const tryAnimate = () => {
+        attemptRef.count++
+        const prevEl = prevRef.current
+        const curEl = currRef.current
+        if (!prevEl || !curEl) {
+          if (attemptRef.count < attemptRef.max) {
+            if (attemptRef.count === 1 || attemptRef.count % 5 === 0) {
+              console.log('[GlobalDrawer] refs not ready, retry frame', attemptRef.count)
+            }
+            return requestAnimationFrame(tryAnimate)
+          }
+          console.warn('[GlobalDrawer] refs never became ready, skipping page animation')
+          setRenderedChild(nextChild)
+          setHeaderTitle(nextTitle)
+          setIsAnimating(false)
+          setPrevChild(null)
+          setIncomingChild(null)
+          return
+        }
+        console.log('[GlobalDrawer] anim elements ready in', attemptRef.count, 'frames')
+        prevEl.style.transition = 'none'
+        prevEl.style.transform = 'translateX(0%)'
+        curEl.style.transition = 'none'
+        curEl.style.transform = `translateX(${dir * 100}%)`
+        // Force reflow to ensure initial transforms are applied
+        void prevEl.offsetHeight
+        void curEl.offsetHeight
+        requestAnimationFrame(() => {
+          prevEl.style.transition = `transform ${PAGE_TRANSITION_MS}ms ${TRANSITION_EASE}`
+          curEl.style.transition = `transform ${PAGE_TRANSITION_MS}ms ${TRANSITION_EASE}`
+          prevEl.style.transform = `translateX(${dir * -100}%)`
+          curEl.style.transform = 'translateX(0%)'
+          console.log('[GlobalDrawer] anim launched')
+        })
+      }
+      tryAnimate()
+    })
+
+    const t = setTimeout(() => {
+      setRenderedChild(nextChild)
+      setHeaderTitle(nextTitle)
+      setIsAnimating(false)
+      setPrevChild(null)
+      setIncomingChild(null)
+      console.log('[GlobalDrawer] nav settle', { current: nextTitle })
+    }, PAGE_TRANSITION_MS + 40)
+    return () => clearTimeout(t)
+  }, [stack?.length, lastAction, isOpen, memoizedContent, title])
+
+  // Static header (non-animated) with reserved space for back and close
+  const Header = () => (
+    <div className="grid grid-cols-[40px_1fr_40px] items-center px-4 py-3 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
+      <div className="flex items-center justify-start">
+        {canGoBack ? (
+          <button onClick={onBack} className="p-2 rounded-md cursor-pointer transition-colors" title="Back" aria-label="Back" style={{ color: 'var(--color-text-muted)' }}
+            onMouseEnter={(e)=> e.currentTarget.style.background = 'var(--color-bg-hover)'}
+            onMouseLeave={(e)=> e.currentTarget.style.background = 'transparent'}
+          >
+            <FiArrowLeft size={18} />
+          </button>
+        ) : (
+          <span className="block" style={{ width: 28, height: 28 }} />
+        )}
+      </div>
+      <div className="truncate">
+        {headerTitle && (
+          <h2 className="text-[14px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
+            {headerTitle}
+          </h2>
+        )}
+      </div>
+      <div className="flex items-center justify-end">
+        <button onClick={onClose} className="p-2 rounded-md cursor-pointer transition-colors" title="Close" aria-label="Close" style={{ color: 'var(--color-text-muted)' }}
+          onMouseEnter={(e)=> e.currentTarget.style.background = 'var(--color-bg-hover)'}
+          onMouseLeave={(e)=> e.currentTarget.style.background = 'transparent'}
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  )
+
+  if (!isMounted) return null;
+
+  // Backdrop + container with mobile/desktop positioning
   return (
-    <RightDrawer 
-      isOpen={isOpen} 
-      onClose={onClose}
-      header={title}
-      onBack={canGoBack ? onBack : null}
-      viewKey={stack?.length || 0}
-      navDirection={navDir}
+    <div ref={overlayRef} className="fixed inset-0 z-[200]" style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+      onClick={(e)=>{ if (!interactionsArmed) return; if (e.target === overlayRef.current) onClose?.() }}
     >
-      {memoizedContent}
-    </RightDrawer>
-  );
+      <div onClick={(e)=> e.stopPropagation()} className={`absolute ${isMobile ? 'inset-x-0 bottom-0' : 'inset-y-8 right-4'} z-[300] ${isMobile ? 'w-full' : 'w-[420px]'} ${isMobile ? '' : 'rounded-2xl'} shadow-2xl border overflow-hidden flex flex-col h-full`}
+        ref={panelRef}
+        style={{
+          height: isMobile ? '80vh' : 'calc(100vh - 4rem)',
+          transform: isVisible ? 'translate(0, 0)' : (isMobile ? 'translateY(100%)' : 'translateX(100%)'),
+          transition: `transform ${TRANSITION_MS}ms ${TRANSITION_EASE}`,
+          willChange: 'transform',
+          borderColor: 'var(--color-border-primary)',
+          background: 'var(--color-bg-primary)'
+        }}
+      >
+        {/* Static header */}
+        <Header />
+        {/* Animated content area below header */}
+        <div className="relative flex-1 overflow-hidden">
+          {isAnimating && prevChild && (
+            <div ref={prevRef} className="absolute inset-0 w-full h-full overflow-y-auto">
+              {prevChild}
+            </div>
+          )}
+          {isAnimating && incomingChild && (
+            <div ref={currRef} className="absolute inset-0 w-full h-full overflow-y-auto">
+              {incomingChild}
+            </div>
+          )}
+          {!isAnimating && (
+            <div className="absolute inset-0 w-full h-full overflow-y-auto">
+              {renderedChild}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function App() {
