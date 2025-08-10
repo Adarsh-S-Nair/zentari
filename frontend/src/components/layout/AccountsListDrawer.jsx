@@ -4,6 +4,38 @@ import { groupAccountsByType, getRawBalance } from './accountsUtils'
 import CategoryIcon from '../ui/CategoryIcon'
 import { FinancialContext } from '../../contexts/FinancialContext'
 
+function SegBar({ pctA = 0, pctB = 0, height = 12 }) {
+  const a = Math.max(0, Math.min(100, pctA))
+  const b = Math.max(0, Math.min(100, pctB))
+  const rest = Math.max(0, 100 - a - b)
+  return (
+    <div
+      className="w-full overflow-hidden"
+      style={{ height, borderRadius: 8, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', display: 'flex' }}
+    >
+      <div style={{ width: `${a}%`, background: 'rgba(255,255,255,0.95)', borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }} />
+      <div style={{ width: `${b}%`, background: 'rgba(255,255,255,0.35)' }} />
+      {rest > 0 && <div style={{ width: `${rest}%`, background: 'transparent' }} />}
+    </div>
+  )
+}
+
+function Legend({ aLabel, aValue, bLabel, bValue }) {
+  const dot = (alpha) => ({ display: 'inline-block', width: 8, height: 8, borderRadius: 9999, background: `rgba(255,255,255,${alpha})`, marginRight: 6 })
+  return (
+    <div className="flex items-center justify-between text-[11px] mt-1">
+      <div className="flex items-center gap-2 opacity-95">
+        <span style={dot(0.95)} />
+        <span>{aLabel}: {aValue}</span>
+      </div>
+      <div className="flex items-center gap-2 opacity-85">
+        <span style={dot(0.35)} />
+        <span>{bLabel}: {bValue}</span>
+      </div>
+    </div>
+  )
+}
+
 function AccountRow({ account, onClick }) {
   const lastFour = account?.mask ? String(account.mask).slice(-4) : ''
   const balance = getRawBalance(account)
@@ -33,7 +65,7 @@ function AccountRow({ account, onClick }) {
           </div>
         </div>
       </div>
-      <div className="text-right text-[13px] font-medium ml-4 flex-shrink-0" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+      <div className="text-right text-[13px] font-medium ml-4 flex-shrink-0" style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
         {formatCurrency(balance)}
       </div>
     </div>
@@ -70,7 +102,7 @@ function MiniSparkline({ series = [], height = 40 }) {
   )
 }
 
-function Section({ title, accounts, onAccountClick, total }) {
+function Section({ title, count = 0, accounts, onAccountClick, total }) {
   return (
     <div
       className="p-0 rounded-lg border"
@@ -78,8 +110,14 @@ function Section({ title, accounts, onAccountClick, total }) {
     >
       <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
         <div className="flex items-center justify-between">
-          <div className="text-[12px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>{title}</div>
-          <div className="text-[12px] font-medium" style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(total)}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-[12px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>{title}</div>
+            <span className="inline-flex items-center justify-center text-[10px] font-medium px-1.5 h-4 min-w-[16px] rounded-full"
+              style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border-primary)', color: 'var(--color-text-secondary)' }}>
+              {count}
+            </span>
+          </div>
+          <div className="text-[12px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(total)}</div>
         </div>
       </div>
       <div className="p-2">
@@ -131,46 +169,19 @@ export default function AccountsListDrawer({ accounts = [], onAccountClick }) {
     run()
   }, [user?.id])
 
+  const assets = totals.cash + totals.investment
+  const liabilities = totals.credit + totals.loan
+  const assetsPct = assets + liabilities > 0 ? Math.round((assets / (assets + liabilities)) * 100) : 0
+  const liabilitiesPct = 100 - assetsPct
+
   return (
     <div className="w-full" style={{ color: 'var(--color-text-primary)' }}>
-      {/* Branded Overview */}
-      <div className="px-4 pt-2 pb-3">
-        <div
-          className="p-4 rounded-lg"
-          style={{
-            background: 'var(--color-gradient-networth)',
-            color: 'var(--color-text-white)',
-            boxShadow: '0 6px 14px rgba(0,0,0,0.18)'
-          }}
-        >
-          <div className="text-[12px] mb-2 opacity-90">Accounts Overview</div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-[11px] opacity-80">Accounts</div>
-              <div className="text-[18px] font-semibold">{counts.all}</div>
-            </div>
-            <div>
-              <div className="text-[11px] opacity-80">Net Balance</div>
-              <div className="text-[18px] font-semibold">{formatCurrency(net)}</div>
-            </div>
-            <div>
-              <div className="text-[11px] opacity-80">Cash / Investments</div>
-              <div className="text-[13px] font-medium">{formatCurrency(totals.cash)} / {formatCurrency(totals.investment)}</div>
-            </div>
-            <div>
-              <div className="text-[11px] opacity-80">Credit / Loans</div>
-              <div className="text-[13px] font-medium">{formatCurrency(totals.credit)} / {formatCurrency(totals.loan)}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Sections */}
-      <div className="px-4 pb-5 space-y-3" style={{ maxHeight: '65vh', overflowY: 'auto' }}>
-        <Section title={`Cash (${counts.cash})`} accounts={grouped.cash} total={totals.cash} onAccountClick={onAccountClick} />
-        <Section title={`Investments (${counts.investment})`} accounts={grouped.investment} total={totals.investment} onAccountClick={onAccountClick} />
-        <Section title={`Credit (${counts.credit})`} accounts={grouped.credit} total={totals.credit} onAccountClick={onAccountClick} />
-        <Section title={`Loans (${counts.loan})`} accounts={grouped.loan} total={totals.loan} onAccountClick={onAccountClick} />
+      <div className="px-4 pt-4 pb-5 space-y-3" style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+        <Section title={`Cash`} count={counts.cash} accounts={grouped.cash} total={totals.cash} onAccountClick={onAccountClick} />
+        <Section title={`Investments`} count={counts.investment} accounts={grouped.investment} total={totals.investment} onAccountClick={onAccountClick} />
+        <Section title={`Credit`} count={counts.credit} accounts={grouped.credit} total={totals.credit} onAccountClick={onAccountClick} />
+        <Section title={`Loans`} count={counts.loan} accounts={grouped.loan} total={totals.loan} onAccountClick={onAccountClick} />
       </div>
     </div>
   )

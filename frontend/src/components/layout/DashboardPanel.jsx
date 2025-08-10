@@ -427,62 +427,52 @@ export default function DashboardPanel() {
           </Card>
 
           <Card className="p-0" elevation="md">
-            <div className="p-5 pb-3 flex items-center justify-between">
+            <div className="p-5 pb-0 flex items-center justify-between">
               <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
                 <FaReceipt size={14} />
-                <span>Recent Transaction</span>
+                <span>Recent Transactions</span>
               </div>
-              <div className="flex items-center gap-2">
-                <input placeholder="Search here.." className="text-[12px] px-3 py-1.5 rounded-md border" style={{ borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }} />
-                <Button label="Filter" className="h-8" width="w-20" />
-              </div>
+              <button
+                type="button"
+                className="text-[11px] font-medium px-2 py-1 rounded-sm cursor-pointer"
+                style={{ color: 'var(--color-text-secondary)', background: 'transparent' }}
+                onClick={() => navigate('/transactions')}
+                onMouseEnter={(e)=>{ e.currentTarget.style.textDecoration='underline'; e.currentTarget.style.color='var(--color-text-primary)'; }}
+                onMouseLeave={(e)=>{ e.currentTarget.style.textDecoration='none'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+              >View all</button>
             </div>
-            <div className="px-3 pb-4">
-              <div className="flex items-center justify-between text-[11px] font-medium py-2" style={{ color: 'var(--color-text-muted)' }}>
-                <div className="flex-1 pl-2">Name</div>
-                <div className="w-[120px] hidden sm:block">Type</div>
-                <div className="w-[150px] hidden md:block">Date</div>
-                <div className="w-[100px] text-right">Amount</div>
-                <div className="w-[100px] text-right">Status</div>
-              </div>
-              <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--color-border-primary)' }}>
-                {recent.map((t, i) => {
-                  const isPositiveAmount = t.amount > 0
-                  const status = t.pending ? 'Pending' : 'Completed'
-                  const color = t.category_color || '#64748b'
-                  return (
-                    <div
-                      key={t.id || i}
-                      className="flex items-center justify-between py-3 px-3 transition-colors"
-                      style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)', outline: '1px solid transparent' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = hexToRgba(color, 0.08); e.currentTarget.style.outline = `1px solid ${hexToRgba(color, 0.20)}`; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${hexToRgba(color, 0.8)}` }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.outline = '1px solid transparent'; e.currentTarget.style.boxShadow = 'none' }}
-                    >
-                      <div className="flex-1 flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center" style={{ background: t.icon_url ? 'transparent' : (t.category_color || 'var(--color-bg-secondary)') }}>
-                          {t.icon_url ? (
-                            <img src={t.icon_url} alt="icon" className="w-full h-full object-cover" />
-                          ) : t.category_icon_lib && t.category_icon_name ? (
-                            <CategoryIcon lib={t.category_icon_lib} name={t.category_icon_name} size={16} color={'var(--color-text-white)'} />
-                          ) : (
-                            <FaReceipt size={14} style={{ color: 'var(--color-text-white)' }} />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{t.merchant_name || t.description || 'Transaction'}</div>
-                          <div className="text-[11px] mt-0.5 hidden md:block" style={{ color: 'var(--color-text-muted)' }}>{formatDate(t.datetime)}</div>
-                        </div>
+            <div className="px-3 pt-3 pb-3">
+              {recent.map((t, i) => {
+                const isPositiveAmount = t.amount > 0
+                const color = t.category_color || '#64748b'
+                return (
+                  <div
+                    key={t.id || i}
+                    className="flex items-center justify-between py-3 px-3 transition-colors"
+                    style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)', cursor: 'pointer', outline: '1px solid transparent' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = hexToRgba(color, 0.10); e.currentTarget.style.outline = `1px solid ${hexToRgba(color, 0.25)}`; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${hexToRgba(color, 0.8)}` }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.outline = '1px solid transparent'; e.currentTarget.style.boxShadow = 'none' }}
+                    onClick={() => navigate('/transactions')}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{ background: t.icon_url ? 'transparent' : (t.category_color || 'var(--color-bg-secondary)') }}>
+                        {t.icon_url ? (
+                          <img src={t.icon_url} alt="icon" className="w-full h-full object-cover rounded-full" />
+                        ) : t.category_icon_lib && t.category_icon_name ? (
+                          <CategoryIcon lib={t.category_icon_lib} name={t.category_icon_name} size={14} color={'var(--color-text-white)'} />
+                        ) : (
+                          <FaReceipt size={14} style={{ color: 'var(--color-text-white)' }} />
+                        )}
                       </div>
-                      <div className="w-[120px] hidden sm:block text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t.payment_channel || 'Bank Transfer'}</div>
-                      <div className="w-[150px] hidden md:block text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(t.datetime)}</div>
-                      <div className="w-[100px] text-right text-[13px] font-medium" style={{ color: isPositiveAmount ? 'var(--color-success)' : 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{isPositiveAmount ? '+' : ''}{formatCurrency(Math.abs(t.amount))}</div>
-                      <div className="w-[100px] text-right">
-                        <span className="inline-block text-[11px] px-2 py-1 rounded-full" style={{ background: t.pending ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)', color: t.pending ? '#f59e0b' : '#10b981', border: `1px solid ${t.pending ? 'rgba(245,158,11,0.35)' : 'rgba(16,185,129,0.35)'}` }}>{status}</span>
+                      <div className="min-w-0">
+                        <div className="text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{t.merchant_name || t.description || 'Transaction'}</div>
+                        <div className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{formatDate(t.datetime)}</div>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
+                    <div className="text-right text-[13px] font-medium w-[110px]" style={{ color: isPositiveAmount ? 'var(--color-success)' : 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{isPositiveAmount ? '+' : ''}{formatCurrency(Math.abs(t.amount))}</div>
+                  </div>
+                )
+              })}
             </div>
           </Card>
         </div>
@@ -503,24 +493,15 @@ export default function DashboardPanel() {
                   openDrawer({
                     title: 'All Accounts',
                     content: (
-                      <div className="p-4 space-y-3 text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
-                        <div>Dummy List Page</div>
-                        <button
-                          className="px-3 py-1.5 rounded-md border text-[12px]"
-                          style={{ borderColor: 'var(--color-border-primary)' }}
-                          onClick={() => {
-                            pushDrawer({
-                              title: 'Second Page',
-                              content: (
-                                <div className="p-4 space-y-3 text-[14px]" style={{ color: 'var(--color-text-secondary)' }}>
-                                  <div>Dummy Detail Page</div>
-                                  <div>This is for testing slide forward/back.</div>
-                                </div>
-                              )
-                            })
-                          }}
-                        >Go to next page</button>
-                      </div>
+                      <AccountsListDrawer
+                        accounts={accounts}
+                        onAccountClick={(acc) => {
+                          pushDrawer({
+                            title: 'Account Details',
+                            content: <AccountDetail account={acc} />
+                          })
+                        }}
+                      />
                     ),
                   })
                 }}

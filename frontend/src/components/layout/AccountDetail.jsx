@@ -12,6 +12,25 @@ import { AccountCard } from '../ui/AccountCardsCarousel';
 import SlideOver from '../ui/SlideOver';
 import { getApiBaseUrl } from '../../utils/api';
 
+function hexToRgba(hex, alpha = 1) {
+  const h = (hex || '').replace('#', '')
+  if (!h) return `rgba(0,0,0,${alpha})`
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+  const r = parseInt(full.substring(0,2), 16)
+  const g = parseInt(full.substring(2,4), 16)
+  const b = parseInt(full.substring(4,6), 16)
+  return `rgba(${isNaN(r)?0:r}, ${isNaN(g)?0:g}, ${isNaN(b)?0:b}, ${alpha})`
+}
+
+function UsageBar({ value = 0, max = 0 }) {
+  const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0
+  return (
+    <div className="w-full h-2 rounded-md overflow-hidden" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)' }}>
+      <div className="h-full" style={{ width: `${pct}%`, background: 'var(--brand-spending-hex)' }} />
+    </div>
+  )
+}
+
 // Function to get brand color from institution name
 const getBrandColor = (institutionName) => {
   if (!institutionName) return null;
@@ -220,7 +239,18 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = f
     t => t.accounts?.account_id === account.account_id
   ).slice(0, 8);
 
-
+  // Limit and usage (for credit/charge cards that report a limit)
+  const limit = typeof balances?.limit === 'number' ? Math.max(0, balances.limit) : null
+  // Used balance estimation: prefer limit - available; fallback to absolute current
+  let usedBalance = null
+  if (limit != null) {
+    if (typeof balances?.available === 'number') {
+      const avail = Math.max(0, balances.available)
+      usedBalance = Math.max(0, limit - avail)
+    } else if (typeof balances?.current === 'number') {
+      usedBalance = Math.max(0, Math.abs(balances.current))
+    }
+  }
 
   const type = (account?.type || '').toLowerCase();
   let gradientStyle = { background: cardColor };
@@ -306,78 +336,68 @@ const AccountDetail = ({ maxWidth = 700, account: propAccount, inBottomSheet = f
                 <AccountCard account={account} index={0} fitWidth className="w-full" />
               </div>
 
+              {/* Limit usage summary (credit accounts) */}
+              {limit != null && limit > 0 && usedBalance != null && (
+                <div className="w-full px-4 py-3 mb-4 rounded-lg border" style={{ borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-secondary)' }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>Balance</div>
+                    <div className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>Limit {formatCurrency(limit)}</div>
+                  </div>
+                  <div className="flex items-end justify-between mb-1">
+                    <div className="text-[18px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(usedBalance)} <span className="text-[12px] font-normal" style={{ color: 'var(--color-text-secondary)' }}>/ {formatCurrency(limit)}</span></div>
+                    <div className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{Math.min(100, Math.round((usedBalance / limit) * 100))}% used</div>
+                  </div>
+                  <UsageBar value={usedBalance} max={limit} />
+                </div>
+              )}
+
               <div className="w-full mb-2">
-                <div className="text-[16px] pt-4 tracking-wide" style={{ color: 'var(--color-text-primary)' }}>
+                <div className="text-[14px] pt-2 tracking-wide" style={{ color: 'var(--color-text-primary)' }}>
                   Recent Transactions
                 </div>
                 <div className="flex flex-col gap-0 w-full">
                   {accountTransactions.length === 0 ? (
-                    <div className="text-center py-3 text-[13px]" style={{ color: 'var(--color-text-muted)' }}>No recent transactions</div>
+                    <div className="text-center py-2 text-[12px]" style={{ color: 'var(--color-text-muted)' }}>No recent transactions</div>
                   ) : accountTransactions.map((txn, i) => {
-                    const isPositive = txn.amount > 0;
-                    const amountColor = isPositive ? 'var(--color-success)' : 'var(--color-text-secondary)';
-                    const amountPrefix = isPositive ? '+' : '';
+                    const isPositive = txn.amount > 0
+                    const amountColor = isPositive ? 'var(--color-success)' : 'var(--color-text-secondary)'
+                    const amountPrefix = isPositive ? '+' : ''
                     return (
                       <div
                         key={txn.id || i}
-                        className="flex items-center px-2 py-4 min-h-[70px] box-border border-b transition-all duration-200 cursor-pointer w-full max-w-full overflow-x-hidden"
-                        style={{ 
-                          borderColor: 'var(--color-border-primary)',
-                          background: 'var(--color-bg-primary)'
-                        }}
+                        className="flex items-center px-3 py-3 min-h-[56px] transition-colors duration-150"
+                        style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)', cursor: 'pointer', outline: '1px solid transparent' }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'var(--color-bg-hover)';
+                          const col = txn.category_color || '#64748b'
+                          e.currentTarget.style.background = hexToRgba(col, 0.10)
+                          e.currentTarget.style.outline = `1px solid ${hexToRgba(col, 0.25)}`
+                          e.currentTarget.style.boxShadow = `inset 3px 0 0 ${hexToRgba(col, 0.8)}`
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'var(--color-bg-primary)';
+                          e.currentTarget.style.background = 'transparent'
+                          e.currentTarget.style.outline = '1px solid transparent'
+                          e.currentTarget.style.boxShadow = 'none'
                         }}
                         onClick={() => navigate(`/transaction/${txn.id}`)}
                       >
-                        {/* Transaction icon */}
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 mr-3" 
-                          style={{ 
-                            background: txn.category_color || 'var(--color-primary)'
-                          }}
-                        >
+                        <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center" style={{ background: txn.icon_url ? 'transparent' : (txn.category_color || 'var(--color-bg-secondary)') }}>
                           {txn.icon_url ? (
-                            <img 
-                              src={txn.icon_url} 
-                              alt={txn.category_name || 'Transaction'}
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={txn.icon_url} alt="icon" className="w-full h-full object-cover" />
                           ) : txn.category_icon_lib && txn.category_icon_name ? (
-                            <CategoryIcon 
-                              lib={txn.category_icon_lib} 
-                              name={txn.category_icon_name}
-                              size={20}
-                              color="var(--color-text-white)"
-                            />
+                            <CategoryIcon lib={txn.category_icon_lib} name={txn.category_icon_name} size={14} color={'var(--color-text-white)'} />
                           ) : (
-                            <FaChevronRight 
-                              size={14} 
-                              style={{ 
-                                color: 'var(--color-text-white)',
-                                display: txn.icon_url ? 'none' : 'block'
-                              }} 
-                            />
+                            <FaChevronRight size={12} style={{ color: 'var(--color-text-white)' }} />
                           )}
                         </div>
-                        {/* Main info and category */}
-                        <div className="flex-1 min-w-0 flex flex-col justify-center px-2">
-                          <div className="text-[14px] sm:text-[16px] truncate max-w-[180px] sm:max-w-none" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
-                          {txn.category_name && (
-                            <div className="flex items-center gap-1 sm:gap-2 mt-1">
-                              <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0" style={{ background: txn.category_color || 'var(--color-primary)' }} />
-                              <span className="text-[9px] sm:text-[10px] tracking-wide truncate max-w-[100px] sm:max-w-none" style={{ color: 'var(--color-text-secondary)' }}>{txn.category_name}</span>
-                            </div>
-                          )}
+                        <div className="flex-1 min-w-0 px-3">
+                          <div className="text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{txn.description}</div>
+                          <div className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{formatDate(txn.datetime)}</div>
                         </div>
-                        {/* Amount */}
-                        <div className="flex-shrink-0 text-right text-[12px] sm:text-[14px] min-w-[60px] sm:min-w-[80px] ml-2 sm:ml-3 whitespace-nowrap flex items-center justify-center self-center" style={{ color: amountColor }}>
+                        <div className="text-right text-[12px] font-medium" style={{ color: amountColor, fontVariantNumeric: 'tabular-nums' }}>
                           {amountPrefix}{formatCurrency(Math.abs(txn.amount))}
                         </div>
                       </div>
-                    );
+                    )
                   })}
                 </div>
               </div>

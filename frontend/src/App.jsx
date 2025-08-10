@@ -415,7 +415,6 @@ function App() {
 
   const allTabs = [
     { label: 'Dashboard', icon: <FaTachometerAlt size={18} />, route: '/dashboard', hasContent: false, requiresAuth: true },
-    { label: 'Accounts', icon: <IoFolderOpen size={18} />, route: '/accounts', hasContent: false, requiresAuth: true },
     { label: 'Transactions', icon: <FaReceipt size={18} />, route: '/transactions', hasContent: false, requiresAuth: true },
   ];
 
@@ -877,11 +876,26 @@ function AppContent({
                 maxWidth={maxWidth} 
                 isMobile={isMobile}
                 toolbarItems={
-                  <CircleUserToggle
-                    users={circleUsers}
-                    selectedUser={selectedCircleUser}
-                    onSelectUser={setSelectedCircleUser}
-                  />
+                  <div className="w-full flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <CircleUserToggle
+                        users={circleUsers}
+                        selectedUser={selectedCircleUser}
+                        onSelectUser={setSelectedCircleUser}
+                      />
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Button
+                        label="Add Accounts"
+                        onClick={() => setPlaidModalOpen(true)}
+                        width="w-32"
+                        loading={plaidLoading}
+                        disabled={plaidLoading}
+                        className="h-8"
+                        color="networth"
+                      />
+                    </div>
+                  </div>
                 }
               />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
@@ -900,75 +914,7 @@ function AppContent({
           </div>
         ) : null}
       />
-      <Route
-        path="/accounts"
-        element={user ? (
-          <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
-            {!isMobile && (
-              <CollapsibleSidebar
-                visibleTabs={visibleTabs}
-                form={form}
-                handleChange={handleChange}
-                handleSubmit={handleSubmit}
-                onLoginClick={() => setLoginOpen(true)}
-                user={user}
-                isTablet={isTablet}
-                isMobile={isMobile}
-                currentTab={'/accounts'}
-              />
-            )}
-            <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
-              <Topbar 
-                user={user} 
-                onLoginClick={() => setLoginOpen(true)} 
-                currentPage={'Accounts'} 
-                maxWidth={maxWidth} 
-                isMobile={isMobile}
-                toolbarItems={
-                  <div className="flex items-center justify-between gap-3">
-                    <CircleUserToggle
-                      users={circleUsers}
-                      selectedUser={selectedCircleUser}
-                      onSelectUser={setSelectedCircleUser}
-                    />
-                    <Button
-                      label="Add Accounts"
-                      onClick={() => setPlaidModalOpen(true)}
-                      width="w-32"
-                      loading={plaidLoading}
-                      disabled={plaidLoading}
-                      className="h-8"
-                      color="networth"
-                    />
-                  </div>
-                }
-              />
-              <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
-                <AccountsPanel 
-                  isMobile={isMobile} 
-                  maxWidth={maxWidth} 
-                  circleUsers={circleUsers}
-                  plaidModalOpen={plaidModalOpen}
-                  setPlaidModalOpen={setPlaidModalOpen}
-                  plaidLoading={plaidLoading}
-                  setPlaidLoading={setPlaidLoading}
-                  onPlaidSuccess={handlePlaidSuccess}
-                  onPlaidClose={handlePlaidClose}
-                />
-              </div>
-              {isMobile && (
-                <MobileBottomBar
-                  user={user}
-                  onLoginClick={() => setLoginOpen(true)}
-                  setLogoutOpen={() => {}}
-                  visibleTabs={visibleTabs}
-                  currentTab={'/accounts'}
-                />
-              )}
-            </div>
-          </div>
-        ) : null}
-      />
+      {/* Removed /accounts route; accounts are accessible via drawer on Dashboard */}
       <Route
         path="/transactions"
         element={user ? (
