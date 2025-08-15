@@ -5,6 +5,7 @@ import { FaPencilRuler } from 'react-icons/fa'
 import { FiChevronRight } from 'react-icons/fi'
 import CategoryList from '../ui/CategoryList'
 import AccountDetail from './AccountDetail'
+import { useDrawer } from '../../App'
 
 const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColor, isFirst = false }) => (
   <div
@@ -24,8 +25,9 @@ const DetailRow = ({ label, children, onClick, hoverable = false, backgroundColo
   </div>
 )
 
-const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false }) => {
+const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false, pushPage, popPage }) => {
   const { accounts, updateTransactionCategory, setToast, categories } = useFinancial()
+  const { pushDrawer, goBack } = useDrawer()
   const [note, setNote] = useState(transaction?.notes || '')
   const [showCategoryList, setShowCategoryList] = useState(false)
   const [showAccountDetail, setShowAccountDetail] = useState(false)
@@ -63,10 +65,6 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
       name: category?.name || null,
       color: category?.color || null,
     })
-    
-    // Start animation to slide back
-    setShowCategoryList(false)
-    
     const success = await updateTransactionCategory(transaction.id, categoryId)
     if (!success && setToast) {
       setToast({ type: 'error', message: 'Failed to update category' })
@@ -76,10 +74,9 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
         color: transaction.category_color,
       })
     }
-  }
-
-  const handleBackFromCategoryList = () => {
-    setShowCategoryList(false)
+    // Close the category list view
+    if (typeof popPage === 'function') popPage()
+    else goBack()
   }
 
   const handleBackFromAccountDetail = () => {
@@ -87,7 +84,29 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
   }
 
   const handleShowCategoryList = () => {
-    setShowCategoryList(true)
+    if (typeof pushPage === 'function') {
+      pushPage('Select Category', (
+        <CategoryList
+          onBack={() => { if (typeof popPage === 'function') popPage(); else setShowCategoryList(false) }}
+          onCategorySelect={handleCategorySelect}
+          selectedCategory={localCategory}
+          showHeader={false}
+        />
+      ))
+      return
+    }
+    // Fallback to global drawer if provided
+    pushDrawer({
+      title: 'Select Category',
+      content: (
+        <CategoryList
+          onBack={() => setShowCategoryList(false)}
+          onCategorySelect={handleCategorySelect}
+          selectedCategory={localCategory}
+          showHeader={false}
+        />
+      )
+    })
   }
 
   const handleShowAccountDetail = () => {
@@ -277,22 +296,8 @@ const TransactionDetail = ({ maxWidth = 700, transaction, inBottomSheet = false 
         </main>
       </div>
 
-      {/* Category List - slides in from right */}
-      <div 
-        className="w-full h-full absolute top-0 left-0"
-        style={{
-          transform: showCategoryList ? 'translateX(0)' : 'translateX(100%)',
-          transition: 'transform 0.2s ease-in-out'
-        }}
-      >
-        <CategoryList
-          onBack={handleBackFromCategoryList}
-          onCategorySelect={handleCategorySelect}
-          selectedCategory={localCategory}
-        />
-      </div>
-
-      {/* Account Detail - slides in from right */}
+      {/* Category List - slides in from right (handled by parent drawer when pushPage provided) */}
+      {/* Account Detail - preserved for internal slide animation if used elsewhere */}
       <div 
         className="w-full h-full absolute top-0 left-0"
         style={{

@@ -772,10 +772,10 @@ export const FinancialProvider = ({ children, setToast }) => {
       
       // Ensure baseUrl doesn't already have a protocol
       const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
-      const fullUrl = `${protocol}://${cleanBaseUrl}/database/transactions/${transactionId}/category`
+      const fullUrl = `${protocol}://${cleanBaseUrl}/database/transaction/${transactionId}/category`
       
       const response = await fetch(fullUrl, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },

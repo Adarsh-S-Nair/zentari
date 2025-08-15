@@ -57,25 +57,9 @@ function AccountsPanel({
   };
 
   const handleAccountClick = React.useCallback((account) => {
-    const lastFour = account.mask ? String(account.mask).slice(-4) : '';
-    const title = `${account.name}${lastFour ? ' ••••' + lastFour : ''}`;
-    const AccountDetailWrapper = () => {
-      const [isLoading, setIsLoading] = useState(true);
-      React.useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 50);
-        return () => clearTimeout(timer);
-      }, []);
-      if (isLoading) {
-        return <Spinner label="Loading..." />;
-      }
-      return <AccountDetail account={account} />;
-    };
-    openDrawer({
-      title,
-      content: <AccountDetailWrapper />,
-      onClose: () => {}
-    });
-  }, [openDrawer]);
+    // Drawer removed; navigate to a dedicated account route
+    navigate(`/accounts/${account.id}`);
+  }, []);
 
   const allAccountsEmpty =
     !grouped?.cash?.length &&

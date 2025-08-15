@@ -6,8 +6,8 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import { FaSearch, FaChevronRight } from 'react-icons/fa';
 import CategoryIcon from '../ui/CategoryIcon';
 import CircleUserToggle from './CircleUserToggle';
-import { useDrawer } from '../../App';
 import TransactionDetail from './TransactionDetail';
+import SimpleDrawer from '../ui/SimpleDrawer';
 
 // helper to tint hover by category color
 function hexToRgba(hex, alpha = 1) {
@@ -32,7 +32,6 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
     loadMoreTransactions,
     allTransactions
   } = useContext(FinancialContext);
-  const { openDrawer } = useDrawer();
   const navigate = useNavigate();
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [selectedUser, setSelectedUser] = useState(user?.id || 'combined');
@@ -44,20 +43,54 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
     }
   }, [user]);
 
-  // Use filtered transactions if available, otherwise use regular transactions
-  const baseTransactions = filteredTransactions !== null ? filteredTransactions : transactions;
+  // Drawer state for transaction detail + category select
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [pages, setPages] = useState([])
+  const pushPage = (title, elementOrFactory) => {
+    // Push placeholder page to show spinner instantly
+    setPages(prev => [...prev, { title, element: null }])
+    setDrawerOpen(true)
+    // Replace with actual content on next tick
+    setTimeout(() => {
+      const element = typeof elementOrFactory === 'function' ? elementOrFactory() : elementOrFactory
+      setPages(prev => {
+        const next = [...prev]
+        if (next.length === 0) return prev
+        next[next.length - 1] = { title, element }
+        return next
+      })
+    }, 0)
+  }
+  const popPage = () => setPages(prev => prev.slice(0, -1))
 
-  const searchable = allTransactions && allTransactions.length > 0 ? allTransactions : baseTransactions
-  const filteredTransactionsList = searchable.filter(
-    (txn) =>
-      (selectedAccount === 'all' || txn.accounts?.account_id === selectedAccount) &&
-      txn.description?.toLowerCase().includes((searchQuery || '').toLowerCase())
-  );
+  // Choose source list: if search query present, prefer global allTransactions when available; otherwise prefer filteredTransactions, else transactions
+  const query = (searchQuery || '').trim().toLowerCase()
+  const baseForSearch = query
+    ? ((allTransactions && allTransactions.length > 0) ? allTransactions : (filteredTransactions !== null ? filteredTransactions : transactions))
+    : (filteredTransactions !== null ? filteredTransactions : transactions)
 
-  // Group transactions by date
-  const groupedTransactions = React.useMemo(() => {
+  // Apply per-panel filters (account selection, optional query)
+  const fullyFiltered = (baseForSearch || []).filter((txn) => {
+    if (selectedAccount !== 'all' && txn.accounts?.account_id !== selectedAccount) return false
+    if (!query) return true
+    const d = (txn.description || '').toLowerCase()
+    const m = (txn.merchant_name || '').toLowerCase()
+    return d.includes(query) || m.includes(query)
+  })
+
+  // Local pager: show 20 at a time (over matched set)
+  const [visibleCount, setVisibleCount] = useState(20)
+  // Reset pager when filters/search/account change
+  useEffect(() => {
+    setVisibleCount(20)
+  }, [filteredTransactions, selectedAccount, searchQuery])
+
+  const visibleList = fullyFiltered.slice(0, visibleCount)
+
+  // Group transactions by date (only visible items)
+  const groupedTransactions = useMemo(() => {
     const grouped = {};
-    filteredTransactionsList.forEach(txn => {
+    visibleList.forEach(txn => {
       const date = formatDate(txn.datetime);
       if (!grouped[date]) {
         grouped[date] = [];
@@ -65,40 +98,34 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
       grouped[date].push(txn);
     });
     return grouped;
-  }, [filteredTransactionsList]);
+  }, [visibleList]);
 
   const handleTransactionClick = React.useCallback((transaction) => {
-    // Create a wrapper component that shows loading initially
-    const TransactionDetailWrapper = () => {
-      const [isLoading, setIsLoading] = useState(true);
-      
-      React.useEffect(() => {
-        // Hide loading after a short delay to allow component to render
-        const timer = setTimeout(() => setIsLoading(false), 50);
-        return () => clearTimeout(timer);
-      }, []);
-      
-      if (isLoading) {
-        return <Spinner label="Loading..." />;
-      }
-      
-      return <TransactionDetail transaction={transaction} />;
-    };
-    
-    openDrawer({
-      title: 'Transaction Details',
-      content: <TransactionDetailWrapper />,
-      onClose: () => {
-        // No navigation needed since we're using the global drawer
-      }
-    });
-  }, [openDrawer]);
+    // Open drawer with transaction detail page (placeholder first for instant open)
+    setPages([])
+    pushPage('Transaction Details', () => (
+      <TransactionDetail
+        transaction={transaction}
+        pushPage={pushPage}
+        popPage={popPage}
+      />
+    ))
+  }, [])
 
   const handleLoadMore = React.useCallback(() => {
-    if (user?.id && hasMoreTransactions && !isLoadingMoreTransactions) {
-      loadMoreTransactions(user.id);
+    // Increase local visible count by 20
+    setVisibleCount(prev => prev + 20)
+    // If no explicit filters/search and we’ve exhausted locally available items but server has more, fetch next batch
+    const noExplicitFilters = (filteredTransactions === null) && !query
+    if (noExplicitFilters && user?.id && visibleCount + 20 > fullyFiltered.length && hasMoreTransactions && !isLoadingMoreTransactions) {
+      loadMoreTransactions(user.id)
     }
-  }, [user?.id, hasMoreTransactions, isLoadingMoreTransactions, loadMoreTransactions]);
+  }, [filteredTransactions, query, user?.id, visibleCount, fullyFiltered.length, hasMoreTransactions, isLoadingMoreTransactions, loadMoreTransactions])
+
+  const canLoadMore = (() => {
+    // When searching or filtered, we only page within the matched set
+    return visibleCount < fullyFiltered.length || (!query && filteredTransactions === null && hasMoreTransactions)
+  })()
 
   return (
     <>
@@ -123,7 +150,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
             <div className="h-full flex items-center justify-center min-h-[120px]">
               <Spinner size={28} />
             </div>
-          ) : filteredTransactionsList.length === 0 ? (
+          ) : visibleList.length === 0 ? (
             <div className="h-full flex items-center justify-center text-sm text-center px-6 min-h-[120px]" style={{ color: 'var(--color-text-muted)' }}>
               {activeFilters 
                 ? 'No transactions match your current filters. Try adjusting your filter criteria.'
@@ -210,7 +237,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
               ))}
               
               {/* Load More Button */}
-              {hasMoreTransactions && !activeFilters && (
+              {canLoadMore && (
                 <div className="flex justify-center py-6">
                   <button
                     onClick={handleLoadMore}
@@ -228,7 +255,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
                         <span>Loading...</span>
                       </div>
                     ) : (
-                      'Load More Transactions'
+                      'Load More'
                     )}
                   </button>
                 </div>
@@ -242,7 +269,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
                     color: 'var(--color-text-muted)',
                     border: '1px solid var(--color-border-primary)'
                   }}>
-                    Showing filtered results. Clear filters to load more transactions.
+                    Showing filtered results. Adjust filters to refine further.
                   </div>
                 </div>
               )}
@@ -250,6 +277,13 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
           )}
         </Container>
       </main>
+
+      <SimpleDrawer
+        isOpen={drawerOpen}
+        stack={pages}
+        onClose={() => { setDrawerOpen(false); setPages([]) }}
+        onBack={popPage}
+      />
     </>
   );
 };

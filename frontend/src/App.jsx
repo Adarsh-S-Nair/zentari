@@ -31,11 +31,13 @@ import { Button, Modal } from './components/ui';
 import { TransactionFilterForm } from './components/forms';
 import { PlaidLinkModal } from './components/modals';
 import { useMediaQuery } from 'react-responsive';
-import { FaChartArea, FaSearch, FaTachometerAlt } from 'react-icons/fa';
+import { FaChartArea, FaSearch } from 'react-icons/fa';
+import { MdDashboard } from 'react-icons/md';
 import { IoFolderOpen } from 'react-icons/io5';
 import { FaReceipt } from 'react-icons/fa';
 import { FiArrowLeft, FiFilter } from 'react-icons/fi';
 import { FinancialContext } from './contexts/FinancialContext';
+import SimpleDrawer from './components/ui/SimpleDrawer';
 
 // Modal Context
 const ModalContext = createContext();
@@ -127,13 +129,23 @@ export function DrawerProvider({ children }) {
 
   const pushDrawer = React.useCallback((config) => {
     console.log('[DrawerProvider] pushDrawer', { title: config?.title })
+    // First push with new title and temporary null content to update header immediately
     setDrawerState(prev => ({
       ...prev,
       isOpen: true,
-      stack: [...(prev.stack || []), { title: config?.title || '', content: config?.content || null }],
+      stack: [...(prev.stack || []), { title: config?.title || '', content: null }],
       lastAction: 'push'
-    }));
-  }, []);
+    }))
+    // Then, in next tick, replace top with the actual content while keeping the same title
+    setTimeout(() => {
+      setDrawerState(prev => {
+        const next = [...(prev.stack || [])]
+        if (next.length === 0) return prev
+        next[next.length - 1] = { title: config?.title || '', content: config?.content || null }
+        return { ...prev, stack: next }
+      })
+    }, 0)
+  }, [])
 
   const replaceTop = React.useCallback((config) => {
     setDrawerState(prev => {
@@ -165,7 +177,7 @@ export function DrawerProvider({ children }) {
   return (
     <DrawerContext.Provider value={{ openDrawer, closeDrawer, pushDrawer, replaceTop, goBack }}>
       {children}
-      <GlobalDrawer config={{ ...drawerState, top }} onClose={closeDrawer} onBack={goBack} />
+      {/* Drawer UI removed intentionally; will be reimplemented later */}
     </DrawerContext.Provider>
   );
 }
@@ -262,6 +274,8 @@ function GlobalDrawer({ config, onClose, onBack }) {
       setRenderedChild(nextChild)
       setHeaderTitle(nextTitle)
       setIsAnimating(false)
+      setPrevChild(null)
+      setIncomingChild(null)
       return
     }
 
@@ -414,7 +428,7 @@ function App() {
   const [plaidLoading, setPlaidLoading] = useState(false);
 
   const allTabs = [
-    { label: 'Dashboard', icon: <FaTachometerAlt size={18} />, route: '/dashboard', hasContent: false, requiresAuth: true },
+    { label: 'Dashboard', icon: <MdDashboard size={18} />, route: '/dashboard', hasContent: false, requiresAuth: true },
     { label: 'Transactions', icon: <FaReceipt size={18} />, route: '/transactions', hasContent: false, requiresAuth: true },
   ];
 
@@ -811,42 +825,36 @@ function AppContent({
     navigate('/simulate');
   };
 
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [filterPages, setFilterPages] = useState([]);
+
   const handleFilterClick = () => {
-    openDrawer({
+    // Open filter drawer with SimpleDrawer stack
+    setFilterPages([{
       title: 'Filter Transactions',
-      content: (
+      element: (
         <TransactionFilterForm
           currentFilters={activeFilters}
           onApply={async (filters) => {
-            console.log('Applied filters:', filters);
             setActiveFilters(filters);
-            
-            // Update URL with filters
             updateURLWithFilters(filters);
-            
-            // Fetch filtered transactions
             if (user?.id) {
               const filtered = await fetchFilteredTransactions(user.id, filters);
               setFilteredTransactions(filtered);
             }
+            setFilterDrawerOpen(false)
           }}
           onReset={() => {
-            console.log('Reset filters');
             setActiveFilters(null);
             setFilteredTransactions(null);
-            
-            // Clear URL parameters
             navigate('/transactions', { replace: true });
+            setFilterDrawerOpen(false)
           }}
-          onClose={() => {
-            // Drawer will close automatically
-          }}
+          onClose={() => setFilterDrawerOpen(false)}
         />
-      ),
-      onClose: () => {
-        // No additional cleanup needed
-      }
-    });
+      )
+    }])
+    setFilterDrawerOpen(true)
   };
 
   return (
@@ -1008,6 +1016,13 @@ function AppContent({
                 />
               )}
             </div>
+            {/* Filters Drawer */}
+            <SimpleDrawer
+              isOpen={filterDrawerOpen}
+              stack={filterPages}
+              onClose={() => setFilterDrawerOpen(false)}
+              onBack={() => setFilterDrawerOpen(false)}
+            />
           </div>
         ) : null}
       />

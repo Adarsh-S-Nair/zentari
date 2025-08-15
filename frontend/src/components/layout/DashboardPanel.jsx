@@ -10,6 +10,7 @@ import CategoryIcon from '../ui/CategoryIcon'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import { groupAccountsByType, getRawBalance } from './accountsUtils'
 import AccountsListDrawer from './AccountsListDrawer'
+import SimpleDrawer from '../ui/SimpleDrawer'
 
 function hexToRgba(hex, alpha = 1) {
   const h = hex?.replace('#', '')
@@ -100,19 +101,45 @@ export default function DashboardPanel() {
   const tabIndicator = 'linear-gradient(90deg, #6e7ff1 0%, #735ec6 100%)'
   const [hoverTab, setHoverTab] = useState(null)
   const [animTab, setAnimTab] = useState(null)
-  const { openDrawer, pushDrawer } = useDrawer()
   const navigate = useNavigate()
+
+  // Simple drawer stack for smooth left/right page transitions
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [pages, setPages] = useState([]) // [{ title, element }]
+  const top = pages[pages.length - 1] || { title: '', element: null }
+  const canGoBack = pages.length > 1
+  const [navDir, setNavDir] = useState('forward') // 'forward' | 'back'
+
+  const openAccountsDrawer = () => {
+    setNavDir('forward')
+    setPages([{ title: 'All Accounts', element: (
+      <AccountsListDrawer
+        accounts={accounts}
+        onAccountClick={(acc) => {
+          const lastFour = acc?.mask ? String(acc.mask).slice(-4) : ''
+          const title = `${acc?.name || 'Account'}${lastFour ? ' ••••' + lastFour : ''}`
+          setNavDir('forward')
+          setPages(prev => [...prev, { title, element: (
+            <div className="relative w-full h-full">
+              <AccountDetail account={acc} />
+            </div>
+          ) }])
+        }}
+      />
+    ) }])
+    setDrawerOpen(true)
+  }
+
+  const handleBack = () => {
+    setNavDir('back')
+    setPages(prev => prev.slice(0, -1))
+  }
+
   const handleAccountCardClick = React.useCallback((account) => {
     const lastFour = account?.mask ? String(account.mask).slice(-4) : ''
     const title = `${account?.name || 'Account'}${lastFour ? ' ••••' + lastFour : ''}`
-    const AccountDetailWrapper = () => {
-      const [isLoading, setIsLoading] = useState(true)
-      useEffect(() => { const t = setTimeout(() => setIsLoading(false), 50); return () => clearTimeout(t) }, [])
-      if (isLoading) return (<Spinner label="Loading..." />)
-      return (<AccountDetail account={account} />)
-    }
-    openDrawer({ title: 'Account Details', content: <AccountDetailWrapper />, onClose: () => {} })
-  }, [openDrawer])
+    navigate(`/accounts/${account.id}`)
+  }, [])
   const detectNetwork = (nameOrSubtype = '') => {
     const s = (nameOrSubtype || '').toLowerCase()
     if (/(visa)/.test(s)) return 'visa'
@@ -489,22 +516,7 @@ export default function DashboardPanel() {
                 type="button"
                 className="text-[11px] font-medium px-2 py-1 rounded-sm cursor-pointer"
                 style={{ color: 'var(--color-text-secondary)', background: 'transparent' }}
-                onClick={() => {
-                  openDrawer({
-                    title: 'All Accounts',
-                    content: (
-                      <AccountsListDrawer
-                        accounts={accounts}
-                        onAccountClick={(acc) => {
-                          pushDrawer({
-                            title: 'Account Details',
-                            content: <AccountDetail account={acc} />
-                          })
-                        }}
-                      />
-                    ),
-                  })
-                }}
+                onClick={openAccountsDrawer}
                 onMouseEnter={(e)=>{ e.currentTarget.style.textDecoration='underline'; e.currentTarget.style.color='var(--color-text-primary)'; }}
                 onMouseLeave={(e)=>{ e.currentTarget.style.textDecoration='none'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
               >View all</button>
@@ -604,6 +616,12 @@ export default function DashboardPanel() {
           </Card>
         </div>
       </div>
+      <SimpleDrawer
+        isOpen={drawerOpen}
+        stack={pages}
+        onClose={() => { setDrawerOpen(false); setPages([]) }}
+        onBack={handleBack}
+      />
     </Container>
   )
 } 

@@ -107,9 +107,7 @@ const AccountsList = ({ grouped, onAccountClick }) => {
                   return (
                     <div
                       key={acc.account_id}
-                      className={`flex items-center py-4 px-4 min-h-[70px] box-border transition-all duration-200 cursor-pointer w-full max-w-full overflow-hidden ${
-                        !isLast ? 'border-b' : ''
-                      }`}
+                      className={`py-0 px-0 min-h-[70px] box-border transition-all duration-200 cursor-pointer w-full max-w-full overflow-hidden`}
                       style={{ 
                         background: 'var(--color-bg-secondary)', 
                         borderColor: 'var(--color-border-primary)'
@@ -128,62 +126,58 @@ const AccountsList = ({ grouped, onAccountClick }) => {
                         }
                       }}
                     >
-                      {/* Institution Logo */}
-                      <div className="flex-shrink-0 mr-3 sm:mr-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center overflow-hidden self-center" style={{ 
-                        background: acc.institution_logo ? 'transparent' : 'var(--color-bg-primary)', 
-                        border: '1px solid var(--color-border-primary)'
-                      }}>
-                        {acc.institution_logo ? (
-                          <img
-                            src={acc.institution_logo}
-                            alt={acc.institution_name || 'Bank'}
-                            className="w-full h-full object-cover"
-                            onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                          />
-                        ) : null}
-                        <div className={`${acc.institution_logo ? 'hidden' : 'flex'} items-center justify-center w-full h-full opacity-70`} style={{ color: 'var(--color-text-muted)' }}>
-                          <FaUniversity size={12} />
-                        </div>
-                      </div>
-
-                      {/* Account Info */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-center px-3">
-                        <div className="text-[14px] sm:text-[16px] truncate max-w-[160px] sm:max-w-[200px] lg:max-w-none" style={{ color: 'var(--color-text-primary)' }}>
-                          {acc.name}
-                        </div>
-                        <div className="flex items-center gap-1 sm:gap-2 mt-1">
-                          {acc.mask && (
-                            <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-                              ••••{acc.mask}
-                            </span>
-                          )}
-                          <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-                            {capitalizeWords(acc.subtype)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Balance and Last Sync - Right Aligned */}
-                      <div className="flex-shrink-0 text-right min-w-[70px] sm:min-w-[90px] ml-3 flex flex-col items-end justify-center">
-                        <div className="text-[12px] sm:text-[14px] whitespace-nowrap transition-colors duration-150" style={{ color: 'var(--color-text-primary)' }}>
-                          {formatCurrency(balance)}
-                        </div>
-                        <div className="flex items-center gap-1 mt-1">
-                          {lastSync && (
-                            <span className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>
-                              {formatLastUpdated(lastSync)}
-                            </span>
-                          )}
-                          {acc.update_success ? (
-                            <FaCircleCheck size={8} className="text-green-500" />
+                      <div className="flex items-center py-4 px-4 w-full">
+                        {/* Institution Logo */}
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden flex items-center justify-center" style={{ background: acc.institution_logo ? 'transparent' : (acc.institution_color || '#64748b') }}>
+                          {acc.institution_logo ? (
+                            <img src={acc.institution_logo} alt="logo" className="w-full h-full object-cover" />
                           ) : (
-                            <FaCircleXmark size={8} className="text-red-500" />
+                            <CategoryIcon lib={'fa'} name={'FaWallet'} size={16} color={'var(--color-text-white)'} />
                           )}
                         </div>
+
+                        {/* Account Details - Middle Section */}
+                        <div className="flex-1 min-w-0 ml-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="text-[13px] sm:text-[14px] truncate" style={{ color: 'var(--color-text-primary)' }}>
+                              {acc.name || acc.subtype || 'Account'}{acc.mask ? ` ••••${String(acc.mask).slice(-4)}` : ''}
+                            </div>
+                          </div>
+                          <div className="text-[11px] sm:text-[12px] truncate" style={{ color: 'var(--color-text-muted)' }}>
+                            {acc.institution_name || acc.institution?.name || acc.subtype || '—'}
+                          </div>
+                        </div>
+
+                        {/* Balance and Last Sync - Right Aligned */}
+                        <div className="flex-shrink-0 text-right min-w-[70px] sm:min-w-[90px] ml-3 flex flex-col items-end justify-center">
+                          <div className="text-[12px] sm:text-[14px] whitespace-nowrap transition-colors duration-150" style={{ color: 'var(--color-text-primary)' }}>
+                            {formatCurrency(balance)}
+                          </div>
+                          <div className="flex items-center gap-1 mt-1">
+                            {lastSync && (
+                              <span className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>
+                                {formatLastUpdated(lastSync)}
+                              </span>
+                            )}
+                            {acc.update_success ? (
+                              <FaCircleCheck size={8} className="text-green-500" />
+                            ) : (
+                              <FaCircleXmark size={8} className="text-red-500" />
+                            )}
+                          </div>
+                        </div>
                       </div>
+                      {!isLast && (
+                        <div className="h-px" style={{ background: 'var(--color-border-primary)' }} />
+                      )}
                     </div>
                   );
                 })}
+
+                {/* Empty state for categories with no accounts */}
+                {accounts.length === 0 && (
+                  <div className="text-[12px] py-2 pl-4" style={{ color: 'var(--color-text-muted)' }}>No accounts</div>
+                )}
               </div>
             </div>
           </div>

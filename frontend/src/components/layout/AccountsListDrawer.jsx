@@ -42,13 +42,13 @@ function AccountRow({ account, onClick }) {
   const color = account?.institution_color || account?.category_color || '#64748b'
   return (
     <div
-      className="flex items-center justify-between py-2 px-2 rounded-md transition-colors duration-150"
+      className="flex items-center justify-between py-2 px-0 transition-colors duration-150"
       style={{ cursor: 'pointer' }}
       onClick={() => onClick?.(account)}
       onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-hover-secondary)'; e.currentTarget.style.boxShadow = 'inset 3px 0 0 rgba(167,139,250,0.80)' }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none' }}
     >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="flex items-center gap-3 min-w-0 flex-1 px-2">
         <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{ background: account.institution_logo ? 'transparent' : color }}>
           {account.institution_logo ? (
             <img src={account.institution_logo} alt="logo" className="w-full h-full object-cover" />
@@ -65,7 +65,7 @@ function AccountRow({ account, onClick }) {
           </div>
         </div>
       </div>
-      <div className="text-right text-[13px] font-medium ml-4 flex-shrink-0" style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+      <div className="text-right text-[13px] font-medium ml-4 flex-shrink-0 px-2" style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
         {formatCurrency(balance)}
       </div>
     </div>
@@ -120,17 +120,17 @@ function Section({ title, count = 0, accounts, onAccountClick, total }) {
           <div className="text-[12px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(total)}</div>
         </div>
       </div>
-      <div className="p-2">
+      <div className="py-2">
         {(accounts || []).map((a, i) => (
           <div key={a.id || i}>
             <AccountRow account={a} onAccountClick={onAccountClick} onClick={onAccountClick} />
             {i < (accounts?.length || 0) - 1 && (
-              <div className="h-px" style={{ background: 'var(--color-border-primary)', marginLeft: 44 }} />
+              <div className="h-px" style={{ background: 'var(--color-border-primary)' }} />
             )}
           </div>
         ))}
         {(accounts || []).length === 0 && (
-          <div className="text-[12px] py-2" style={{ color: 'var(--color-text-muted)' }}>No accounts</div>
+          <div className="text-[12px] py-2 pl-4" style={{ color: 'var(--color-text-muted)' }}>No accounts</div>
         )}
       </div>
     </div>

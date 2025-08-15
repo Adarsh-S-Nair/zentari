@@ -13,7 +13,7 @@ try {
   ModalContext = null;
 }
 
-const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
+const CategoryList = ({ onBack, onCategorySelect, selectedCategory, title = 'Select Category', showHeader = true }) => {
   const { categories } = useFinancial()
   
   // Try to use modal context if available
@@ -128,7 +128,7 @@ const CategoryList = ({ onBack, onCategorySelect, selectedCategory }) => {
   })
 
   return (
-    <SlideOver onBack={onBack} title="Select Category">
+    <SlideOver onBack={onBack} title={title} showHeader={showHeader}>
       {/* Search Bar */}
       <div className="p-4 border-b" style={{ borderColor: 'var(--color-border-primary)' }}>
         <div className="flex gap-2">
