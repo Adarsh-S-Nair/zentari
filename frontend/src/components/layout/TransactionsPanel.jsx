@@ -78,14 +78,18 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
     return d.includes(query) || m.includes(query)
   })
 
-  // Local pager: show 20 at a time (over matched set)
-  const [visibleCount, setVisibleCount] = useState(20)
-  // Reset pager when filters/search/account change
+  // Local windowed pager: maintain sliding window [startIndex, endIndex)
+  const WINDOW_SIZE = 30
+  const BATCH = 10
+  const [startIndex, setStartIndex] = useState(0)
+  const [endIndex, setEndIndex] = useState(WINDOW_SIZE)
+  // Reset window when filters/search/account change
   useEffect(() => {
-    setVisibleCount(20)
+    setStartIndex(0)
+    setEndIndex(WINDOW_SIZE)
   }, [filteredTransactions, selectedAccount, searchQuery])
 
-  const visibleList = fullyFiltered.slice(0, visibleCount)
+  const visibleList = fullyFiltered.slice(startIndex, Math.min(endIndex, fullyFiltered.length))
 
   // Group transactions by date (only visible items)
   const groupedTransactions = useMemo(() => {
@@ -100,6 +104,45 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
     return grouped;
   }, [visibleList]);
 
+  // Infinite scroll: load more at bottom; de-load from top to keep at most WINDOW_SIZE
+  useEffect(() => {
+    const handleScroll = () => {
+      const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 600
+      const nearTop = window.scrollY <= 200
+
+      if (nearBottom) {
+        setEndIndex(prevEnd => {
+          let nextEnd = Math.min(prevEnd + BATCH, fullyFiltered.length)
+          // If not searching or explicitly filtered and server may have more, fetch
+          const noExplicitFilters = (filteredTransactions === null) && !query
+          if (noExplicitFilters && user?.id && nextEnd >= fullyFiltered.length && hasMoreTransactions && !isLoadingMoreTransactions) {
+            loadMoreTransactions(user.id)
+          }
+          // Slide window to keep size under WINDOW_SIZE
+          setStartIndex(prevStart => {
+            const windowSize = nextEnd - prevStart
+            if (windowSize > WINDOW_SIZE) {
+              return Math.max(0, nextEnd - WINDOW_SIZE)
+            }
+            return prevStart
+          })
+          return nextEnd
+        })
+      } else if (nearTop) {
+        // Expand upwards if we've scrolled back near the top
+        setStartIndex(prevStart => {
+          const nextStart = Math.max(0, prevStart - BATCH)
+          // Ensure end covers at least WINDOW_SIZE if possible
+          setEndIndex(prevEnd => Math.max(prevEnd, Math.min(nextStart + WINDOW_SIZE, fullyFiltered.length)))
+          return nextStart
+        })
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [fullyFiltered.length, filteredTransactions, query, user?.id, hasMoreTransactions, isLoadingMoreTransactions, loadMoreTransactions])
+
   const handleTransactionClick = React.useCallback((transaction) => {
     // Open drawer with transaction detail page (placeholder first for instant open)
     setPages([])
@@ -111,21 +154,6 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
       />
     ))
   }, [])
-
-  const handleLoadMore = React.useCallback(() => {
-    // Increase local visible count by 20
-    setVisibleCount(prev => prev + 20)
-    // If no explicit filters/search and we’ve exhausted locally available items but server has more, fetch next batch
-    const noExplicitFilters = (filteredTransactions === null) && !query
-    if (noExplicitFilters && user?.id && visibleCount + 20 > fullyFiltered.length && hasMoreTransactions && !isLoadingMoreTransactions) {
-      loadMoreTransactions(user.id)
-    }
-  }, [filteredTransactions, query, user?.id, visibleCount, fullyFiltered.length, hasMoreTransactions, isLoadingMoreTransactions, loadMoreTransactions])
-
-  const canLoadMore = (() => {
-    // When searching or filtered, we only page within the matched set
-    return visibleCount < fullyFiltered.length || (!query && filteredTransactions === null && hasMoreTransactions)
-  })()
 
   return (
     <>
@@ -236,30 +264,7 @@ const TransactionsPanel = ({ isMobile, maxWidth = 700, circleUsers, filteredTran
                 </div>
               ))}
               
-              {/* Load More Button */}
-              {canLoadMore && (
-                <div className="flex justify-center py-6">
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={isLoadingMoreTransactions}
-                    className="px-6 py-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                    style={{ 
-                      background: 'var(--color-bg-secondary)',
-                      color: 'var(--color-text-primary)',
-                      border: '1px solid var(--color-border-primary)'
-                    }}
-                  >
-                    {isLoadingMoreTransactions ? (
-                      <div className="flex items-center gap-2">
-                        <Spinner size={16} />
-                        <span>Loading...</span>
-                      </div>
-                    ) : (
-                      'Load More'
-                    )}
-                  </button>
-                </div>
-              )}
+              {/* Load More Button removed: infinite scroll enabled */}
               
               {/* Filter notice */}
               {activeFilters && (

@@ -31,7 +31,7 @@ function ProgressBar({ value = 0, max = 100, color = 'var(--color-primary)' }) {
   )
 }
 
-function SegmentedBar({ items = [], total = 0, height = 16, gap = 3, radius = 6 }) {
+function SegmentedBar({ items = [], total = 0, height = 16, gap = 3, radius = 6, onItemClick }) {
   const safeTotal = total > 0 ? total : items.reduce((s, i) => s + (i.value || 0), 0)
   const count = items.length
   const containerRef = useRef(null)
@@ -60,24 +60,24 @@ function SegmentedBar({ items = [], total = 0, height = 16, gap = 3, radius = 6 
             const x = Math.min(Math.max(10, e.clientX - (rect?.left || 0)), (rect?.width || 0) - 10)
             setTt({ visible: true, x, label: seg.label || 'Category', value: seg.value || 0, pct: widthPct, color: seg.color || '#999' })
           }
-          const isActive = tt.visible && tt.label === (seg.label || 'Category')
-          const glow = hexToRgba(seg.color || '#000000', 0.25)
+          const isClickable = typeof onItemClick === 'function' && (seg?.id != null)
           return (
             <div
               key={idx}
               onMouseEnter={onMove}
               onMouseMove={onMove}
               onMouseLeave={handleLeave}
+              onClick={isClickable ? () => onItemClick(seg) : undefined}
               className="transition-all"
               style={{
                 width: `${widthPct}%`,
                 background: seg.background || seg.color,
                 height: '100%',
                 borderRadius: br,
-                cursor: 'pointer',
+                cursor: isClickable ? 'pointer' : 'default',
                 outline: '1px solid var(--color-border-primary)',
-                filter: isActive ? 'brightness(1.06) saturate(1.05)' : 'none',
-                boxShadow: isActive ? `0 0 0 3px ${glow}, 0 2px 8px rgba(0,0,0,0.12)` : 'none'
+                filter: tt.visible && tt.label === (seg.label || 'Category') ? 'brightness(1.06) saturate(1.05)' : 'none',
+                boxShadow: tt.visible && tt.label === (seg.label || 'Category') ? `0 0 0 3px ${hexToRgba(seg.color || '#000000', 0.25)}, 0 2px 8px rgba(0,0,0,0.12)` : 'none'
               }}
             />
           )
@@ -219,19 +219,20 @@ export default function DashboardPanel() {
         if (d >= startThis && d < endThis) {
           thisSp += amt
           const key = t.category_id || t.personal_finance_category?.primary || t.category_name || 'Other'
+          const prev = catTotals.get(key) || { id: t.category_id || null, label: t.category_name || t.personal_finance_category?.primary || 'Other', value: 0, color: t.category_color || null }
           catTotals.set(key, {
-            label: t.category_name || t.personal_finance_category?.primary || 'Other',
-            value: (catTotals.get(key)?.value || 0) + amt
+            ...prev,
+            value: prev.value + amt,
+            color: prev.color || t.category_color || '#64748b'
           })
         } else if (d >= startPrev && d < endPrev) {
           lastSp += amt
         }
       }
     }
-    const solids = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b']
     const monthCategories = Array.from(catTotals.values())
       .sort((a, b) => b.value - a.value)
-      .map((c, i) => ({ ...c, color: solids[i % solids.length] }))
+      .map((c) => ({ ...c, color: c.color || '#64748b' }))
 
     total = assetTotal - Math.abs(liabilityTotal);
     return { totalBalance: total, topAccounts: top, monthCategories, spendingThisMonth: thisSp, spendingLastMonth: lastSp, assetTotal, liabilityTotal, accountsCount, cashTotal, investTotal, creditTotal, loanTotal }
@@ -272,10 +273,19 @@ export default function DashboardPanel() {
   const barCandidates = ranked.filter((c) => c.pct >= MIN_SEG_PCT).slice(0, MAX_BAR_SEGS)
   const shownSum = barCandidates.reduce((s, c) => s + (c.value || 0), 0)
   const otherValue = Math.max(0, totalSp - shownSum)
-  const segs = otherValue > 0 ? [...barCandidates, { label: 'Other', value: otherValue, color: '#94a3b8' }] : [...barCandidates]
+  const segs = [
+    ...barCandidates.map((c) => ({ label: c.label, value: c.value, color: c.color, id: c.id })),
+    ...(otherValue > 0 ? [{ label: 'Other', value: otherValue, color: '#94a3b8' }] : [])
+  ]
   const listItems = (ranked || []).slice(0, 3)
   const deltaPct = spendingLastMonth > 0 ? ((spendingThisMonth - spendingLastMonth) / spendingLastMonth) * 100 : 0
   const isPositive = deltaPct < 0
+
+  const goToCategory = (categoryId) => {
+    if (!categoryId) return
+    const params = new URLSearchParams({ categories: String(categoryId) })
+    navigate(`/transactions?${params.toString()}`)
+  }
 
   return (
     <Container size="xl" className="py-6">
@@ -337,10 +347,6 @@ export default function DashboardPanel() {
                   {/* Segmented bar by active tab */}
                   {alTab === 'assets' ? (
                     <div>
-                      <div className="flex items-center justify-between text-[11px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                        <span>Cash vs Investments</span>
-                        <span>{formatCurrency(cashTotal)} / {formatCurrency(investTotal)}</span>
-                      </div>
                       <SegmentedBar
                         items={[
                           { label: 'Cash', value: cashTotal, color: brandPrimary, background: brandPrimary },
@@ -351,17 +357,25 @@ export default function DashboardPanel() {
                         gap={0}
                         radius={8}
                       />
-                      <div className="flex items-center gap-4 mt-1 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandPrimary }} />Cash</span>
-                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandSecondary }} />Investments</span>
+                      <div className="mt-1 space-y-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-2" style={{ color: 'var(--color-text-secondary)' }}>
+                            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: brandPrimary }} />
+                            Cash
+                          </span>
+                          <span style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(cashTotal)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-2" style={{ color: 'var(--color-text-secondary)' }}>
+                            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: brandSecondary }} />
+                            Investments
+                          </span>
+                          <span style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(investTotal)}</span>
+                        </div>
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <div className="flex items-center justify-between text-[11px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                        <span>Credit vs Loans</span>
-                        <span>{formatCurrency(Math.abs(creditTotal))} / {formatCurrency(Math.abs(loanTotal))}</span>
-                      </div>
                       <SegmentedBar
                         items={[
                           { label: 'Credit', value: Math.abs(creditTotal), color: brandPrimary, background: brandPrimary },
@@ -372,9 +386,21 @@ export default function DashboardPanel() {
                         gap={0}
                         radius={8}
                       />
-                      <div className="flex items-center gap-4 mt-1 text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandPrimary }} />Credit</span>
-                        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full" style={{ background: brandSecondary }} />Loans</span>
+                      <div className="mt-1 space-y-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-2" style={{ color: 'var(--color-text-secondary)' }}>
+                            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: brandPrimary }} />
+                            Credit
+                          </span>
+                          <span style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(Math.abs(creditTotal))}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-2" style={{ color: 'var(--color-text-secondary)' }}>
+                            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: brandSecondary }} />
+                            Loans
+                          </span>
+                          <span style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(Math.abs(loanTotal))}</span>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -397,13 +423,14 @@ export default function DashboardPanel() {
                     <Pill value={Math.abs(deltaPct)} isPositive={isPositive} />
                   </div>
                 </div>
-                <SegmentedBar items={segs} total={spendingThisMonth} height={16} gap={3} radius={6} />
+                <SegmentedBar items={segs} total={spendingThisMonth} height={16} gap={3} radius={6} onItemClick={(seg) => seg?.id && goToCategory(seg.id)} />
                 <div className="space-y-1">
                   {listItems.map((c) => (
                     <div key={c.label} className="grid grid-cols-2 items-center rounded-md px-2 py-1 cursor-pointer transition"
                       style={{ outline: '1px solid transparent' }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = hexToRgba(c.color || '#64748b', 0.10); e.currentTarget.style.outline = `1px solid ${hexToRgba(c.color || '#64748b', 0.25)}`; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${hexToRgba(c.color || '#64748b', 0.8)}` }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.outline = '1px solid transparent'; e.currentTarget.style.boxShadow = 'none' }}
+                      onClick={() => c?.id && goToCategory(c.id)}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} />

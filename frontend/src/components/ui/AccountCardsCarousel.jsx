@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { getRawBalance } from '../layout/accountsUtils'
 import { formatCurrency } from '../../utils/formatters'
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi'
+import SimpleDrawer from './SimpleDrawer'
+
+const LazyAccountDetail = React.lazy(() => import('../layout/AccountDetail'))
 
 function detectNetwork(nameOrSubtype = '') {
   const s = (nameOrSubtype || '').toLowerCase()
@@ -11,7 +15,7 @@ function detectNetwork(nameOrSubtype = '') {
   return 'generic'
 }
 
-export function AccountCard({ account, index = 0, fitWidth = false, className = '', style = {} }) {
+export function AccountCard({ account, index = 0, fitWidth = false, className = '', style = {}, snapAlign = 'center' }) {
   const a = account || {}
   const i = index
   const net = detectNetwork(`${a.name || ''} ${a.subtype || ''} ${a.type || ''}`)
@@ -21,16 +25,16 @@ export function AccountCard({ account, index = 0, fitWidth = false, className = 
   const cy2 = `${(100 - (i * 13) % 100)}%`
   const bg = (() => {
     const t = (a.subtype || a.type || '').toLowerCase()
-    if (t.includes('credit')) return 'linear-gradient(135deg,#7f1d1d 0%, #450a0a 100%)'
-    if (t.includes('cash') || t.includes('checking') || t.includes('savings')) return 'linear-gradient(135deg,#1d4ed8 0%, #0f3ab6 100%)'
-    if (t.includes('invest') || t.includes('broker')) return 'linear-gradient(135deg,#065f46 0%, #064e3b 100%)'
-    return 'linear-gradient(135deg, #4338ca 0%, #312e81 100%)'
+    if (t.includes('cash') || t.includes('checking') || t.includes('savings')) return 'var(--color-gradient-assets)'
+    if (t.includes('invest') || t.includes('broker')) return 'var(--color-gradient-networth)'
+    if (t.includes('credit') || t.includes('loan')) return 'var(--color-gradient-liabilities)'
+    return 'var(--color-gradient-primary)'
   })()
   const balance = getRawBalance(a)
   const baseClass = fitWidth ? 'w-full' : 'min-w-[280px]'
   const baseStyle = fitWidth ? { aspectRatio: '7 / 4' } : { height: 160 }
   return (
-    <div className={`${baseClass} ${className} relative rounded-2xl p-4 text-white transition-transform`} style={{ scrollSnapAlign: fitWidth ? 'unset' : 'center', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.15)', backdropFilter: 'blur(2px)', background: bg, marginBottom: 2, ...baseStyle, ...style }}>
+    <div className={`${baseClass} ${className} relative rounded-2xl p-4 text-white transition-transform`} style={{ scrollSnapAlign: snapAlign, border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 6px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.15)', backdropFilter: 'blur(2px)', background: bg, marginBottom: 2, ...baseStyle, ...style }}>
       <svg className="absolute inset-0 rounded-2xl" width="100%" height="100%" style={{ mixBlendMode: 'overlay', opacity: 0.55, pointerEvents: 'none' }}>
         <defs>
           <radialGradient id={`rg1-${i}`} cx={cx1} cy={cy1} r="100%">
@@ -56,41 +60,45 @@ export function AccountCard({ account, index = 0, fitWidth = false, className = 
       <div className="flex items-center justify-between relative z-10">
         <div className="text-[11px] font-semibold tracking-widest" style={{ letterSpacing: '0.08em', color: 'rgba(255,255,255,0.92)' }}>{(a.subtype || a.type || 'Account').toString().toUpperCase()}</div>
         {a.institution_logo || a.institution?.logo ? (
-          <img src={a.institution_logo || a.institution?.logo} alt="inst" className="w-7 h-7 rounded-full object-cover" />
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.45)', boxShadow: '0 2px 8px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.6)', backdropFilter: 'blur(2px)' }}>
+            <img src={a.institution_logo || a.institution?.logo} alt="institution" className="w-5 h-5 rounded-full object-cover" />
+          </div>
         ) : (
-          <span className="w-7 h-7 rounded-full inline-block" style={{ background: 'rgba(255,255,255,0.25)' }} />
+          <span className="w-8 h-8 rounded-full inline-flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.35)' }}>
+            <span className="w-4 h-4 rounded-full inline-block" style={{ background: 'rgba(255,255,255,0.6)' }} />
+          </span>
         )}
       </div>
       <div className="mt-4 flex items-center justify-between relative z-10">
-        <svg width="46" height="32" style={{ borderRadius: 8, display: 'block' }}>
+        <svg width="38" height="26" style={{ borderRadius: 6, display: 'block', filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))' }}>
           <defs>
-            <linearGradient id={`chipBase-${i}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#e8dbc0" />
-              <stop offset="100%" stopColor="#b5a682" />
+            <linearGradient id={`chipGray-${i}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#e5e7eb" />
+              <stop offset="100%" stopColor="#9ca3af" />
             </linearGradient>
             <linearGradient id={`chipShine-${i}`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
+              <stop offset="0%" stopColor="rgba(255,255,255,0.8)" />
               <stop offset="100%" stopColor="rgba(255,255,255,0)" />
             </linearGradient>
           </defs>
-          <rect x="0" y="0" width="46" height="32" rx="8" fill={`url(#chipBase-${i})`} stroke="rgba(0,0,0,0.20)" />
-          <rect x="1.5" y="1.5" width="43" height="29" rx="7" fill="none" stroke="rgba(255,255,255,0.35)" />
-          <g stroke="#8b7d5a" strokeWidth="1.2" strokeLinecap="round" opacity="0.9">
-            <path d="M8 7 v18" />
-            <path d="M16 7 v18" />
-            <path d="M24 7 v18" />
-            <path d="M32 7 v18" />
-            <path d="M8 16 h24" />
-            <path d="M8 12 h10" />
-            <path d="M22 22 h10" />
+          <rect x="0" y="0" width="38" height="26" rx="6" fill={`url(#chipGray-${i})`} stroke="rgba(0,0,0,0.18)" />
+          <rect x="1" y="1" width="36" height="24" rx="5" fill="none" stroke="rgba(255,255,255,0.55)" />
+          <g stroke="#6b7280" strokeWidth="1.1" strokeLinecap="round" opacity="0.85">
+            <path d="M7 6 v14" />
+            <path d="M14 6 v14" />
+            <path d="M21 6 v14" />
+            <path d="M28 6 v14" />
+            <path d="M7 13 h21" />
+            <path d="M7 10 h8" />
+            <path d="M20 16 h8" />
           </g>
-          <g fill="#8b7d5a" opacity="0.95">
-            <rect x="6.5" y="14.5" width="3" height="3" rx="0.7" />
-            <rect x="14.5" y="14.5" width="3" height="3" rx="0.7" />
-            <rect x="22.5" y="14.5" width="3" height="3" rx="0.7" />
-            <rect x="30.5" y="14.5" width="3" height="3" rx="0.7" />
+          <g fill="#6b7280" opacity="0.95">
+            <rect x="5.5" y="12.5" width="2.6" height="2.6" rx="0.6" />
+            <rect x="12.5" y="12.5" width="2.6" height="2.6" rx="0.6" />
+            <rect x="19.5" y="12.5" width="2.6" height="2.6" rx="0.6" />
+            <rect x="26.5" y="12.5" width="2.6" height="2.6" rx="0.6" />
           </g>
-          <rect x="0" y="0" width="46" height="32" rx="8" fill={`url(#chipShine-${i})`} />
+          <rect x="0" y="0" width="38" height="26" rx="6" fill={`url(#chipShine-${i})`} />
         </svg>
         <div className="text-[12px] opacity-90 truncate max-w-[160px] text-right" style={{ color: 'rgba(255,255,255,0.92)' }}>{a.name || (a.subtype || a.type || 'Account')}</div>
       </div>
@@ -125,44 +133,11 @@ export function AccountCard({ account, index = 0, fitWidth = false, className = 
 export default function AccountCardsCarousel({ accounts = [], className = '', style = {}, onCardClick }) {
   const rootRef = useRef(null)
   const carouselRef = useRef(null)
-  const [carouselIndex, setCarouselIndex] = useState(0)
-  const [carouselPages, setCarouselPages] = useState(1)
-  const [containerW, setContainerW] = useState(0)
-
-  useEffect(() => {
-    const node = rootRef.current
-    if (!node) return
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect?.width || 0
-      setContainerW(w)
-    })
-    ro.observe(node)
-    return () => ro.disconnect()
-  }, [])
-
-  useEffect(() => {
-    const el = carouselRef.current
-    if (!el) return
-    const CARD_W = 280
-    const GAP = 12
-    const compute = () => {
-      const containerW = el.clientWidth || 1
-      const perView = Math.max(1, Math.floor((containerW + GAP) / (CARD_W + GAP)))
-      setCarouselPages(Math.max(1, Math.ceil((Array.isArray(accounts) ? accounts.length : 0) / perView)))
-      const idx = Math.round(el.scrollLeft / ((CARD_W + GAP) * perView))
-      setCarouselIndex(idx)
-    }
-    const onScroll = () => {
-      const containerW = el.clientWidth || 1
-      const perView = Math.max(1, Math.floor((containerW + GAP) / (CARD_W + GAP)))
-      const idx = Math.round(el.scrollLeft / ((CARD_W + GAP) * perView))
-      setCarouselIndex(idx)
-    }
-    compute()
-    el.addEventListener('scroll', onScroll)
-    window.addEventListener('resize', compute)
-    return () => { el.removeEventListener('scroll', onScroll); window.removeEventListener('resize', compute) }
-  }, [accounts])
+  const [canLeft, setCanLeft] = useState(false)
+  const [canRight, setCanRight] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerStack, setDrawerStack] = useState([])
 
   const sorted = useMemo(() => (accounts || [])
     .map(a => ({ ...a, balance: getRawBalance(a) }))
@@ -170,52 +145,178 @@ export default function AccountCardsCarousel({ accounts = [], className = '', st
     .slice(0, 12), [accounts])
 
   const CARD_W = 280
-  const CARD_H = 160
-  const scale = useMemo(() => {
-    if (!containerW) return 1
-    const available = containerW - 24 // padding/gaps safety
-    const s = Math.min(1, Math.max(0.78, available / CARD_W))
-    return s
-  }, [containerW])
-  const padLR = useMemo(() => {
-    const scaledW = CARD_W * scale
-    return Math.max(0, (containerW - scaledW) / 2)
-  }, [containerW, scale])
+  const GAP = 12
+
+  const computeNearestIndex = (el) => {
+    if (!el) return 0
+    const itemWidth = CARD_W + GAP
+    const viewportCenter = el.scrollLeft + el.clientWidth / 2
+    let nearest = 0
+    let minDist = Infinity
+    for (let i = 0; i < sorted.length; i++) {
+      const cardCenter = i * itemWidth + CARD_W / 2
+      const dist = Math.abs(cardCenter - viewportCenter)
+      if (dist < minDist) { minDist = dist; nearest = i }
+    }
+    return nearest
+  }
+
+  const updateArrowsAndActive = () => {
+    const el = carouselRef.current
+    if (!el) return
+    const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth - 2)
+    const atStart = el.scrollLeft <= 2
+    const atEnd = el.scrollLeft >= maxScrollLeft - 2
+    setCanLeft(!atStart)
+    setCanRight(!atEnd)
+    if (atStart) { setActiveIndex(0); return }
+    if (atEnd) { setActiveIndex(Math.max(0, sorted.length - 1)); return }
+    setActiveIndex(computeNearestIndex(el))
+  }
+
+  const scrollToIndex = (idx) => {
+    const el = carouselRef.current
+    if (!el) return
+    const maxIdx = Math.max(0, sorted.length - 1)
+    const i = Math.max(0, Math.min(idx, maxIdx))
+    const itemWidth = CARD_W + GAP
+    let target
+    if (i === 0) {
+      target = 0
+    } else if (i === maxIdx) {
+      target = el.scrollWidth - el.clientWidth
+    } else {
+      target = i * itemWidth + CARD_W / 2 - el.clientWidth / 2
+    }
+    const clamped = Math.max(0, Math.min(target, el.scrollWidth - el.clientWidth))
+    el.scrollTo({ left: clamped, behavior: 'smooth' })
+    setTimeout(updateArrowsAndActive, 220)
+  }
+
+  useEffect(() => {
+    const el = carouselRef.current
+    if (!el) return
+    updateArrowsAndActive()
+    const onScroll = () => updateArrowsAndActive()
+    const onResize = () => updateArrowsAndActive()
+    el.addEventListener('scroll', onScroll)
+    window.addEventListener('resize', onResize)
+    return () => { el.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize) }
+  }, [sorted.length])
+
+  const scrollByAmount = (dir = 1) => {
+    const el = carouselRef.current
+    if (!el) return
+    const perView = Math.max(1, Math.floor((el.clientWidth + GAP) / (CARD_W + GAP)))
+    const nextIndex = Math.max(0, Math.min(sorted.length - 1, activeIndex + dir * perView))
+    scrollToIndex(nextIndex)
+  }
+
+  const getSnapAlignForIndex = (i) => {
+    if (i === 0) return 'start'
+    if (i === sorted.length - 1) return 'end'
+    return 'center'
+  }
+
+  const openAccountDrawer = (account) => {
+    const title = account?.name || (account?.subtype || account?.type || 'Account')
+    setDrawerStack([{ title, element: (
+      <React.Suspense fallback={null}>
+        <LazyAccountDetail account={account} inBottomSheet />
+      </React.Suspense>
+    ) }])
+    setDrawerOpen(true)
+  }
+
+  const handleCardClick = (e, account) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault()
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation()
+    openAccountDrawer(account)
+  }
 
   return (
     <div ref={rootRef} className={`relative ${className}`} style={style}>
       {/* Edge fades for scroll affordance */}
-      <div className="pointer-events-none absolute left-0 top-0 bottom-6 w-6 rounded-l-2xl" style={{ background: 'linear-gradient(90deg, var(--color-bg-secondary) 10%, rgba(0,0,0,0))' }} />
-      <div className="pointer-events-none absolute right-0 top-0 bottom-6 w-6 rounded-r-2xl" style={{ background: 'linear-gradient(270deg, var(--color-bg-secondary) 10%, rgba(0,0,0,0))' }} />
+      <div className="pointer-events-none absolute left-0 top-0 bottom-10 w-6" style={{ background: 'linear-gradient(90deg, var(--color-bg-secondary) 10%, rgba(0,0,0,0))' }} />
+      <div className="pointer-events-none absolute right-0 top-0 bottom-10 w-6" style={{ background: 'linear-gradient(270deg, var(--color-bg-secondary) 10%, rgba(0,0,0,0))' }} />
 
-      <div ref={carouselRef} className="flex gap-3 overflow-x-auto overflow-y-visible hide-scrollbar scroll-smooth" style={{ scrollSnapType: 'x mandatory', paddingTop: 6, paddingBottom: 12, paddingLeft: padLR, paddingRight: padLR, minHeight: CARD_H * scale + 24, overflowY: 'visible' }}>
+      {/* Arrow controls */}
+      {canLeft && (
+        <button
+          aria-label="Scroll left"
+          onClick={() => scrollByAmount(-1)}
+          className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full shadow-md transition-transform hover:scale-110 cursor-pointer"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)' }}
+        >
+          <FiChevronLeft size={16} />
+        </button>
+      )}
+      {canRight && (
+        <button
+          aria-label="Scroll right"
+          onClick={() => scrollByAmount(1)}
+          className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full shadow-md transition-transform hover:scale-110 cursor-pointer"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)' }}
+        >
+          <FiChevronRight size={16} />
+        </button>
+      )}
+
+      <div ref={carouselRef} className="flex gap-3 overflow-x-auto overflow-y-visible hide-scrollbar scroll-smooth" style={{ scrollSnapType: 'x mandatory', paddingTop: 6, paddingBottom: 28 }}>
         {sorted.map((a, i) => (
-          <div key={i} onMouseEnter={(e) => { e.currentTarget.style.transform = `translateY(-2px) scale(${scale})` }} onMouseLeave={(e) => { e.currentTarget.style.transform = `translateY(0) scale(${scale})` }} style={{ transform: `translateY(0) scale(${scale})`, transformOrigin: 'left top', transition: 'transform 150ms ease' }}>
-            <div role="button" onClick={() => onCardClick && onCardClick(a)} style={{ cursor: onCardClick ? 'pointer' : 'default' }}>
-              <AccountCard account={a} index={i} />
+          <div key={i} style={{ flex: '0 0 auto' }}>
+            <div role="button" onClick={(e) => handleCardClick(e, a)} className="cursor-pointer" title={a.name || 'Open account'}>
+              <AccountCard account={a} index={i} snapAlign={getSnapAlignForIndex(i)} />
             </div>
           </div>
         ))}
       </div>
 
-      {/* Paging dots */}
-      <div className="flex items-center justify-center gap-1.5 mt-2">
-        {Array.from({ length: carouselPages }).map((_, i) => {
-          const isActive = carouselIndex === i
-          return (
-            <button
-              key={i}
-              aria-current={isActive}
-              onClick={() => {
-                const el = carouselRef.current; if (!el) return; const CARD_W = 280; const GAP = 12; const perView = Math.max(1, Math.floor((el.clientWidth + GAP) / (CARD_W + GAP))); el.scrollTo({ left: i * (CARD_W + GAP) * perView, behavior: 'smooth' });
-              }}
-              className={`rounded-full transition-all transform ${isActive ? 'w-5 h-1.5' : 'w-2.5 h-1.5'} hover:scale-110`} 
-              style={{ background: isActive ? 'linear-gradient(90deg,#667eea 0%, #764ba2 100%)' : 'var(--color-border-primary)', boxShadow: isActive ? '0 0 0 2px rgba(118,75,162,0.25)' : 'none', cursor: 'pointer' }}
-              title={`Go to page ${i + 1}`}
-            />
-          )
-        })}
-      </div>
+      {/* Pagination bubbles */}
+      {sorted.length > 1 && (
+        <div className="absolute left-0 right-0 bottom-2 flex items-center justify-center gap-1.5 select-none">
+          {sorted.map((_, i) => {
+            const isActive = i === activeIndex
+            return (
+              <button
+                key={i}
+                aria-label={`Go to card ${i + 1}`}
+                onClick={() => scrollToIndex(i)}
+                className="rounded-full transition-all duration-200 ease-out cursor-pointer"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.15)'
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'var(--brand-income-hex)'
+                    e.currentTarget.style.boxShadow = '0 0 0 2px rgba(103, 80, 164, 0.20)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = isActive ? 'scale(1.1)' : 'scale(1.0)'
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'rgba(148,163,184,0.5)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }
+                }}
+                style={{
+                  height: 6,
+                  width: isActive ? 18 : 6,
+                  background: isActive ? 'var(--brand-income-hex)' : 'rgba(148,163,184,0.5)',
+                  transform: isActive ? 'scale(1.1)' : 'scale(1.0)',
+                  willChange: 'transform'
+                }}
+              />
+            )
+          })}
+        </div>
+      )}
+
+      {/* Account detail drawer */}
+      <SimpleDrawer
+        isOpen={drawerOpen}
+        stack={drawerStack}
+        onClose={() => setDrawerOpen(false)}
+        onBack={() => setDrawerStack(s => s.slice(0, -1))}
+      />
     </div>
   )
 } 
