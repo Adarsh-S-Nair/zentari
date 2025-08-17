@@ -18,6 +18,7 @@ import {
   AccountsPanel,
   TransactionsPanel,
   DashboardPanel,
+  GptTradingPanel,
   MobileBottomBar,
   LoginModal,
   LogoutModal,
@@ -430,6 +431,7 @@ function App() {
   const allTabs = [
     { label: 'Dashboard', icon: <MdDashboard size={18} />, route: '/dashboard', hasContent: false, requiresAuth: true },
     { label: 'Transactions', icon: <FaReceipt size={18} />, route: '/transactions', hasContent: false, requiresAuth: true },
+    { label: 'GPT Trading', icon: <FaChartArea size={18} />, route: '/gpt-trading', hasContent: false, requiresAuth: true },
   ];
 
   const visibleTabs = allTabs.filter(tab => !tab.requiresAuth || user);
@@ -596,6 +598,8 @@ function App() {
     setPlaidModalOpen(false);
     setPlaidLoading(false);
   };
+
+  const authenticatedRoutes = ['/dashboard', '/accounts', '/transactions', '/gpt-trading'];
 
   return (
     <FinancialProvider setToast={setToast}>
@@ -792,7 +796,7 @@ function AppContent({
     return count;
   };
 
-  const authenticatedRoutes = ['/dashboard', '/accounts', '/transactions'];
+  const authenticatedRoutes = ['/dashboard', '/accounts', '/transactions', '/gpt-trading'];
 
   useEffect(() => {
     if (!userChecked) return;
@@ -815,6 +819,9 @@ function AppContent({
   } else if (location.pathname === '/transactions') {
     currentPage = 'Transactions';
     currentTab = '/transactions';
+  } else if (location.pathname === '/gpt-trading') {
+    currentPage = 'GPT Trading';
+    currentTab = '/gpt-trading';
   }
 
   const handleLoginSuccess = () => {
@@ -1023,6 +1030,47 @@ function AppContent({
               onClose={() => setFilterDrawerOpen(false)}
               onBack={() => setFilterDrawerOpen(false)}
             />
+          </div>
+        ) : null}
+      />
+      <Route
+        path="/gpt-trading"
+        element={user ? (
+          <div className="flex min-h-screen w-full relative overflow-auto" style={{ background: 'var(--color-bg-primary)' }}>
+            {!isMobile && (
+              <CollapsibleSidebar
+                visibleTabs={visibleTabs}
+                form={form}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                onLoginClick={() => setLoginOpen(true)}
+                user={user}
+                isTablet={isTablet}
+                isMobile={isMobile}
+                currentTab={'/gpt-trading'}
+              />
+            )}
+            <div className={`flex-1 flex flex-col sm:pb-0 ${isMobile ? 'ml-[0px]' : 'ml-[55px]'}`}>
+              <Topbar 
+                user={user} 
+                onLoginClick={() => setLoginOpen(true)} 
+                currentPage={'GPT Trading'} 
+                maxWidth={maxWidth} 
+                isMobile={isMobile}
+              />
+              <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
+                <GptTradingPanel isMobile={isMobile} maxWidth={maxWidth} />
+              </div>
+              {isMobile && (
+                <MobileBottomBar
+                  user={user}
+                  onLoginClick={() => setLoginOpen(true)}
+                  setLogoutOpen={() => {}}
+                  visibleTabs={visibleTabs}
+                  currentTab={'/gpt-trading'}
+                />
+              )}
+            </div>
           </div>
         ) : null}
       />
