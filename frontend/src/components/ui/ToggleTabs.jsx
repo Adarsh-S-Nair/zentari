@@ -1,31 +1,41 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 
 function ToggleTabs({ options = [], value, onChange, activeStyles = {}, className = '' }) {
-  const cols = Math.max(2, options.length)
-  const inactiveBg = 'var(--color-bg-secondary)'
-  const inactiveColor = 'var(--color-text-secondary)'
+  const activeIndex = useMemo(() => Math.max(0, options.findIndex(o => String(o.value) === String(value))), [options, value])
+  const count = Math.max(1, options.length)
+  const indicatorWidth = `${100 / count}%`
+
   return (
-    <div className={`grid rounded-md overflow-hidden border ${className}`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, borderColor: 'var(--color-border-primary)' }}>
+    <div className={`relative inline-flex items-center rounded-md border overflow-hidden ${className}`} style={{ borderColor: 'var(--color-border-primary)', background: 'var(--color-bg-secondary)' }}>
+      {/* Sliding indicator */}
+      <div
+        className="absolute top-0 bottom-0 left-0 rounded-md transition-transform duration-200 ease-out will-change-transform"
+        style={{
+          width: indicatorWidth,
+          transform: `translateX(${activeIndex * 100}%)`,
+          background: (activeStyles[options[activeIndex]?.value]?.background) || 'var(--color-gradient-primary)'
+        }}
+      />
+      {/* Separators to prevent color bleed */}
+      {Array.from({ length: count - 1 }).map((_, i) => (
+        <div key={i} className="absolute top-1 bottom-1 w-px z-[1]" style={{ left: `${(100 / count) * (i + 1)}%`, transform: 'translateX(-0.5px)', background: 'var(--color-border-primary)' }} />
+      ))}
       {options.map((opt, idx) => {
-        const isActive = String(value) === String(opt.value)
+        const isActive = idx === activeIndex
         const isDisabled = !!opt.disabled
-        const baseStyle = isActive
-          ? (activeStyles[opt.value] || { background: 'var(--color-gradient-primary)', color: 'var(--color-text-white)' })
-          : { background: inactiveBg, color: inactiveColor }
+        const activeStyle = activeStyles[opt.value] || { color: 'var(--color-text-white)' }
+        const inactiveStyle = { color: 'var(--color-text-secondary)' }
         return (
           <button
             key={opt.value}
             disabled={isDisabled}
-            className={`text-[12px] py-2 transition-all ${isActive ? 'font-semibold' : ''}`}
+            className={`relative z-[2] text-[12px] px-4 py-1.5 transition-colors ${isActive ? 'font-semibold' : 'font-medium'}`}
             style={{
-              ...baseStyle,
+              ...(isActive ? activeStyle : inactiveStyle),
               cursor: isDisabled ? 'not-allowed' : 'pointer',
-              opacity: isDisabled ? 0.6 : 1,
-              borderLeft: idx === 0 ? 'none' : '1px solid var(--color-border-primary)'
+              opacity: isDisabled ? 0.6 : 1
             }}
             onClick={() => !isDisabled && onChange && onChange(opt.value)}
-            onMouseEnter={(e) => { if (!isActive && !isDisabled) { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.background = 'var(--color-bg-hover)' } }}
-            onMouseLeave={(e) => { if (!isActive && !isDisabled) { e.currentTarget.style.transform = 'scale(1.0)'; e.currentTarget.style.background = inactiveBg } }}
           >
             {String(opt.label || opt.value).toUpperCase()}
           </button>

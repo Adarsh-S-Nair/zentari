@@ -6,6 +6,7 @@ from services.validation import validate_simulation_params
 from api.plaid_routes import router as plaid_router
 from api.database_routes import router as database_router
 from api.sync_routes import router as sync_router
+from api.market_routes import router as market_router
 
 router = APIRouter()
 
@@ -52,3 +53,6 @@ router.include_router(database_router)
 
 # Include Sync routes
 router.include_router(sync_router)
+
+# Include Market routes
+router.include_router(market_router)

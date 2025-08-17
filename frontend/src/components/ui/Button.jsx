@@ -56,8 +56,9 @@ const colorMap = {
   red: 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white',
   green: 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white',
   yellow: 'bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white',
-  gray: 'bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-800 shadow-sm border border-gray-200',
-  white: 'bg-white hover:bg-gray-100 active:bg-gray-200 text-gray-900 shadow-sm border border-gray-200',
+  // Neutral buttons tuned for light mode visibility
+  gray: 'bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-800 shadow-sm border border-gray-300',
+  white: 'bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-900 shadow-sm border border-gray-300',
 }
 
 function Button({
@@ -85,9 +86,9 @@ function Button({
       : color.includes(' ')
         ? color
         : colorMap.networth
-  const baseClasses = `inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-[13px] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300 ${width} cursor-pointer hover:scale-105`
-  const inactiveClasses = 'opacity-60 cursor-not-allowed'
-  const activeClasses = !isInactive ? 'hover:scale-[1.06] active:scale-95 cursor-pointer' : ''
+  const baseClasses = `inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-[13px] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300 ${width}`
+  const inactiveClasses = 'opacity-60 cursor-not-allowed pointer-events-none'
+  const activeClasses = !isInactive ? 'hover:scale-[1.03] active:scale-95 cursor-pointer' : ''
 
   // Convert CSS variable to hex for color blending
   const getComputedColor = (cssVar) => {
@@ -105,21 +106,6 @@ function Button({
   }
 
   const baseColor = getComputedColor(color)
-  
-  // Special handling for white colors
-  const isWhite = baseColor === '#ffffff' || baseColor === 'var(--color-white)'
-  
-  let darkerBg, hoverBg
-  
-  if (isWhite) {
-    darkerBg = '#f1f3f4' // Slightly darker gray, still very light
-    hoverBg = '#e8eaed'  // Darker on hover for better feedback
-  } else {
-    darkerBg = darkenColor(baseColor, 0.15) // Make background slightly darker
-    hoverBg = darkenColor(baseColor, 0.25) // Darker on hover
-  }
-  
-  const inactiveBg = mixWithGray(baseColor, '#6b7280', 0.5) // duller inactive
 
   const lightText = {
     base: 'var(--color-text-white)',
@@ -153,7 +139,8 @@ function Button({
       onFocus={() => setIsHovering(true)}
       onBlur={() => setIsHovering(false)}
       style={{ 
-        color: darkText ? 'var(--color-text-secondary)' : 'var(--color-text-white)',
+        // Only control colors via inline styles for the gradient "networth" variant.
+        // Other variants rely on their Tailwind classes, so we don't override text or bg colors here.
         background: color === 'networth' ? 'var(--color-gradient-primary)' : undefined,
         ...(color === 'networth' && isHovering && !isInactive && { background: 'var(--color-gradient-primary-hover)' }),
         ...(color === 'networth' && isInactive && { background: 'var(--color-gradient-primary-active)' })

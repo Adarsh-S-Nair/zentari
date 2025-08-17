@@ -1,11 +1,25 @@
-from fastapi import APIRouter, HTTPException, Header, Request
+from fastapi import APIRouter, HTTPException, Header, Request, Depends
 from typing import Optional
-from supabase_services import get_accounts, get_transactions, get_categories, get_sync, get_institutions
+from pydantic import BaseModel, Field, validator
+from supabase_services import get_accounts, get_transactions, get_categories, get_sync, get_institutions, get_portfolios
 from plaid_services import get_items
 import os
 from supabase_services import get_client
 
 router = APIRouter(prefix="/database", tags=["Database Operations"])
+
+class CreatePortfolioRequest(BaseModel):
+    user_id: str = Field(..., description="Auth user id")
+    name: str = Field(..., min_length=1, max_length=100)
+    starting_balance: int = Field(..., ge=10, le=100000000)
+    is_paper: bool = Field(default=True)
+
+    @validator('name')
+    def strip_name(cls, v: str) -> str:
+        s = v.strip()
+        if not s:
+            raise ValueError('name cannot be empty')
+        return s
 
 @router.get("/user-accounts/{user_id}")
 async def get_user_accounts(user_id: str, authorization: Optional[str] = Header(None)):
@@ -381,3 +395,25 @@ async def update_transaction_category(transaction_id: str, request: Request, aut
     except Exception as e:
         print(f"Exception in update_transaction_category for transaction {transaction_id}: {str(e)}")
         return {"success": False, "error": str(e)} 
+
+
+@router.post("/portfolios")
+async def create_portfolio(payload: CreatePortfolioRequest):
+    """Create a portfolio row with basic validation. Returns inserted record(s)."""
+    try:
+        portfolios = get_portfolios()
+        result = portfolios.create(
+            user_id=payload.user_id,
+            name=payload.name,
+            starting_balance=payload.starting_balance,
+            is_paper=payload.is_paper
+        )
+        if not result.get('success'):
+            raise HTTPException(status_code=400, detail=result.get('error') or 'Failed to create portfolio')
+        data = result.get('data') or []
+        return {"success": True, "portfolio": (data[0] if data else None)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[DB] Exception in create_portfolio: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

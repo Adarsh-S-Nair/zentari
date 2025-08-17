@@ -28,7 +28,9 @@ import {
   LandingPage,
   TransactionDetail,
 } from './components';
+import { PortfolioCreateForm } from './components/forms';
 import { Button, Modal } from './components/ui';
+import ToggleTabs from './components/ui/ToggleTabs';
 import { TransactionFilterForm } from './components/forms';
 import { PlaidLinkModal } from './components/modals';
 import { useMediaQuery } from 'react-responsive';
@@ -683,6 +685,11 @@ function AppContent({
   const { openDrawer, pushDrawer, replaceTop, goBack } = useDrawer();
   const maxWidth = 700;
 
+  // Simple drawer for GPT Trading actions (scoped to AppContent)
+  const [simpleDrawerOpen, setSimpleDrawerOpen] = useState(false)
+  const [simpleDrawerStack, setSimpleDrawerStack] = useState([])
+  const [tradeMode, setTradeMode] = useState('PAPER')
+
   // Toolbar state
   const [selectedCircleUser, setSelectedCircleUser] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -1057,10 +1064,48 @@ function AppContent({
                 currentPage={'GPT Trading'} 
                 maxWidth={maxWidth} 
                 isMobile={isMobile}
+                toolbarItems={
+                  <div className="w-full flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <ToggleTabs 
+                        options={[{ label: 'PAPER', value: 'PAPER' }, { label: 'LIVE', value: 'LIVE', disabled: true }]}
+                        value={tradeMode}
+                        onChange={setTradeMode}
+                        className="max-w-[240px]"
+                        activeStyles={{
+                          PAPER: { background: 'linear-gradient(90deg, var(--brand-income-hex), var(--color-primary))', color: 'var(--color-text-white)' },
+                          LIVE: { background: 'var(--color-danger)', color: 'var(--color-text-white)' }
+                        }}
+                      />
+                    </div>
+                    <Button 
+                      label="Create Portfolio" 
+                      width="w-auto" 
+                      color="networth" 
+                      className="h-8 px-3" 
+                      onClick={() => {
+                        setSimpleDrawerStack([{
+                          title: 'Create Portfolio',
+                          element: (
+                            <PortfolioCreateForm onClose={() => setSimpleDrawerOpen(false)} />
+                          )
+                        }])
+                        setSimpleDrawerOpen(true)
+                      }}
+                    />
+                  </div>
+                }
               />
               <div className={`flex-1 ${isMobile ? 'pb-[60px]' : ''}`}>
-                <GptTradingPanel isMobile={isMobile} maxWidth={maxWidth} />
+                <GptTradingPanel isMobile={isMobile} maxWidth={maxWidth} tradeMode={tradeMode} />
               </div>
+              {/* Simple drawer for GPT Trading */}
+              <SimpleDrawer
+                isOpen={simpleDrawerOpen}
+                stack={simpleDrawerStack}
+                onClose={() => setSimpleDrawerOpen(false)}
+                onBack={() => setSimpleDrawerOpen(false)}
+              />
               {isMobile && (
                 <MobileBottomBar
                   user={user}

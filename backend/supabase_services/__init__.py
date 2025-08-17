@@ -4,6 +4,7 @@ from .transactions import TransactionService
 from .categories import CategoryService
 from .institutions import InstitutionService
 from .sync import SyncService
+from .portfolios import PortfolioService
 from .snapshots import SnapshotService
 
 # Global instances
@@ -14,6 +15,7 @@ _categories = None
 _institutions = None
 _sync = None
 _snapshots = None
+_portfolios = None
 
 def get_client() -> SupabaseClient:
     """Get the global Supabase client instance"""
@@ -64,6 +66,13 @@ def get_snapshots() -> SnapshotService:
         _snapshots = SnapshotService(get_client())
     return _snapshots
 
+def get_portfolios() -> PortfolioService:
+    """Get the global portfolio service instance"""
+    global _portfolios
+    if _portfolios is None:
+        _portfolios = PortfolioService(get_client())
+    return _portfolios
+
 __all__ = [
     'SupabaseClient',
     'AccountService',
@@ -72,6 +81,7 @@ __all__ = [
     'InstitutionService',
     'SyncService',
     'SnapshotService',
+    'PortfolioService',
     'get_client',
     'get_accounts',
     'get_transactions',
@@ -79,4 +89,5 @@ __all__ = [
     'get_institutions',
     'get_sync',
     'get_snapshots'
+    , 'get_portfolios'
 ] 

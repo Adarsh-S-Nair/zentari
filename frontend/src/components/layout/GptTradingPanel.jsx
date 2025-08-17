@@ -1,8 +1,9 @@
 import React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Container, Pill, Input, Button, Card, ToggleTabs } from '../ui'
+import { Container, Pill, Input, Button, Card, ToggleTabs, Spinner, NumericInput } from '../ui'
 import { FaSearch, FaMinus, FaPlus } from 'react-icons/fa'
 import { formatCurrency } from '../../utils/formatters'
+import { useFinancial } from '../../contexts/FinancialContext'
 
 function SmoothLineChart({ series = [], height = 320, onHoverIndexChange }) {
   const containerRef = useRef(null)
@@ -115,25 +116,23 @@ function SmoothLineChart({ series = [], height = 320, onHoverIndexChange }) {
   )
 }
 
-export default function GptTradingPanel({ isMobile }) {
+export default function GptTradingPanel({ isMobile, tradeMode }) {
+  const { portfolio, portfolioLoading } = useFinancial()
   const allSeries = useMemo(() => {
-    const now = new Date()
-    const days = 365
+    const days = 60
     const out = []
-    let base = 10000
+    const todayValue = Math.round(portfolio?.cash_balance || 0)
+    const now = new Date()
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(now)
       d.setDate(now.getDate() - i)
-      const drift = (Math.random() - 0.5) * 40
-      base = Math.max(8500, base + drift)
-      out.push({ x: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), y: Math.round(base) })
+      out.push({ x: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), y: todayValue })
     }
     return out
-  }, [])
+  }, [portfolio?.cash_balance])
 
   const [range, setRange] = useState('1M')
   const [hoverIdx, setHoverIdx] = useState(-1)
-  const [tradeMode, setTradeMode] = useState('PAPER')
 
   const rangedSeries = useMemo(() => {
     const map = { '1D': 5, '1W': 7, '1M': 30, '3M': 90, 'YTD': (() => { const now = new Date(); const start = new Date(now.getFullYear(), 0, 1); return Math.max(1, Math.round((now - start) / (1000*60*60*24))) })(), '1Y': 365, 'ALL': allSeries.length }
@@ -160,15 +159,54 @@ export default function GptTradingPanel({ isMobile }) {
     return ((last - first) / first) * 100
   }, [rangedSeries, hoveredValue])
 
-  const [ticker, setTicker] = useState('AAPL')
+  const [ticker, setTicker] = useState('')
   const [side, setSide] = useState('BUY')
   const [orderType, setOrderType] = useState('market')
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState(0)
   const [limitPrice, setLimitPrice] = useState('')
+  const [quotePrice, setQuotePrice] = useState(null)
+  const [quoteError, setQuoteError] = useState('')
+  const [quoteLoading, setQuoteLoading] = useState(false)
+  const formContentRef = useRef(null)
+  const [formBlockHeight, setFormBlockHeight] = useState(260)
 
   const mockPrice = useMemo(() => 150 + Math.round(Math.random() * 100), [])
-  const estPrice = orderType === 'limit' && limitPrice ? Number(limitPrice) : mockPrice
+  const estPrice = orderType === 'limit' && limitPrice ? Number(limitPrice) : (quotePrice ?? mockPrice)
   const estCost = Math.max(0, (Number(quantity) || 0) * (Number(estPrice) || 0))
+  // Lookup helper with rounding and error handling
+  const lookupQuote = async () => {
+    try {
+      const symbol = (ticker || '').trim()
+      if (!symbol) { setQuoteError('Enter a symbol'); return }
+      setQuoteLoading(true)
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//,'')
+      const resp = await fetch(`${protocol}://${cleanBaseUrl}/market/quote/${encodeURIComponent(symbol)}`)
+      if(!resp.ok){ setQuoteError('We could not find that symbol.'); setQuotePrice(null); return }
+      const data = await resp.json()
+      if(data?.price){
+        const p = Number(data.price)
+        const rounded = Math.round(p * 100) / 100
+        setQuotePrice(isFinite(rounded) ? rounded : null)
+        // Prefill limit with 2-decimals string
+        setLimitPrice(isFinite(rounded) ? String(rounded.toFixed(2)) : '')
+        setQuoteError('')
+      } else { setQuoteError('We could not find that symbol.'); setQuotePrice(null) }
+    } catch (e) {
+      console.error('quote error', e)
+      setQuoteError('Symbol lookup failed')
+    }
+    finally { setQuoteLoading(false) }
+  }
+
+  // Measure the full form block height so the spinner uses the same height
+  useEffect(() => {
+    if (!quoteLoading && formContentRef.current) {
+      const h = formContentRef.current.offsetHeight
+      if (h && Math.abs(h - formBlockHeight) > 2) setFormBlockHeight(h)
+    }
+  }, [quoteLoading, orderType, limitPrice, quantity, side])
 
   const stepQty = (delta) => setQuantity(q => Math.max(0, (Number(q) || 0) + delta))
   const isPlaceDisabled = !ticker || (orderType === 'limit' && (!limitPrice || Number(limitPrice) <= 0)) || (Number(quantity) || 0) <= 0
@@ -181,17 +219,41 @@ export default function GptTradingPanel({ isMobile }) {
     { ticker: 'TEM', type: 'AI Market', side: 'Sell', date: 'Jun 11', amount: 90.19, shares: 1.30868, price: 68.92 },
   ]
 
+  if (portfolioLoading) {
+    return (
+      <Container size="xl" className="py-6">
+        <div className="w-full flex items-center justify-center" style={{ minHeight: 360 }}>
+          <Spinner label="Loading portfolio..." />
+        </div>
+      </Container>
+    )
+  }
+
+  if (!portfolio) {
+    return (
+      <Container size="xl" className="py-6">
+        <div className="w-full flex flex-col items-center justify-center text-center gap-2" style={{ minHeight: 360 }}>
+          <div className="text-[16px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>No portfolios found</div>
+          <div className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>Create a paper portfolio to get started with GPT trading.</div>
+        </div>
+      </Container>
+    )
+  }
+
   return (
     <Container size="xl" className="py-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <ToggleTabs options={[{ label: 'PAPER', value: 'PAPER' }, { label: 'LIVE', value: 'LIVE', disabled: true }]} value={tradeMode} onChange={setTradeMode} activeStyles={{ PAPER: { background: 'var(--color-gradient-primary)', color: 'var(--color-text-white)' }, LIVE: { background: 'var(--color-danger)', color: 'var(--color-text-white)' } }} className="max-w-[260px]" />
+          {/* Toggle moved to toolbar */}
 
           <div>
             <div className="text-[12px] font-medium" style={{ color: 'var(--color-text-muted)' }}>Portfolio Value</div>
             <div className="flex items-center gap-3 mt-1">
               <div className="text-[32px] font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(hoveredValue)}</div>
               <Pill value={Math.abs(pctChange)} isPositive={pctChange >= 0} isZero={Math.abs(pctChange) < 0.01} />
+            </div>
+            <div className="mt-1 text-[12px]" style={{ color: 'var(--color-text-muted)' }}>
+              Cash balance: <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(portfolio?.cash_balance || 0)}</span>
             </div>
           </div>
 
@@ -228,34 +290,85 @@ export default function GptTradingPanel({ isMobile }) {
 
         <div className="space-y-4">
           <Card className="p-0" elevation="md">
-            <div className="px-5 pt-5 pb-0"><div className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--color-text-muted)' }}><FaSearch size={12} /><span>Ticker Lookup & Trade</span></div></div>
-            <div className="px-5 pb-4 space-y-3">
-              <div>
-                <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Symbol</div>
-                <div className="flex items-center gap-2"><Input value={ticker} onChange={(e) => setTicker(e.target.value.toUpperCase())} placeholder="AAPL" className="flex-1" /><Button label="Go" width="w-auto" color="networth" className="px-3 py-1.5 text-[12px]" /></div>
+            <div className="px-5 pt-5 pb-2"><div className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--color-text-muted)' }}><FaSearch size={12} /><span>Ticker Lookup & Trade</span></div></div>
+            <div className="px-5 pb-4 space-y-4">
+              {/* Symbol + Lookup */}
+              <div className="grid grid-cols-[1fr_40px] gap-2 items-end">
+                <div className="w-full">
+                  <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Symbol</div>
+                  <Input 
+                    value={ticker}
+                    onChange={(e) => { setTicker(e.target.value.toUpperCase()); setQuoteError('') }} 
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupQuote() } }}
+                    placeholder="Enter symbol (e.g., AAPL)" 
+                    className="w-full h-10" 
+                  />
+                </div>
+                <div className="w-full flex flex-col">
+                  <div className="text-[12px] mb-1 invisible select-none">Search</div>
+                  <button
+                    aria-label="Lookup"
+                    onClick={lookupQuote}
+                    className="h-10 w-10 rounded-md border flex items-center justify-center"
+                    style={{ borderColor: 'var(--color-input-border)', background: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)', cursor: 'pointer', transition: 'transform 120ms ease, background 120ms ease' }}
+                    onMouseEnter={(e)=>{ e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.background='var(--color-bg-hover)'; }}
+                    onMouseLeave={(e)=>{ e.currentTarget.style.transform='scale(1.0)'; e.currentTarget.style.background='var(--color-bg-secondary)'; }}
+                  >
+                    <FaSearch size={14} />
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Side</div>
-                  <ToggleTabs options={[{ label: 'BUY', value: 'BUY' }, { label: 'SELL', value: 'SELL' }]} value={side} onChange={setSide} activeStyles={{ BUY: { background: 'var(--color-gradient-primary)', color: 'var(--color-text-white)' }, SELL: { background: 'var(--color-danger)', color: 'var(--color-text-white)' } }} />
+              {!quoteLoading && quoteError && (
+                <div className="text-[12px]" style={{ color: 'var(--color-danger)' }}>{quoteError}</div>
+              )}
+
+              {quoteLoading ? (
+                <div className="w-full flex items-center justify-center" style={{ height: formBlockHeight }}>
+                  <Spinner label="Loading quote..." />
                 </div>
-                <div>
-                  <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Order Type</div>
-                  <select value={orderType} onChange={(e)=> setOrderType(e.target.value)} className="w-full px-3 py-2.5 text-sm rounded-md border bg-transparent" style={{ borderColor: 'var(--color-input-border)', color: 'var(--color-text-primary)' }}><option value="market">Market</option><option value="limit">Limit</option></select>
+              ) : (
+                <div ref={formContentRef}>
+                  {/* Side and Type */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Side</div>
+                      <ToggleTabs options={[{ label: 'BUY', value: 'BUY' }, { label: 'SELL', value: 'SELL' }]} value={side} onChange={setSide} />
+                    </div>
+                    <div>
+                      <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Order Type</div>
+                      <select value={orderType} onChange={(e)=> setOrderType(e.target.value)} className="w-full px-3 py-2 text-[13px] rounded-md border bg-transparent" style={{ borderColor: 'var(--color-input-border)', color: 'var(--color-text-primary)' }}>
+                        <option value="market">Market</option>
+                        <option value="limit">Limit</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Price and Quantity */}
+                  <div className="grid grid-cols-2 gap-3 w-full">
+                    <div>
+                      <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Limit Price</div>
+                      <Input 
+                        value={orderType==='limit' ? limitPrice : ''}
+                        onChange={(e)=> setLimitPrice(e.target.value)} 
+                        disabled={orderType!=='limit'} 
+                        placeholder={(() => { const v = quotePrice ?? ''; return v ? String((Math.round(v*100)/100).toFixed(2)) : '' })()} 
+                        className="text-[13px] h-10" 
+                      />
+                    </div>
+                    <div>
+                      <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Quantity</div>
+                      <NumericInput value={quantity} onChange={setQuantity} min={1} placeholder="Enter quantity" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[12px] mt-1"><div style={{ color: 'var(--color-text-muted)' }}>Est. {side==='BUY' ? 'Cost' : 'Proceeds'}</div><div className="font-semibold" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(estCost)}</div></div>
                 </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
+                <Button label="Place Order" width="w-full" color="networth" className="px-4 py-2 text-[13px]" disabled={quoteLoading || (!ticker?.trim()) || (Number(quantity) <= 0) || (orderType==='limit' && (!limitPrice || Number(limitPrice) <= 0))} />
+                <Button label="Clear" width="w-auto" color="white" className="px-3 py-2 text-[13px]" onClick={()=>{ setTicker(''); setQuantity(0); setLimitPrice(''); setOrderType('market'); setQuotePrice(null); setQuoteError('') }} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Price</div>
-                  <Input value={orderType==='limit' ? limitPrice : estPrice} onChange={(e)=> setLimitPrice(e.target.value)} disabled={orderType!=='limit'} placeholder={String(estPrice)} />
-                </div>
-                <div>
-                  <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Quantity</div>
-                  <div className="flex items-center gap-2"><button aria-label="decrease" className="w-8 h-8 rounded-md border flex items-center justify-center" style={{ borderColor: 'var(--color-border-primary)', color: 'var(--color-text-secondary)' }} onClick={() => stepQty(-1)}>−</button><Input type="number" value={quantity} onChange={(e) => setQuantity(Number(e.target.value || 0))} min={0} step={1} className="flex-1" /><button aria-label="increase" className="w-8 h-8 rounded-md border flex items-center justify-center" style={{ borderColor: 'var(--color-border-primary)', color: 'var(--color-text-secondary)' }} onClick={() => stepQty(1)}>+</button></div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-[12px] mt-1"><div style={{ color: 'var(--color-text-muted)' }}>Est. {side==='BUY' ? 'Cost' : 'Proceeds'}</div><div className="font-semibold" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(estCost)}</div></div>
-              <div className="flex items-center gap-2 pt-1"><Button label="Place Order" width="w-full" color="networth" className="px-4 py-2 text-[12px]" disabled={isPlaceDisabled} /><Button label="Clear" width="w-auto" color="white" className="px-3 py-2 text-[12px]" onClick={()=>{ setQuantity(0); setLimitPrice(''); setOrderType('market') }} /></div>
             </div>
           </Card>
 

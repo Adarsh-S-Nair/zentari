@@ -50,6 +50,9 @@ export const FinancialProvider = ({ children, setToast }) => {
   // Time series of total account value (from snapshots)
   const [accountValueSeries, setAccountValueSeries] = useState(null)
   const [accountValueSeriesLoading, setAccountValueSeriesLoading] = useState(false)
+  // Portfolio state (for GPT trading)
+  const [portfolio, setPortfolio] = useState(null)
+  const [portfolioLoading, setPortfolioLoading] = useState(false)
 
   useEffect(() => {
     const getUser = async () => {
@@ -115,6 +118,9 @@ export const FinancialProvider = ({ children, setToast }) => {
 
   // Fetch initial data in background (accounts, categories, plaid items, but NOT transactions)
   const fetchInitialDataInBackground = async (userId) => {
+    // Fetch portfolio first to avoid UI flashing
+    fetchPortfolio(userId)
+
     // Fetch accounts in background
     setAccountsUpdating(true)
     fetchAccounts(userId).finally(() => setAccountsUpdating(false))
@@ -138,6 +144,36 @@ export const FinancialProvider = ({ children, setToast }) => {
 
     // Load all transactions in background for global search
     loadAllTransactions(userId)
+  }
+
+  // Fetch user's paper portfolio (first one)
+  const fetchPortfolio = async (userId) => {
+    if (!userId) { setPortfolio(null); return }
+    try {
+      setPortfolioLoading(true)
+      const { data, error } = await supabase
+        .from('portfolios')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_paper', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+
+      if (error) {
+        console.error('Error fetching portfolio:', error)
+        setPortfolio(null)
+        return null
+      }
+      const p = Array.isArray(data) && data.length > 0 ? data[0] : null
+      setPortfolio(p)
+      return p
+    } catch (e) {
+      console.error('Error fetching portfolio:', e)
+      setPortfolio(null)
+      return null
+    } finally {
+      setPortfolioLoading(false)
+    }
   }
 
   // Load recent transactions (last 30 days) without blocking UI
@@ -883,6 +919,10 @@ export const FinancialProvider = ({ children, setToast }) => {
       buildRecurringPayments,
       loadAllTransactions,
       fetchAccountValueSeries,
+      // Portfolio
+      portfolio,
+      portfolioLoading,
+      fetchPortfolio,
       setToast
     }}>
       {children}
