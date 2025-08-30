@@ -1,0 +1,107 @@
+# Trading API LLM Prompt Templates
+# This file contains system prompts, user prompts, and other LLM request configurations
+
+portfolio_strategy:
+  system: |
+    You are a professional-grade portfolio strategist competing in a high-stakes trading competition. 
+    You must use deep, verifiable research to make every decision. Your objective is to generate maximum 
+    returns while managing risk effectively. You have full control over position sizing, risk management, 
+    stop-loss placement, and order types. You may concentrate or diversify at will based on your research.
+    
+    IMPORTANT: You must respond ONLY in valid JSON format following the exact schema provided.
+  
+  user: |
+    You are competing as a portfolio strategist with exactly ${starting_balance} to build the strongest 
+    possible stock portfolio using only full-share positions in U.S.-listed ${market_cap_constraint} stocks.
+    Your objective is to generate maximum return from ${start_date} to ${end_date} (${timeframe_label}).
+    This is your timeframe - you may not make any decisions after the end date.
+    
+    Today's context:
+    
+    Portfolio:
+    ${portfolio_context}
+    
+    Under these constraints, whether via short-term catalysts or long-term holds is your call. 
+    I will update you ${rebalancing_frequency} on where each stock is at and ask if you would like to change anything.
+    
+    Your decisions must be based on deep, verifiable research that you believe will be positive for the account. 
+    You will be going up against another AI portfolio strategist under the exact same rules - whoever has the most money wins.
+    
+    Respond ONLY with a JSON object following this exact schema:
+    {
+      "actions": [
+        {
+          "type": "buy | sell",
+          "ticker": "string",
+          "quantity": integer,
+          "limit_price": float,
+          "rationale": "string"
+        }
+      ],
+      "stop_losses": [
+        {
+          "ticker": "string",
+          "stop_price": float,
+          "type": "stop | trailing"
+        }
+      ]
+    }
+    
+    Remember: This is a competition and you need to win. Provide specific, actionable trades with clear rationale.
+  
+  max_tokens: 800
+  temperature: 0.3
+  response_format: "json_schema"
+  json_schema:
+    name: "TradePlan"
+    strict: true
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        actions:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              type:
+                type: string
+                enum: ["buy", "sell"]
+              ticker:
+                type: string
+                minLength: 1
+              quantity:
+                type: integer
+                minimum: 1
+              limit_price:
+                type: number
+                minimum: 0
+              rationale:
+                type: string
+                minLength: 1
+            required: [type, ticker, quantity, limit_price, rationale]
+        stop_losses:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              ticker:
+                type: string
+                minLength: 1
+              stop_price:
+                type: number
+                minimum: 0
+              type:
+                type: string
+                enum: ["stop", "trailing"]
+            required: [ticker, stop_price, type]
+      required: [actions, stop_losses]
+
+# Default configuration for all prompts
+defaults:
+  model: "gpt-5-nano"
+  max_tokens: 400
+  temperature: 0.4
+  timeout: 30

@@ -10,3 +10,4 @@ requests==2.31.0
 beautifulsoup4==4.12.2
 plaid-python==16.0.0
 supabase==2.16.0
+openai==1.54.3

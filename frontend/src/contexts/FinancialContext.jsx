@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabaseClient'
 import { getApiBaseUrl } from '../utils/api';
 
@@ -54,28 +54,37 @@ export const FinancialProvider = ({ children, setToast }) => {
   const [portfolio, setPortfolio] = useState(null)
   const [portfolioLoading, setPortfolioLoading] = useState(false)
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      if (user) {
-        // Load cached data instantly
-        loadCachedData(user.id)
-        // Then fetch fresh data in background (but not transactions initially)
-        fetchInitialDataInBackground(user.id)
-      }
-    }
-    getUser()
+  // Guard against duplicate initialization on mount + auth callback
+  const initializedUserIdRef = useRef(null)
+  // Shared all-transactions fetch promise to avoid redundant pagination
+  const allTransactionsPromiseRef = useRef(null)
 
-    // Listen for auth changes
+  useEffect(() => {
+    const initializeForUser = (userId) => {
+      if (!userId) return
+      if (initializedUserIdRef.current === userId) return
+      initializedUserIdRef.current = userId
+      // Load cached data instantly
+      loadCachedData(userId)
+      // Then fetch fresh data in background (but not transactions initially)
+      fetchInitialDataInBackground(userId)
+    }
+
+    const prime = async () => {
+      const { data: { user: current } } = await supabase.auth.getUser()
+      setUser(current)
+      if (current?.id) initializeForUser(current.id)
+    }
+    prime()
+
+    // Listen for auth changes (deduped)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const uid = session?.user?.id || null
       setUser(session?.user || null)
-      if (session?.user) {
-        // Load cached data instantly
-        loadCachedData(session.user.id)
-        // Then fetch fresh data in background (but not transactions initially)
-        fetchInitialDataInBackground(session.user.id)
+      if (uid) {
+        initializeForUser(uid)
       } else {
+        initializedUserIdRef.current = null
         // Clear all data on logout
         setAccounts([])
         setTransactions([])
@@ -87,6 +96,9 @@ export const FinancialProvider = ({ children, setToast }) => {
         setPlaidItemsCache({})
         setHasMoreTransactions(true)
         setTransactionsPage(1)
+        setSpendingEarningSeries(null)
+        setRecurringPayments([])
+        setAllTransactions([])
       }
     })
 
@@ -133,17 +145,11 @@ export const FinancialProvider = ({ children, setToast }) => {
     setPlaidItemsUpdating(true)
     fetchPlaidItems(userId).finally(() => setPlaidItemsUpdating(false))
     
-    // Load recent transactions in background (not blocking)
+    // Load only recent transactions on initial load (lightweight)
     loadRecentTransactions(userId)
 
-    // Build spending vs earning aggregates in background
-    buildSpendingEarningAggregates(userId)
-
-    // Detect recurring payments in background
-    buildRecurringPayments(userId)
-
-    // Load all transactions in background for global search
-    loadAllTransactions(userId)
+    // Kick off server-side monthly aggregates for dashboard
+    buildSpendingEarningAggregates(userId, 6)
   }
 
   // Fetch user's paper portfolio (first one)
@@ -274,11 +280,9 @@ export const FinancialProvider = ({ children, setToast }) => {
     }
   }
 
-  const buildSpendingEarningAggregates = async (userId) => {
-    if (!userId) return
+  const computeSpendingEarningFrom = (allTxns) => {
     try {
       setSpendingEarningLoading(true)
-      // Prepare last 6 month labels (e.g., ['Jan','Feb',...])
       const now = new Date()
       const labels = []
       for (let i = 5; i >= 0; i--) {
@@ -287,49 +291,46 @@ export const FinancialProvider = ({ children, setToast }) => {
       }
       const income = Object.fromEntries(labels.map(l => [l, 0]))
       const spend = Object.fromEntries(labels.map(l => [l, 0]))
-
-      // Fetch pages without storing raw transactions in state
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
-      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
-      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
-
-      const limit = 500
-      let offset = 0
-      // Safety cap to avoid excessive requests
-      const maxPages = 200
-      let page = 0
-      while (page < maxPages) {
-        const url = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?limit=${limit}&offset=${offset}`
-        const resp = await fetch(url)
-        if (!resp.ok) {
-          break
-        }
-        const result = await resp.json()
-        const batch = result?.transactions || []
-        if (!batch.length) break
-        for (const t of batch) {
-          const d = new Date(t.datetime)
-          if (isNaN(d)) continue
-          const lbl = d.toLocaleString('en-US', { month: 'short' })
-          if (!(lbl in income)) continue
-          if (t.amount > 0) income[lbl] += t.amount
-          else spend[lbl] += Math.abs(t.amount)
-        }
-        if (batch.length < limit) break
-        offset += limit
-        page += 1
-        // Yield to UI
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise(r => setTimeout(r, 0))
+      for (const t of allTxns) {
+        const d = new Date(t.datetime)
+        if (isNaN(d)) continue
+        const lbl = d.toLocaleString('en-US', { month: 'short' })
+        if (!(lbl in income)) continue
+        if (t.amount > 0) income[lbl] += t.amount
+        else spend[lbl] += Math.abs(t.amount)
       }
-
       setSpendingEarningSeries([
         { id: 'Income', color: '#16a34a', data: labels.map(x => ({ x, y: Math.round(income[x]) })) },
         { id: 'Spending', color: '#6366f1', data: labels.map(x => ({ x, y: Math.round(spend[x]) })) }
       ])
     } catch (e) {
-      console.error('Error building spending/earning aggregates:', e)
+      console.error('Error computing spending/earning aggregates:', e)
       setSpendingEarningSeries(null)
+    } finally {
+      setSpendingEarningLoading(false)
+    }
+  }
+
+  const buildSpendingEarningAggregates = async (userId, months = 6) => {
+    if (!userId) return
+    try {
+      setSpendingEarningLoading(true)
+      const base = getApiBaseUrl()
+      const params = new URLSearchParams({ months: String(months) })
+      const url = `${base}/database/user-spending-earning/${userId}?${params.toString()}`
+      const resp = await fetch(url)
+      if (resp.ok) {
+        const result = await resp.json()
+        if (Array.isArray(result?.series) && result.series.length >= 2) {
+          setSpendingEarningSeries(result.series)
+          return
+        }
+      }
+      // Fallback to client-side computation from whatever we have
+      computeSpendingEarningFrom(transactions || [])
+    } catch (e) {
+      console.error('Error fetching spending/earning aggregates:', e)
+      computeSpendingEarningFrom(transactions || [])
     } finally {
       setSpendingEarningLoading(false)
     }
@@ -337,13 +338,7 @@ export const FinancialProvider = ({ children, setToast }) => {
 
   const buildRecurringPayments = async (userId) => {
     if (!userId) return
-    try {
-      setRecurringLoading(true)
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
-      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
-      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
-
-      const normalize = (str) => {
+    const normalize = (str) => {
         if (!str) return ''
         let s = String(str).toLowerCase()
         // remove typical noise
@@ -352,44 +347,28 @@ export const FinancialProvider = ({ children, setToast }) => {
         s = s.replace(/[0-9]/g, ' ').replace(/\s+/g, ' ').trim()
         return s
       }
+    try {
+      setRecurringLoading(true)
       const banned = /(nsf|fee|overdraft|charge|atm|interest|transfer|zelle|venmo|cash app|apple cash|refund|reversal)/i
-
-      const limit = 500
-      let offset = 0
-      const maxPages = 200
       const now = new Date()
       const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       cutoff.setDate(cutoff.getDate() - 130)
 
+      const all = await getAllTransactions(userId)
       const keyToTxns = new Map()
-
-      for (let page = 0; page < maxPages; page++) {
-        const url = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?limit=${limit}&offset=${offset}`
-        const resp = await fetch(url)
-        if (!resp.ok) break
-        const result = await resp.json()
-        const batch = result?.transactions || []
-        if (!batch.length) break
-        for (const t of batch) {
-          // only expenses and within last ~130 days
-          if (!(t?.amount < 0)) continue
-          const d = new Date(t.datetime)
-          if (isNaN(d) || d < cutoff) continue
-          const label = t.merchant_name || t.description || 'Payment'
-          if (banned.test(label)) continue
-          const key = normalize(label)
-          // skip too generic keys
-          if (!key || key.length < 4 || key.split(' ').length < 1) continue
-          const accId = t.accounts?.account_id || t.account_id || 'unknown'
-          const composite = `${accId}::${key}`
-          const arr = keyToTxns.get(composite) || []
-          arr.push({ date: d, amount: Math.abs(t.amount), raw: t, label, accountId: accId })
-          keyToTxns.set(composite, arr)
-        }
-        if (batch.length < limit) break
-        offset += limit
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((r) => setTimeout(r, 0))
+      for (const t of all) {
+        if (!(t?.amount < 0)) continue
+        const d = new Date(t.datetime)
+        if (isNaN(d) || d < cutoff) continue
+        const label = t.merchant_name || t.description || 'Payment'
+        if (banned.test(label)) continue
+        const key = normalize(label)
+        if (!key || key.length < 4 || key.split(' ').length < 1) continue
+        const accId = t.accounts?.account_id || t.account_id || 'unknown'
+        const composite = `${accId}::${key}`
+        const arr = keyToTxns.get(composite) || []
+        arr.push({ date: d, amount: Math.abs(t.amount), raw: t, label, accountId: accId })
+        keyToTxns.set(composite, arr)
       }
 
       const candidates = []
@@ -446,40 +425,53 @@ export const FinancialProvider = ({ children, setToast }) => {
     }
   }
 
-  const loadAllTransactions = async (userId) => {
-    if (!userId) return
-    try {
-      setAllTransactionsLoading(true)
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
-      const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
-      const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
-      const limit = 500
-      let offset = 0
-      const maxPages = 400
-      let collected = []
-      for (let page = 0; page < maxPages; page++) {
-        const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
-        const url = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?${params.toString()}`
-        const resp = await fetch(url)
-        if (!resp.ok) break
-        const result = await resp.json()
-        const batch = result?.transactions || []
-        if (!batch.length) break
-        collected = collected.concat(batch)
-        if (batch.length < limit) break
-        offset += limit
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise(r => setTimeout(r, 0))
+  const getAllTransactions = async (userId) => {
+    if (!userId) return []
+    if (Array.isArray(allTransactions) && allTransactions.length > 0) return allTransactions
+    if (allTransactionsPromiseRef.current) return allTransactionsPromiseRef.current
+    const promise = (async () => {
+      try {
+        setAllTransactionsLoading(true)
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+        const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+        const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+        const limit = 500
+        let offset = 0
+        const maxPages = 400
+        let collected = []
+        for (let page = 0; page < maxPages; page++) {
+          const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+          const url = `${protocol}://${cleanBaseUrl}/database/user-transactions/${userId}?${params.toString()}`
+          const resp = await fetch(url)
+          if (!resp.ok) break
+          const result = await resp.json()
+          const batch = result?.transactions || []
+          if (!batch.length) break
+          collected = collected.concat(batch)
+          if (batch.length < limit) break
+          offset += limit
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise(r => setTimeout(r, 0))
+        }
+        collected.sort((a, b) => new Date(b.datetime) - new Date(a.datetime))
+        setAllTransactions(collected)
+        return collected
+      } catch (e) {
+        console.error('Error loading all transactions:', e)
+        setAllTransactions([])
+        return []
+      } finally {
+        setAllTransactionsLoading(false)
+        allTransactionsPromiseRef.current = null
       }
-      // Sort desc by datetime for consistency
-      collected.sort((a, b) => new Date(b.datetime) - new Date(a.datetime))
-      setAllTransactions(collected)
-    } catch (e) {
-      console.error('Error loading all transactions:', e)
-      setAllTransactions([])
-    } finally {
-      setAllTransactionsLoading(false)
-    }
+    })()
+    allTransactionsPromiseRef.current = promise
+    return promise
+  }
+
+  const loadAllTransactions = async (userId) => {
+    const all = await getAllTransactions(userId)
+    setAllTransactions(all)
   }
 
   const fetchAccounts = async (userId) => {

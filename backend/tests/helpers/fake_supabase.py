@@ -9,6 +9,10 @@ class FakeSupabaseClient:
 		self.db: Dict[str, List[Dict[str, Any]]] = {
 			'accounts': [],
 			'transactions': [],
+			'portfolios': [],
+			'positions': [],
+			'orders': [],
+			'companies': [],
 		}
 
 	# --- Basic helpers ---
@@ -34,8 +38,8 @@ class FakeSupabaseClient:
 			return {"success": True, "data": [data]}
 
 	def _insert_one(self, table: str, data: Dict[str, Any]):
-		# Simulate primary keys for accounts
-		if table == 'accounts' and 'id' not in data:
+		# Simulate primary keys for common tables
+		if table in ('accounts', 'positions', 'orders', 'portfolios') and 'id' not in data:
 			data = {**data, 'id': str(uuid.uuid4())}
 		# Upsert-like behavior should be separate; here just append
 		self.db[table].append(dict(data))
@@ -89,3 +93,41 @@ class FakeSupabaseClient:
 
 	def exists(self, table: str, filters: Dict[str, Any]) -> bool:
 		return len(self._find_rows(table, filters)) > 0 
+
+	# --- Minimal Supabase-style query builder used by some routes ---
+	class _TableQuery:
+		def __init__(self, outer, table_name: str):
+			self._outer = outer
+			self._table = table_name
+			self._filters: Dict[str, Any] = {}
+			self._limit: int | None = None
+			self.data = None
+		def select(self, _cols: str = "*"):
+			return self
+		def eq(self, key: str, value: Any):
+			self._filters[key] = value
+			return self
+		def in_(self, key: str, values):
+			# store a callable filter for inclusion
+			vals = set([v for v in values])
+			self._filters[f"__in__{key}"] = vals
+			return self
+		def limit(self, n: int):
+			self._limit = n
+			return self
+		def execute(self):
+			# apply simple equality filters
+			eq_filters = {k: v for k, v in self._filters.items() if not str(k).startswith("__in__")}
+			rows = self._outer._find_rows(self._table, eq_filters)
+			# apply inclusion filters
+			for k, v in self._filters.items():
+				if str(k).startswith("__in__"):
+					col = str(k).split("__in__", 1)[1]
+					rows = [r for r in rows if r.get(col) in v]
+			if self._limit is not None:
+				rows = rows[: self._limit]
+			self.data = [dict(r) for r in rows]
+			return self
+
+	def table(self, name: str):
+		return FakeSupabaseClient._TableQuery(self, name)

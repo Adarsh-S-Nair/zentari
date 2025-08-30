@@ -27,4 +27,16 @@ class PortfolioService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    def get_by_id(self, portfolio_id: str) -> Dict[str, Any]:
+        try:
+            return self.client.select('portfolios', filters={'id': portfolio_id})
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def update_cash(self, portfolio_id: str, new_cash_balance: float) -> Dict[str, Any]:
+        try:
+            return self.client.update('portfolios', {'cash_balance': new_cash_balance}, {'id': portfolio_id})
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
 

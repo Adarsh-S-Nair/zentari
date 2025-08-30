@@ -5,6 +5,9 @@ from .categories import CategoryService
 from .institutions import InstitutionService
 from .sync import SyncService
 from .portfolios import PortfolioService
+from .orders import OrderService
+from .universe import UniverseService
+from .positions import PositionService
 from .snapshots import SnapshotService
 
 # Global instances
@@ -16,6 +19,9 @@ _institutions = None
 _sync = None
 _snapshots = None
 _portfolios = None
+_orders = None
+_positions = None
+_universe = None
 
 def get_client() -> SupabaseClient:
     """Get the global Supabase client instance"""
@@ -73,6 +79,24 @@ def get_portfolios() -> PortfolioService:
         _portfolios = PortfolioService(get_client())
     return _portfolios
 
+def get_orders() -> OrderService:
+    global _orders
+    if _orders is None:
+        _orders = OrderService(get_client())
+    return _orders
+
+def get_positions() -> PositionService:
+    global _positions
+    if _positions is None:
+        _positions = PositionService(get_client())
+    return _positions
+
+def get_universe() -> UniverseService:
+    global _universe
+    if _universe is None:
+        _universe = UniverseService(get_client())
+    return _universe
+
 __all__ = [
     'SupabaseClient',
     'AccountService',
@@ -82,6 +106,9 @@ __all__ = [
     'SyncService',
     'SnapshotService',
     'PortfolioService',
+    'OrderService',
+    'PositionService',
+    'UniverseService',
     'get_client',
     'get_accounts',
     'get_transactions',
@@ -89,5 +116,5 @@ __all__ = [
     'get_institutions',
     'get_sync',
     'get_snapshots'
-    , 'get_portfolios'
+    , 'get_portfolios', 'get_orders', 'get_positions', 'get_universe'
 ] 
