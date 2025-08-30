@@ -482,16 +482,10 @@ async def create_portfolio(payload: CreatePortfolioRequest, background_tasks: Ba
                 print("[OPENAI] Triggered on portfolio creation")
                 # Provide only current holdings in the portfolio context (universe removed)
 
-                # Use the new portfolio strategy template
-                resp = svc.send_portfolio_strategy_message(
-                    starting_balance=payload.starting_balance,
-                    timeframe_months=6,  # Default to 6 months
-                    market_cap_constraint="micro-cap stocks (market cap under $300M)",
-                    rebalancing_frequency="weekly",
-                    portfolio_context=f"Cash: ${payload.starting_balance}\nPositions: None"
-                )
+                # Send a very simple hello message using the hello_test template
+                resp = svc.send_template_message("hello_test")
                 if resp.get('success'):
-                    print(f"[OPENAI] Portfolio strategy message sent for ${payload.starting_balance} portfolio")
+                    print("[OPENAI] hello_test message sent on portfolio creation")
                     print(f"[OPENAI] Response: {str(resp.get('data'))[:500]}")
                 else:
                     err = str(resp.get('error') or '')

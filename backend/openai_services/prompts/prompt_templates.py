@@ -12,37 +12,34 @@ class PromptTemplates:
     def portfolio_strategy(
         self, 
         starting_balance: float,
-        timeframe_months: int = 0,
+        timeframe_months: int = 6,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         market_cap_constraint: str = "micro-cap stocks (market cap under $300M)",
-        rebalancing_frequency: str = "weekly",
-        portfolio_context: str = "Cash: $0\nPositions: None"
+        rebalancing_frequency: str = "daily",
+        portfolio_context: str = "Cash: $0\nPositions: None",
+        available_universe: str = "[]"
     ) -> Optional[Dict[str, Any]]:
         """Get portfolio strategy prompt with customizable parameters"""
         
         # Auto-calculate dates if not provided
         now = datetime.now()
         if start_date is None:
-            start_date = now.strftime("%m/%d/%Y")
+            start_date = now.strftime("%m-%d-%y")
         if end_date is None:
             # Default to 1-week window if timeframe_months==0
             if timeframe_months and timeframe_months > 0:
                 end_dt = now + timedelta(days=timeframe_months * 30)
-                timeframe_label = f"{timeframe_months} months"
             else:
                 end_dt = now + timedelta(days=7)
-                timeframe_label = "1 week"
-            end_date = end_dt.strftime("%m/%d/%Y")
+            end_date = end_dt.strftime("%m-%d-%y")
         else:
             # Provide a reasonable label when explicit dates are passed with 7-day span
             try:
-                sd = datetime.strptime(start_date, "%m/%d/%Y")
-                ed = datetime.strptime(end_date, "%m/%d/%Y")
-                days = (ed - sd).days
-                timeframe_label = f"{days} days" if days != 7 else "1 week"
+                sd = datetime.strptime(start_date, "%m-%d-%y")
+                ed = datetime.strptime(end_date, "%m-%d-%y")
             except Exception:
-                timeframe_label = "custom"
+                pass
         
         return self.manager.format_prompt(
             'portfolio_strategy',
@@ -53,7 +50,7 @@ class PromptTemplates:
             market_cap_constraint=market_cap_constraint,
             rebalancing_frequency=rebalancing_frequency,
             portfolio_context=portfolio_context,
-            timeframe_label=timeframe_label
+            available_universe=available_universe
         )
     
     def custom(self, template_name: str, **kwargs) -> Optional[Dict[str, Any]]:

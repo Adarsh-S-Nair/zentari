@@ -21,6 +21,9 @@ portfolio_strategy:
     Portfolio:
     ${portfolio_context}
     
+    Available universe (candidates you may consider):
+    ${available_universe}
+    
     Under these constraints, whether via short-term catalysts or long-term holds is your call. 
     I will update you ${rebalancing_frequency} on where each stock is at and ask if you would like to change anything.
     
@@ -51,53 +54,7 @@ portfolio_strategy:
   
   max_tokens: 800
   temperature: 0.3
-  response_format: "json_schema"
-  json_schema:
-    name: "TradePlan"
-    strict: true
-    schema:
-      type: object
-      additionalProperties: false
-      properties:
-        actions:
-          type: array
-          items:
-            type: object
-            additionalProperties: false
-            properties:
-              type:
-                type: string
-                enum: ["buy", "sell"]
-              ticker:
-                type: string
-                minLength: 1
-              quantity:
-                type: integer
-                minimum: 1
-              limit_price:
-                type: number
-                minimum: 0
-              rationale:
-                type: string
-                minLength: 1
-            required: [type, ticker, quantity, limit_price, rationale]
-        stop_losses:
-          type: array
-          items:
-            type: object
-            additionalProperties: false
-            properties:
-              ticker:
-                type: string
-                minLength: 1
-              stop_price:
-                type: number
-                minimum: 0
-              type:
-                type: string
-                enum: ["stop", "trailing"]
-            required: [ticker, stop_price, type]
-      required: [actions, stop_losses]
+  response_format: "json_object"
 
 # Default configuration for all prompts
 defaults:
@@ -105,3 +62,9 @@ defaults:
   max_tokens: 400
   temperature: 0.4
   timeout: 30
+
+hello_test:
+  system: |
+    You are a helpful assistant. Respond ONLY with this exact JSON object: {"success": true}
+  user: |
+    Hello

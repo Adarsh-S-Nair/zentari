@@ -68,11 +68,22 @@ class OpenAIService:
                     {"role": "user", "content": message},
                 ],
             }
+            # Log request payload for debugging
+            try:
+                print(f"[OPENAI][REQUEST] {payload}")
+            except Exception:
+                pass
+
             r = requests.post(url, headers=headers, json=payload, timeout=30)
             if r.status_code >= 400:
                 return {"success": False, "error": f"HTTP {r.status_code}: {r.text}"}
             data = r.json()
-            print(f"[OPENAI] Received response.")
+            # Log response preview
+            try:
+                preview = str(data)
+                print(f"[OPENAI][RESPONSE] {preview[:800]}")
+            except Exception:
+                pass
             return {"success": True, "data": data}
         except Exception as e:
             print(f"[OPENAI] Error sending message: {e}")
@@ -96,7 +107,17 @@ class OpenAIService:
         
         try:
             # Get formatted prompt template
-            prompt_data = None\n            try:\n                specialized = getattr(self.prompts, template_name, None)\n                if callable(specialized):\n                    prompt_data = specialized(**kwargs)\n            except Exception:\n                prompt_data = None\n            if not prompt_data:\n                prompt_data = self.prompts.custom(template_name, **kwargs)
+            prompt_data = None
+            try:
+                specialized = getattr(self.prompts, template_name, None)
+                if callable(specialized):
+                    candidate = specialized(**kwargs)
+                    # Only accept specialized result if it's a dict
+                    prompt_data = candidate if isinstance(candidate, dict) else None
+            except Exception:
+                prompt_data = None
+            if not prompt_data:
+                prompt_data = self.prompts.custom(template_name, **kwargs)
             if not prompt_data:
                 return {"success": False, "error": f"Template '{template_name}' not found"}
             
@@ -132,7 +153,6 @@ class OpenAIService:
             payload = {
                 'model': prompt_data.get('model', os.getenv('OPENAI_MODEL', 'gpt-5-nano')),
                 'messages': messages,
-                'max_tokens': prompt_data.get('max_tokens', 200),
             }
             
             # Add response format if specified (json_object or json_schema)
@@ -159,71 +179,28 @@ class OpenAIService:
                     has_response_format = True
                 else:
                     payload['response_format'] = rf
-            # Only include temperature when not forcing JSON structured output
-            if not has_response_format:
-                payload['temperature'] = prompt_data.get('temperature', 0.5)
-            
             # Make the request
             timeout = prompt_data.get('timeout', 30)
             def _post(p):
                 return requests.post(url, headers=headers, json=p, timeout=timeout)
 
+            # Log request payload for debugging
+            try:
+                print(f"[OPENAI][REQUEST] {payload}")
+            except Exception:
+                pass
+
             r = _post(payload)
             
             if r.status_code >= 400:
-                # Retry without temperature if model doesn't support it
-                try:
-                    err_json = r.json()
-                except Exception:
-                    err_json = {}
-                err_param = ((err_json.get('error') or {}).get('param') or '').lower()
-                err_code = ((err_json.get('error') or {}).get('code') or '').lower()
-                if err_param == 'temperature' and 'unsupported' in err_code:
-                    try:
-                        if 'temperature' in payload:
-                            del payload['temperature']
-                        r2 = _post(payload)
-                        if r2.status_code >= 400:
-                            return {"success": False, "error": f"HTTP {r2.status_code}: {r2.text}"}
-                        data = r2.json()
-                        print(f"[OPENAI] Template response (no temperature) received for '{template_name}'")
-                        return {"success": True, "data": data}
-                    except Exception as e:
-                        return {"success": False, "error": str(e)}
                 return {"success": False, "error": f"HTTP {r.status_code}: {r.text}"}
             
             data = r.json()
-            # If we hit length or empty content, auto-increase token budget and retry once
+            # Keep response simple; do not auto-tune token budgets or temperature
+            # Log response preview
             try:
-                choices = data.get('choices') or []
-                first = (choices[0] or {}) if choices else {}
-                msg = (first.get('message') or {})
-                content = (msg.get('content') or '').strip()
-                finish_reason = (first.get('finish_reason') or '').lower()
-                if (finish_reason == 'length' or content == '') and payload.get('max_tokens', 0) < 2000:
-                    new_tokens = min(2000, max(400, int(payload.get('max_tokens', 200)) * 2))
-                    payload['max_tokens'] = new_tokens
-                    print(f"[OPENAI] Retrying with higher token budget: {new_tokens}")
-                    r3 = _post(payload)
-                    if r3.status_code >= 400:
-                        return {"success": False, "error": f"HTTP {r3.status_code}: {r3.text}"}
-                    data = r3.json()
-                    # Re-evaluate after retry
-                    choices = data.get('choices') or []
-                    first = (choices[0] or {}) if choices else {}
-                    msg = (first.get('message') or {})
-                    content = (msg.get('content') or '').strip()
-                    finish_reason = (first.get('finish_reason') or '').lower()
-                    if (finish_reason == 'length' or content == ''):
-                        # Fallback to a different compatible model if available
-                        fallback_model = os.getenv('OPENAI_FALLBACK_MODEL', 'gpt-4o-mini')
-                        if fallback_model and fallback_model != payload.get('model'):
-                            print(f"[OPENAI] Fallback to model: {fallback_model}")
-                            payload['model'] = fallback_model
-                            r4 = _post(payload)
-                            if r4.status_code >= 400:
-                                return {"success": False, "error": f"HTTP {r4.status_code}: {r4.text}"}
-                            data = r4.json()
+                preview = str(data)
+                print(f"[OPENAI][RESPONSE] {preview[:800]}")
             except Exception:
                 pass
             print(f"[OPENAI] Template response received for '{template_name}'")

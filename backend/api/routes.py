@@ -7,6 +7,7 @@ from api.plaid_routes import router as plaid_router
 from api.database_routes import router as database_router
 from api.sync_routes import router as sync_router
 from api.market_routes import router as market_router
+from api.openai_routes import router as openai_router
 
 router = APIRouter()
 
@@ -56,3 +57,6 @@ router.include_router(sync_router)
 
 # Include Market routes
 router.include_router(market_router)
+
+# Include OpenAI routes
+router.include_router(openai_router)
