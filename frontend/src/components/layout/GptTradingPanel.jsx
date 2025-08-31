@@ -121,6 +121,8 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
   // Positions are needed to compute portfolio value (cash + market value)
   const [positions, setPositions] = useState(null)
   const [llmStatus, setLlmStatus] = useState({ status: 'unknown', step: 'Idle' })
+  const [orders, setOrders] = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
   const positionsMarketValue = useMemo(() => {
     if (!Array.isArray(positions)) return 0
     return positions.reduce((sum, p) => sum + Math.abs(Number(p.quantity || 0)) * Number(p.avg_entry_price || 0), 0)
@@ -252,6 +254,14 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
       if (user?.id && typeof fetchPortfolio === 'function') {
         fetchPortfolio(user.id)
       }
+      // Refresh orders list
+      try {
+        const ordResp = await fetch(`${protocol}://${cleanBaseUrl}/database/portfolios/${portfolio.id}/orders`)
+        const ord = await ordResp.json().catch(()=>({}))
+        setOrders(Array.isArray(ord?.orders) ? ord.orders : [])
+      } catch (e) {
+        // ignore
+      }
     } catch (e) {
       console.error('place order error', e)
       setQuoteError(String(e.message || e))
@@ -259,12 +269,10 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
   }
   const rangeOptions = ['1D','1W','1M','3M','YTD','1Y','ALL']
 
-  // Hard-coded orders (Robinhood-style rows)
-  const orders = [
-    { ticker: 'AVGO', type: 'Limit', side: 'Sell', date: 'Jun 11', amount: 97.28, shares: 0.385517, price: 252.35 },
-    { ticker: 'VST', type: 'Market', side: 'Sell', date: 'Jun 11', amount: 88.61, shares: 0.536126, price: 165.27 },
-    { ticker: 'TEM', type: 'AI Market', side: 'Sell', date: 'Jun 11', amount: 90.19, shares: 1.30868, price: 68.92 },
-  ]
+  // Helpers
+  const fmtDateTime = (d) => {
+    try { return new Date(d).toLocaleString() } catch { return '-' }
+  }
 
   // Load positions for current portfolio
   const [poLoading, setPoLoading] = useState(false)
@@ -287,6 +295,17 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
         const posResp = await fetch(`${protocol}://${cleanBaseUrl}/database/portfolios/${portfolio.id}/positions`)
         const pos = await posResp.json().catch(()=>({}))
         setPositions(pos?.positions || [])
+        // Load orders alongside positions
+        setOrdersLoading(true)
+        try {
+          const ordResp = await fetch(`${protocol}://${cleanBaseUrl}/database/portfolios/${portfolio.id}/orders`)
+          const ord = await ordResp.json().catch(()=>({}))
+          setOrders(Array.isArray(ord?.orders) ? ord.orders : [])
+        } catch (e) {
+          setOrders([])
+        } finally {
+          setOrdersLoading(false)
+        }
       } catch (e) {
         console.error('Load positions/orders error', e)
         setPositions([])
@@ -413,13 +432,64 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
             </div>
           </div>
 
-          {/* Removed Orders card per design change */}
+          {/* Orders under line chart */}
+          <Card className="p-0" elevation="md">
+            <div className="px-5 pt-5 pb-2 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+              <FaChartLine size={12} />
+              <span className="text-[12px] font-medium">Orders</span>
+            </div>
+            <div className="px-3 pt-2 pb-3 flex flex-col">
+              {ordersLoading ? (
+                <div className="w-full flex items-center justify-center py-6"><Spinner label="Loading orders..." /></div>
+              ) : (orders && orders.length > 0) ? (
+                orders.map((o, i) => {
+                  const isBuy = String(o.side||'').toLowerCase()==='buy'
+                  const sideLbl = isBuy ? 'Buy' : 'Sell'
+                  const qty = Number(o.filled_quantity ?? o.quantity ?? 0)
+                  const px = Number(o.avg_fill_price ?? o.limit_price ?? 0)
+                  const amt = Math.abs(qty * px)
+                  return (
+                    <div key={o.id || i} className="py-3 px-4" style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)' }}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {o.logo_url ? (
+                            <img src={o.logo_url} alt={o.ticker} className="w-8 h-8 rounded-full object-cover flex-shrink-0" style={{ border: '1px solid var(--color-border-primary)' }} />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full flex-shrink-0" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)' }} />
+                          )}
+                          <div className="min-w-0">
+                            <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                              {(o.company_name || o.ticker || '').toString()}
+                            </div>
+                            <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+                              {(o.ticker || '').toUpperCase()} • {sideLbl} {qty} @ {formatCurrency(px)}
+                            </div>
+                            {o.rationale && (
+                              <div className="text-[12px] mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                {o.rationale}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right self-center">
+                          <div className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(amt)}</div>
+                          <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{fmtDateTime(o.filled_at || o.submitted_at)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="flex-1 flex items-center justify-center py-8"><div className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>No orders yet</div></div>
+              )}
+            </div>
+          </Card>
         </div>
 
         <div className="space-y-4">
-          <Card className="p-0" elevation="md">
+          {/* <Card className="p-0" elevation="md">
             <div className="px-5 pt-5 pb-2"><div className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--color-text-muted)' }}><FaSearch size={12} /><span>Ticker Lookup & Trade</span></div></div>
-            <div className="px-5 pb-4 space-y-4">
+            <div className="px-5 pb-4 space-y-4"> */}
               {/* Symbol + Lookup */}
               <div className="grid grid-cols-[1fr_40px] gap-2 items-end">
                 <div className="w-full">
@@ -518,8 +588,8 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
                   </div>
                 </div>
               )}
-            </div>
-          </Card>
+            {/* </div>
+          </Card> */}
 
           <Card className="p-0" elevation="md">
             <div className="px-5 pt-5 pb-2 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
@@ -585,6 +655,8 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
               )}
             </div>
           </Card>
+
+          
         </div>
       </div>
     </Container>

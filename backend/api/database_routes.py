@@ -79,6 +79,7 @@ class PlaceOrderRequest(BaseModel):
     order_type: Literal['market', 'limit'] = 'market'
     quantity: int = Field(..., gt=0)
     limit_price: Optional[float] = Field(default=None, gt=0)
+    rationale: Optional[str] = Field(default=None)
 
     @field_validator('ticker', mode='before')
     def normalize_ticker(cls, v: str) -> str:
@@ -567,6 +568,12 @@ async def create_portfolio(payload: CreatePortfolioRequest, background_tasks: Ba
                                         ticker = (act.get('ticker') or '').upper().strip()
                                         qty = int(act.get('quantity') or 0)
                                         price = act.get('limit_price')
+                                        rationale = (
+                                            act.get('rationale')
+                                            or act.get('reason')
+                                            or act.get('explanation')
+                                            or act.get('notes')
+                                        )
                                         if not side or not ticker or qty <= 0 or price is None:
                                             print(f"[OPENAI][EXEC] Skipping invalid action: {act}")
                                             continue
@@ -577,6 +584,7 @@ async def create_portfolio(payload: CreatePortfolioRequest, background_tasks: Ba
                                             order_type='limit',
                                             quantity=qty,
                                             limit_price=float(price),
+                                            rationale=rationale,
                                         )
                                         print(f"[OPENAI][EXEC] {ticker} {side} x{qty} @ {price} -> {exec_res}")
                                     except Exception as e:
@@ -643,7 +651,28 @@ async def get_portfolio_orders(portfolio_id: str):
         result = orders.get_by_portfolio(portfolio_id)
         if not result.get('success'):
             return {"success": True, "orders": []}
-        return {"success": True, "orders": result.get('data') or []}
+        rows = result.get('data') or []
+        # Enrich with company ticker/name if possible
+        try:
+            from supabase_services import get_client  # type: ignore
+            client = get_client().client
+            company_ids = list({r.get('company_id') for r in rows if r.get('company_id')})
+            company_map = {}
+            if company_ids:
+                q = client.table('companies').select('id, name, ticker, logo_url').in_('id', company_ids)
+                cr = q.execute()
+                for c in (cr.data or []):
+                    company_map[c.get('id')] = { 'name': c.get('name'), 'ticker': c.get('ticker'), 'logo_url': c.get('logo_url') }
+            for r in rows:
+                cmp = company_map.get(r.get('company_id') or '')
+                if cmp:
+                    r['company_name'] = cmp.get('name')
+                    r['ticker'] = (cmp.get('ticker') or '').upper() if cmp.get('ticker') else None
+                    r['logo_url'] = cmp.get('logo_url')
+        except Exception as _e:
+            # Best-effort enrichment only
+            pass
+        return {"success": True, "orders": rows}
     except Exception as e:
         print(f"[DB] Exception in get_portfolio_orders: {e}")
         return {"success": True, "orders": []}
@@ -688,6 +717,7 @@ async def place_order(payload: PlaceOrderRequest):
             order_type=payload.order_type,
             quantity=payload.quantity,
             limit_price=payload.limit_price,
+            rationale=payload.rationale,
         )
         if not res.get('success'):
             code = res.get('status_code') or 400
@@ -700,7 +730,7 @@ async def place_order(payload: PlaceOrderRequest):
         print(f"[DB] Exception in place_order: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail='Internal server error')
 
-def _execute_order_internal(portfolio_id: str, ticker: str, side: str, order_type: str, quantity: int, limit_price: Optional[float]) -> dict:
+def _execute_order_internal(portfolio_id: str, ticker: str, side: str, order_type: str, quantity: int, limit_price: Optional[float], rationale: Optional[str] = None) -> dict:
     """Execute a single order using the same logic as the API endpoint.
     Returns { success: bool, error?: str, status_code?: int }
     """
@@ -815,7 +845,8 @@ def _execute_order_internal(portfolio_id: str, ticker: str, side: str, order_typ
             'avg_fill_price': exec_price,
             'limit_price': limit_price,
             'submitted_at': ts,
-            'filled_at': ts
+            'filled_at': ts,
+            'rationale': (rationale or None)
         }
         ord_result = orders.client.insert('orders', order_payload)
         print(f"[ORDER] Insert order result: {ord_result}")
