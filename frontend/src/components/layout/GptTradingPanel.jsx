@@ -120,6 +120,7 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
   const { portfolio, portfolioLoading, fetchPortfolio, user } = useFinancial()
   // Positions are needed to compute portfolio value (cash + market value)
   const [positions, setPositions] = useState(null)
+  const [llmStatus, setLlmStatus] = useState({ status: 'unknown', step: 'Idle' })
   const positionsMarketValue = useMemo(() => {
     if (!Array.isArray(positions)) return 0
     return positions.reduce((sum, p) => sum + Math.abs(Number(p.quantity || 0)) * Number(p.avg_entry_price || 0), 0)
@@ -294,6 +295,54 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
       }
     }
     load()
+  }, [portfolio?.id, llmStatus.status])
+
+  // Poll backend for LLM setup status and show spinner messages until complete
+  useEffect(() => {
+    let timer = null
+    let cancelled = false
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+    const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+    const cleanBaseUrl = baseUrl.replace(/^https?:\/\//,'')
+
+    const mapStep = (raw) => {
+      const s = String(raw || '').toLowerCase()
+      if (s.includes('preparing') || s.includes('universe')) return 'Building trade universe...'
+      if (s.includes('sending')) return 'Generating trade plan...'
+      if (s.includes('waiting')) return 'Waiting for AI decision...'
+      if (s.includes('parsing') || s.includes('interpreting')) return 'Interpreting model response...'
+      if (s.includes('placing')) return 'Placing simulated orders...'
+      if (s.includes('refreshing') || s.includes('finalizing')) return 'Finalizing portfolio...'
+      if (s.includes('complete')) return 'Finalizing portfolio...'
+      if (s.includes('error')) return 'Encountered an error'
+      return 'Setting up your portfolio...'
+    }
+
+    const poll = async () => {
+      if (!portfolio?.id) return
+      try {
+        const resp = await fetch(`${protocol}://${cleanBaseUrl}/database/portfolios/${portfolio.id}/llm-status`)
+        const data = await resp.json().catch(()=>({}))
+        const status = data?.status || 'unknown'
+        const stepRaw = data?.step || 'Idle'
+        const step = mapStep(stepRaw)
+        if (!cancelled) setLlmStatus({ status, step })
+        if (status === 'running') {
+          timer = setTimeout(poll, 1500)
+        }
+      } catch (e) {
+        if (!cancelled) setLlmStatus({ status: 'unknown', step: 'Idle' })
+      }
+    }
+
+    // Start polling when a portfolio exists
+    if (portfolio?.id) {
+      poll()
+    } else {
+      setLlmStatus({ status: 'unknown', step: 'Idle' })
+    }
+
+    return () => { cancelled = true; if (timer) clearTimeout(timer) }
   }, [portfolio?.id])
 
   if (portfolioLoading) {
@@ -318,6 +367,16 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
   }
 
   // Gate the whole panel until positions and orders have loaded
+  if (llmStatus.status === 'running') {
+    return (
+      <Container size="xl" className="py-6">
+        <div className="w-full flex items-center justify-center" style={{ minHeight: 420 }}>
+          <Spinner label={llmStatus.step || 'Setting up your portfolio...'} />
+        </div>
+      </Container>
+    )
+  }
+
   if (poLoading) {
     return (
       <Container size="xl" className="py-6">

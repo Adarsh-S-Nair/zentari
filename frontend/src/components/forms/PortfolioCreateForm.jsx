@@ -39,9 +39,9 @@ export default function PortfolioCreateForm({ onClose }) {
       if (!data?.success) {
         throw new Error(data?.error || 'Failed to create portfolio')
       }
-      // Refresh context portfolio and close drawer
+      // Refresh context portfolio (keeps GPT panel showing spinner via polling)
       await fetchPortfolio(user.id)
-      if (setToast) setToast({ type: 'success', message: 'Portfolio created' })
+      if (setToast) setToast({ type: 'success', message: 'Portfolio created. Initial trades are being prepared...' })
       onClose && onClose()
     } catch (e) {
       console.error('Create portfolio error:', e)

@@ -30,8 +30,33 @@ import os
 from datetime import datetime
 import json
 import calendar
+import requests
+from threading import Lock
 
 router = APIRouter(prefix="/database", tags=["Database Operations"])
+
+# In-memory status store for portfolio LLM setup progress
+_portfolio_llm_status = {}
+_portfolio_llm_lock = Lock()
+
+def _set_portfolio_llm_status(portfolio_id: str, step: str, status: str = "running", details: Optional[str] = None):
+    try:
+        with _portfolio_llm_lock:
+            _portfolio_llm_status[portfolio_id] = {
+                'status': status,
+                'step': step,
+                'details': details,
+                'updated_at': datetime.utcnow().isoformat() + 'Z'
+            }
+    except Exception:
+        # Best-effort only; do not break main flow
+        pass
+
+def _mark_portfolio_llm_done(portfolio_id: str):
+    _set_portfolio_llm_status(portfolio_id, step="Setup complete", status="done")
+
+def _mark_portfolio_llm_error(portfolio_id: str, err: str):
+    _set_portfolio_llm_status(portfolio_id, step="Error", status="error", details=err)
 
 class CreatePortfolioRequest(BaseModel):
     user_id: str = Field(..., description="Auth user id")
@@ -454,7 +479,14 @@ async def create_portfolio(payload: CreatePortfolioRequest, background_tasks: Ba
         data = result.get('data') or []
         portfolio = (data[0] if data else None)
 
-        # Fire-and-forget OpenAI greeting in the background
+        # Initialize progress immediately so clients can show spinner
+        try:
+            if portfolio and portfolio.get('id'):
+                _set_portfolio_llm_status(portfolio.get('id'), step="Creating portfolio...")
+        except Exception:
+            pass
+
+        # Fire-and-forget OpenAI strategy + execution in the background
         try:
             # Import lazily to avoid hard dependency during tests
             try:
@@ -478,17 +510,85 @@ async def create_portfolio(payload: CreatePortfolioRequest, background_tasks: Ba
                         pass
                     if not svc.is_configured():
                         print("[OPENAI] Skipping call: API not configured")
+                        try:
+                            _mark_portfolio_llm_error(portfolio.get('id'), 'OpenAI is not configured')
+                        except Exception:
+                            pass
                         return
                 print("[OPENAI] Triggered on portfolio creation")
                 # Provide only current holdings in the portfolio context (universe removed)
 
-                # Send a very simple hello message using the hello_test template
-                resp = svc.send_template_message("hello_test")
+                # Load compact universe from backend/data/universe_preview.json if available
+                universe_compact = None
+                try:
+                    _set_portfolio_llm_status(portfolio.get('id'), step="Preparing stock universe...")
+                    base_dir = os.path.dirname(os.path.dirname(__file__))  # backend/
+                    uni_path = os.path.join(base_dir, 'data', 'universe_preview.json')
+                    if os.path.exists(uni_path):
+                        with open(uni_path, 'r', encoding='utf-8') as f:
+                            uni = json.load(f)
+                        # Compress JSON: no spaces, compact keys already provided by script (t,p,adv,m6,m12)
+                        universe_compact = json.dumps(uni, separators=(',', ':'))
+                        print(f"[OPENAI] Loaded universe_preview.json with {len(uni)} rows")
+                except Exception as e:
+                    print(f"[OPENAI] Failed to load universe_preview.json: {e}")
+
+                # Use the portfolio strategy template (minimal params)
+                _set_portfolio_llm_status(portfolio.get('id'), step="Sending strategy request to model...")
+                resp = svc.send_portfolio_strategy_message(
+                    starting_balance=payload.starting_balance,
+                    timeframe_months=6,
+                    rebalancing_frequency="weekly",
+                    portfolio_context=f"Cash: ${payload.starting_balance}\nPositions: None",
+                    market_cap_constraint="large-cap stocks (market cap over $10B)",
+                    available_universe=(universe_compact if universe_compact is not None else "[]")
+                )
+                _set_portfolio_llm_status(portfolio.get('id'), step="Waiting for model response...")
                 if resp.get('success'):
-                    print("[OPENAI] hello_test message sent on portfolio creation")
-                    print(f"[OPENAI] Response: {str(resp.get('data'))[:500]}")
+                    print(f"[OPENAI] Portfolio strategy message sent for ${payload.starting_balance} portfolio")
+                    try:
+                        _set_portfolio_llm_status(portfolio.get('id'), step="Parsing model response...")
+                        d = resp.get('data') or {}
+                        choices = d.get('choices') or []
+                        first = (choices[0] or {}) if choices else {}
+                        message = (first.get('message') or {})
+                        content = (message.get('content') or '').strip()
+                        if content:
+                            try:
+                                obj = json.loads(content)
+                                import json as _json
+                                print('[OPENAI][CONTENT]\n' + _json.dumps(obj, indent=2))
+                                # Execute suggested actions
+                                _set_portfolio_llm_status(portfolio.get('id'), step="Placing simulated orders...")
+                                actions = obj.get('actions') or []
+                                for act in actions:
+                                    try:
+                                        side = (act.get('type') or '').lower().strip()
+                                        ticker = (act.get('ticker') or '').upper().strip()
+                                        qty = int(act.get('quantity') or 0)
+                                        price = act.get('limit_price')
+                                        if not side or not ticker or qty <= 0 or price is None:
+                                            print(f"[OPENAI][EXEC] Skipping invalid action: {act}")
+                                            continue
+                                        exec_res = _execute_order_internal(
+                                            portfolio_id=portfolio.get('id'),
+                                            ticker=ticker,
+                                            side=side,
+                                            order_type='limit',
+                                            quantity=qty,
+                                            limit_price=float(price),
+                                        )
+                                        print(f"[OPENAI][EXEC] {ticker} {side} x{qty} @ {price} -> {exec_res}")
+                                    except Exception as e:
+                                        print(f"[OPENAI][EXEC] Error executing action {act}: {e}")
+                                _set_portfolio_llm_status(portfolio.get('id'), step="Refreshing portfolio...")
+                            except Exception:
+                                print(f"[OPENAI][CONTENT] {content}")
+                    except Exception as _e:
+                        print(f"[OPENAI] Content parse error: {_e}")
                 else:
                     err = str(resp.get('error') or '')
+                    _mark_portfolio_llm_error(portfolio.get('id'), err)
                     print(f"[OPENAI] Error: {err}")
                     # Graceful fallback to simple message if templates are unavailable
                     if 'Prompt templates not available' in err:
@@ -498,6 +598,11 @@ async def create_portfolio(payload: CreatePortfolioRequest, background_tasks: Ba
                             print(f"[OPENAI] Fallback response: {str(fallback.get('data'))[:500]}")
                         else:
                             print(f"[OPENAI] Fallback error: {fallback.get('error')}")
+
+                try:
+                    _mark_portfolio_llm_done(portfolio.get('id'))
+                except Exception:
+                    pass
 
             background_tasks.add_task(_send_portfolio_creation_message)
         except Exception as e:
@@ -509,6 +614,26 @@ async def create_portfolio(payload: CreatePortfolioRequest, background_tasks: Ba
     except Exception as e:
         print(f"[DB] Exception in create_portfolio: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/portfolios/{portfolio_id}/llm-status")
+async def get_portfolio_llm_status(portfolio_id: str):
+    """Return the in-progress LLM setup status for a portfolio, if available.
+
+    Response shape:
+      { success: True, status: 'running'|'done'|'error'|'unknown', step: str, details?: str, updated_at?: str }
+    """
+    try:
+        with _portfolio_llm_lock:
+            st = _portfolio_llm_status.get(portfolio_id)
+        if not st:
+            return { 'success': True, 'status': 'unknown', 'step': 'Idle' }
+        resp = { 'success': True }
+        resp.update(st)
+        return resp
+    except Exception as e:
+        print(f"[DB] Exception in get_portfolio_llm_status: {e}")
+        return { 'success': True, 'status': 'unknown', 'step': 'Idle' }
 
 
 @router.get("/portfolios/{portfolio_id}/orders")
@@ -556,155 +681,17 @@ async def place_order(payload: PlaceOrderRequest):
                     'limit_price': getattr(payload, 'limit_price', None),
                 }
         print(f"[ORDER] Incoming place_order: {dbg_payload}")
-        portfolios = get_portfolios()
-        positions = get_positions()
-        orders = get_orders()
-
-        # Fetch portfolio
-        pf = portfolios.get_by_id(payload.portfolio_id)
-        if not pf.get('success') or not pf.get('data'):
-            raise HTTPException(status_code=404, detail='Portfolio not found')
-        portfolio = pf['data'][0]
-        cash = float(portfolio.get('cash_balance') or 0)
-        print(f"[ORDER] Portfolio {payload.portfolio_id} current cash: {cash}")
-
-        qty = int(payload.quantity)
-        if payload.order_type == 'limit':
-            if payload.limit_price is None or payload.limit_price <= 0:
-                raise HTTPException(status_code=400, detail='Valid limit_price required for limit orders')
-            exec_price = float(payload.limit_price)
-        else:
-            # For demo we require limit_price as execution for market too, if not provided
-            exec_price = float(payload.limit_price or 0)
-            if exec_price <= 0:
-                raise HTTPException(status_code=400, detail='Execution price required (use limit price)')
-
-        cost = round(exec_price * qty, 2)
-        side = payload.side.lower()
-
-        # Resolve company (if schema migrated to company_id)
-        company_id = None
-        try:
-            comp = get_client().client.table('companies').select('id, ticker').eq('ticker', payload.ticker.upper()).limit(1).execute()
-            if comp.data:
-                company_id = (comp.data[0] or {}).get('id')
-        except Exception:
-            company_id = None
-
-        # Get existing open position (if any)
-        pos_result = positions.get_by_portfolio(payload.portfolio_id)
-        print(f"[ORDER] Positions lookup result success={pos_result.get('success')} count={len(pos_result.get('data') or [])}")
-        current = None
-        if pos_result.get('success'):
-            for row in (pos_result.get('data') or []):
-                if (row.get('ticker') or '').upper() == payload.ticker:
-                    current = row
-                    break
-                # Support company_id flows
-                if company_id and (row.get('company_id') == company_id):
-                    current = row
-                    break
-        print(f"[ORDER] Existing position found? {bool(current)}")
-
-        # Update cash and position logic
-        if side == 'buy':
-            if cash < cost:
-                raise HTTPException(status_code=400, detail='Insufficient cash')
-            cash -= cost
-            if current:
-                # Recompute avg cost
-                old_qty = float(current.get('quantity') or 0)
-                old_cost = float(current.get('avg_entry_price') or 0) * abs(old_qty)
-                new_qty = old_qty + qty
-                new_avg = round((old_cost + cost) / new_qty, 6) if new_qty != 0 else exec_price
-                up_res = positions.client.update('positions', { 'quantity': new_qty, 'avg_entry_price': new_avg }, { 'id': current['id'] })
-                print(f"[ORDER] Update position result: {up_res}")
-                if not up_res.get('success'):
-                    raise HTTPException(status_code=500, detail='Failed to update position')
-            else:
-                # Try inserting with company_id first if available
-                payload_pos = {
-                    'portfolio_id': payload.portfolio_id,
-                    'quantity': qty,
-                    'avg_entry_price': exec_price,
-                    'realized_pnl': 0
-                }
-                if company_id:
-                    payload_pos['company_id'] = company_id
-                else:
-                    payload_pos['ticker'] = payload.ticker
-                ins_res = positions.client.insert('positions', payload_pos)
-                print(f"[ORDER] Insert position result: {ins_res}")
-                if not ins_res.get('success'):
-                    # Fallback: if first attempt used company_id, try legacy ticker; or vice versa
-                    try_alt = None
-                    if 'company_id' in payload_pos:
-                        try_alt = { **payload_pos }
-                        try_alt.pop('company_id', None)
-                        try_alt['ticker'] = payload.ticker
-                    else:
-                        if company_id:
-                            try_alt = { **payload_pos }
-                            try_alt.pop('ticker', None)
-                            try_alt['company_id'] = company_id
-                    if try_alt is not None:
-                        print(f"[ORDER] Insert position retry with alternate schema: {try_alt.keys()}")
-                        ins_res2 = positions.client.insert('positions', try_alt)
-                        print(f"[ORDER] Insert position retry result: {ins_res2}")
-                        if not ins_res2.get('success'):
-                            raise HTTPException(status_code=500, detail='Failed to create position')
-                    else:
-                        raise HTTPException(status_code=500, detail='Failed to create position')
-        else:  # sell
-            if not current:
-                raise HTTPException(status_code=400, detail='No position to sell')
-            old_qty = float(current.get('quantity') or 0)
-            if qty > old_qty:
-                raise HTTPException(status_code=400, detail='Sell quantity exceeds position')
-            cash += cost
-            new_qty = old_qty - qty
-            realized_pnl = float(current.get('realized_pnl') or 0)
-            realized_pnl += round((exec_price - float(current.get('avg_entry_price') or 0)) * qty, 2)
-            if new_qty == 0:
-                # Close position
-                del_res = positions.client.delete('positions', { 'id': current['id'] })
-                print(f"[ORDER] Delete position result: {del_res}")
-                if not del_res.get('success'):
-                    raise HTTPException(status_code=500, detail='Failed to close position')
-            else:
-                up_res = positions.client.update('positions', { 'quantity': new_qty, 'realized_pnl': realized_pnl }, { 'id': current['id'] })
-                print(f"[ORDER] Update position (sell) result: {up_res}")
-                if not up_res.get('success'):
-                    raise HTTPException(status_code=500, detail='Failed to update position')
-
-        # Persist new cash
-        pc_res = portfolios.update_cash(payload.portfolio_id, cash)
-        print(f"[ORDER] Update cash result: {pc_res}")
-        if not pc_res.get('success'):
-            raise HTTPException(status_code=500, detail='Failed to persist cash balance')
-
-        # Record order (use ISO timestamps to avoid DB function call issues)
-        from datetime import datetime, timezone
-        ts = datetime.now(timezone.utc).isoformat()
-        order_payload = {
-            'portfolio_id': payload.portfolio_id,
-            'ticker': payload.ticker,
-            'side': side,
-            'type': payload.order_type,
-            'status': 'filled',
-            'quantity': qty,
-            'filled_quantity': qty,
-            'avg_fill_price': exec_price,
-            'limit_price': payload.limit_price,
-            'submitted_at': ts,
-            'filled_at': ts
-        }
-        ord_result = orders.client.insert('orders', order_payload)
-        print(f"[ORDER] Insert order result: {ord_result}")
-        if not ord_result.get('success'):
-            print(f"[DB] Failed to insert order: {ord_result.get('error')}")
-            raise HTTPException(status_code=500, detail='Failed to record order')
-
+        res = _execute_order_internal(
+            portfolio_id=payload.portfolio_id,
+            ticker=payload.ticker,
+            side=payload.side,
+            order_type=payload.order_type,
+            quantity=payload.quantity,
+            limit_price=payload.limit_price,
+        )
+        if not res.get('success'):
+            code = res.get('status_code') or 400
+            raise HTTPException(status_code=code, detail=res.get('error') or 'Order failed')
         return { 'success': True }
     except HTTPException:
         raise
@@ -712,6 +699,214 @@ async def place_order(payload: PlaceOrderRequest):
         import traceback
         print(f"[DB] Exception in place_order: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail='Internal server error')
+
+def _execute_order_internal(portfolio_id: str, ticker: str, side: str, order_type: str, quantity: int, limit_price: Optional[float]) -> dict:
+    """Execute a single order using the same logic as the API endpoint.
+    Returns { success: bool, error?: str, status_code?: int }
+    """
+    try:
+        portfolios = get_portfolios()
+        positions = get_positions()
+        orders = get_orders()
+
+        # Fetch portfolio
+        pf = portfolios.get_by_id(portfolio_id)
+        if not pf.get('success') or not pf.get('data'):
+            return { 'success': False, 'error': 'Portfolio not found', 'status_code': 404 }
+        portfolio = pf['data'][0]
+        cash = float(portfolio.get('cash_balance') or 0)
+        print(f"[ORDER] Portfolio {portfolio_id} current cash: {cash}")
+
+        qty = int(quantity)
+        if order_type == 'limit':
+            if limit_price is None or float(limit_price) <= 0:
+                return { 'success': False, 'error': 'Valid limit_price required for limit orders', 'status_code': 400 }
+            exec_price = float(limit_price)
+        else:
+            # For demo we require limit_price as execution for market too, if not provided
+            exec_price = float(limit_price or 0)
+            if exec_price <= 0:
+                return { 'success': False, 'error': 'Execution price required (use limit price)', 'status_code': 400 }
+
+        cost = round(exec_price * qty, 2)
+        side_l = (side or '').lower()
+
+        # Resolve or create company by ticker
+        company_id = _ensure_company_for_ticker((ticker or '').upper())
+        if not company_id:
+            return { 'success': False, 'error': f'Unable to resolve company for {ticker}', 'status_code': 400 }
+
+        # Get existing open position (if any)
+        pos_result = positions.get_by_portfolio(portfolio_id)
+        print(f"[ORDER] Positions lookup result success={pos_result.get('success')} count={len(pos_result.get('data') or [])}")
+        current = None
+        if pos_result.get('success'):
+            for row in (pos_result.get('data') or []):
+                if company_id and (row.get('company_id') == company_id):
+                    current = row
+                    break
+        print(f"[ORDER] Existing position found? {bool(current)}")
+
+        # Update cash and position logic
+        if side_l == 'buy':
+            if cash < cost:
+                return { 'success': False, 'error': 'Insufficient cash', 'status_code': 400 }
+            cash -= cost
+            if current:
+                old_qty = float(current.get('quantity') or 0)
+                old_cost = float(current.get('avg_entry_price') or 0) * abs(old_qty)
+                new_qty = old_qty + qty
+                new_avg = round((old_cost + cost) / new_qty, 6) if new_qty != 0 else exec_price
+                up_res = positions.client.update('positions', { 'quantity': new_qty, 'avg_entry_price': new_avg }, { 'id': current['id'] })
+                print(f"[ORDER] Update position result: {up_res}")
+                if not up_res.get('success'):
+                    return { 'success': False, 'error': 'Failed to update position', 'status_code': 500 }
+            else:
+                payload_pos = {
+                    'portfolio_id': portfolio_id,
+                    'company_id': company_id,
+                    'quantity': qty,
+                    'avg_entry_price': exec_price,
+                    'realized_pnl': 0
+                }
+                ins_res = positions.client.insert('positions', payload_pos)
+                print(f"[ORDER] Insert position result: {ins_res}")
+                if not ins_res.get('success'):
+                    return { 'success': False, 'error': 'Failed to create position', 'status_code': 500 }
+        else:  # sell
+            if not current:
+                return { 'success': False, 'error': 'No position to sell', 'status_code': 400 }
+            old_qty = float(current.get('quantity') or 0)
+            if qty > old_qty:
+                return { 'success': False, 'error': 'Sell quantity exceeds position', 'status_code': 400 }
+            cash += cost
+            new_qty = old_qty - qty
+            realized_pnl = float(current.get('realized_pnl') or 0)
+            realized_pnl += round((exec_price - float(current.get('avg_entry_price') or 0)) * qty, 2)
+            if new_qty == 0:
+                del_res = positions.client.delete('positions', { 'id': current['id'] })
+                print(f"[ORDER] Delete position result: {del_res}")
+                if not del_res.get('success'):
+                    return { 'success': False, 'error': 'Failed to close position', 'status_code': 500 }
+            else:
+                up_res = positions.client.update('positions', { 'quantity': new_qty, 'realized_pnl': realized_pnl }, { 'id': current['id'] })
+                print(f"[ORDER] Update position (sell) result: {up_res}")
+                if not up_res.get('success'):
+                    return { 'success': False, 'error': 'Failed to update position', 'status_code': 500 }
+
+        # Persist new cash
+        pc_res = portfolios.update_cash(portfolio_id, cash)
+        print(f"[ORDER] Update cash result: {pc_res}")
+        if not pc_res.get('success'):
+            return { 'success': False, 'error': 'Failed to persist cash balance', 'status_code': 500 }
+
+        # Record order
+        from datetime import datetime, timezone
+        ts = datetime.now(timezone.utc).isoformat()
+        order_payload = {
+            'portfolio_id': portfolio_id,
+            # No ticker column in orders schema assumption; persist company reference for joins if present
+            'company_id': company_id,
+            'side': side_l,
+            'type': order_type,
+            'status': 'filled',
+            'quantity': qty,
+            'filled_quantity': qty,
+            'avg_fill_price': exec_price,
+            'limit_price': limit_price,
+            'submitted_at': ts,
+            'filled_at': ts
+        }
+        ord_result = orders.client.insert('orders', order_payload)
+        print(f"[ORDER] Insert order result: {ord_result}")
+        if not ord_result.get('success'):
+            print(f"[DB] Failed to insert order: {ord_result.get('error')}")
+            return { 'success': False, 'error': 'Failed to record order', 'status_code': 500 }
+
+        return { 'success': True }
+    except Exception as e:
+        import traceback
+        print(f"[ORDER] Internal execution error: {e}\n{traceback.format_exc()}")
+        return { 'success': False, 'error': 'Internal server error', 'status_code': 500 }
+
+def _ensure_company_for_ticker(ticker: str) -> Optional[str]:
+    """Find or create a company row for the given ticker.
+    Returns company_id or None on failure.
+    """
+    try:
+        if not ticker:
+            return None
+        client = get_client().client
+        # Try by ticker first
+        try:
+            r = client.table('companies').select('id, ticker, domain, web_url, name').eq('ticker', ticker).limit(1).execute()
+            if r.data:
+                return (r.data[0] or {}).get('id')
+        except Exception:
+            pass
+
+        # Best-effort enrichment using Finnhub and Clearbit domain logo
+        name = ticker
+        web_url = None
+        domain = None
+        try:
+            api_key = os.getenv('FINNHUB_API_KEY')
+            if api_key:
+                prof = requests.get('https://finnhub.io/api/v1/stock/profile2', params={'symbol': ticker, 'token': api_key}, timeout=6)
+                if prof.ok:
+                    js = prof.json() or {}
+                    name = js.get('name') or ticker
+                    web_url = js.get('weburl') or js.get('url') or None
+                    # Derive domain for Clearbit
+                    domain = _domain_from_url(web_url)
+        except Exception:
+            pass
+
+        payload = {
+            'name': name,
+            'web_url': web_url,
+            'domain': domain,
+            'ticker': ticker,
+        }
+        try:
+            ins = client.table('companies').insert(payload).execute()
+        except Exception:
+            # Fallback insert without ticker if schema mismatch
+            payload2 = {k: v for k, v in payload.items() if k != 'ticker'}
+            ins = client.table('companies').insert(payload2).execute()
+        # Fetch id
+        try:
+            r2 = client.table('companies').select('id').eq('ticker', ticker).limit(1).execute()
+            if r2.data:
+                return (r2.data[0] or {}).get('id')
+        except Exception:
+            pass
+        # As a last resort, try by domain
+        if domain:
+            try:
+                r3 = client.table('companies').select('id').eq('domain', domain).limit(1).execute()
+                if r3.data:
+                    return (r3.data[0] or {}).get('id')
+            except Exception:
+                pass
+        return None
+    except Exception:
+        return None
+
+def _domain_from_url(url: Optional[str]) -> Optional[str]:
+    try:
+        if not url:
+            return None
+        u = str(url).strip()
+        if not u:
+            return None
+        # Basic parse without external deps
+        if '://' in u:
+            u = u.split('://', 1)[1]
+        u = u.split('/', 1)[0]
+        return u.lower()
+    except Exception:
+        return None
 
 
 @router.get("/user-spending-earning/{user_id}")

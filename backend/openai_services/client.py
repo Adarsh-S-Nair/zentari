@@ -1,6 +1,7 @@
 import os
 from typing import Dict, Any, Optional
 import requests
+import json
 
 try:
     from .prompts import PromptTemplates
@@ -78,10 +79,18 @@ class OpenAIService:
             if r.status_code >= 400:
                 return {"success": False, "error": f"HTTP {r.status_code}: {r.text}"}
             data = r.json()
-            # Log response preview
+            # Log assistant content only, pretty-print JSON if possible
             try:
-                preview = str(data)
-                print(f"[OPENAI][RESPONSE] {preview[:800]}")
+                choices = data.get('choices') or []
+                first = (choices[0] or {}) if choices else {}
+                message = (first.get('message') or {})
+                content = (message.get('content') or '').strip()
+                if content:
+                    try:
+                        parsed = json.loads(content)
+                        print('[OPENAI][CONTENT]\n' + json.dumps(parsed, indent=2))
+                    except Exception:
+                        print(f"[OPENAI][CONTENT] {content}")
             except Exception:
                 pass
             return {"success": True, "data": data}
@@ -179,10 +188,18 @@ class OpenAIService:
                     has_response_format = True
                 else:
                     payload['response_format'] = rf
-            # Make the request
-            timeout = prompt_data.get('timeout', 30)
-            def _post(p):
-                return requests.post(url, headers=headers, json=p, timeout=timeout)
+            # Make the request (support env override and per-template minimums)
+            try:
+                env_timeout = os.getenv('OPENAI_TIMEOUT')
+                base_timeout = int(env_timeout) if env_timeout else int(prompt_data.get('timeout', 30))
+            except Exception:
+                base_timeout = 30
+            # Portfolio strategy can be slow; ensure at least 60s
+            if template_name == 'portfolio_strategy' and base_timeout < 60:
+                base_timeout = 60
+
+            def _post_with_timeout(p, to):
+                return requests.post(url, headers=headers, json=p, timeout=to)
 
             # Log request payload for debugging
             try:
@@ -190,17 +207,30 @@ class OpenAIService:
             except Exception:
                 pass
 
-            r = _post(payload)
+            try:
+                r = _post_with_timeout(payload, base_timeout)
+            except requests.exceptions.Timeout:
+                # Retry once with higher timeout
+                retry_timeout = min(max(base_timeout * 2, 60), 120)
+                print(f"[OPENAI] Request timeout at {base_timeout}s for '{template_name}', retrying with {retry_timeout}s")
+                r = _post_with_timeout(payload, retry_timeout)
             
             if r.status_code >= 400:
                 return {"success": False, "error": f"HTTP {r.status_code}: {r.text}"}
             
             data = r.json()
-            # Keep response simple; do not auto-tune token budgets or temperature
-            # Log response preview
+            # Log assistant content only, pretty-print JSON if possible
             try:
-                preview = str(data)
-                print(f"[OPENAI][RESPONSE] {preview[:800]}")
+                choices = data.get('choices') or []
+                first = (choices[0] or {}) if choices else {}
+                message = (first.get('message') or {})
+                content = (message.get('content') or '').strip()
+                if content:
+                    try:
+                        parsed = json.loads(content)
+                        print('[OPENAI][CONTENT]\n' + json.dumps(parsed, indent=2))
+                    except Exception:
+                        print(f"[OPENAI][CONTENT] {content}")
             except Exception:
                 pass
             print(f"[OPENAI] Template response received for '{template_name}'")
