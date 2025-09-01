@@ -199,16 +199,16 @@ export default function DashboardPanel() {
     const liabilityTotal = creditTotal + loanTotal
     const accountsCount = accounts?.length || 0
 
-    // Current month window
+    // Rolling 30-day window: last 30 days vs previous 30 days
     const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth()
-    const startThis = new Date(year, month, 1)
-    const endThis = new Date(year, month + 1, 1)
-    const startPrev = new Date(year, month - 1, 1)
-    const endPrev = new Date(year, month, 1)
+    const endThis = now
+    const startThis = new Date(now)
+    startThis.setDate(now.getDate() - 30)
+    const endPrev = startThis
+    const startPrev = new Date(startThis)
+    startPrev.setDate(startPrev.getDate() - 30)
 
-    // Category totals for THIS month only
+    // Category totals for last 30 days only
     const catTotals = new Map()
     let thisSp = 0
     let lastSp = 0
@@ -414,7 +414,7 @@ export default function DashboardPanel() {
                   <FaChartPie size={14} />
                   <span>Spending Overview</span>
                 </div>
-                <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>This Month</div>
+                <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Last 30 days</div>
               </div>
               <div className="px-5 pt-2 pb-5 space-y-3">
                 <div className="flex items-center justify-between">

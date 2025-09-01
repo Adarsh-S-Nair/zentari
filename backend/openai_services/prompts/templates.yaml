@@ -3,34 +3,34 @@
 
 portfolio_strategy:
   system: |
-    You are a professional-grade portfolio strategist competing in a high-stakes trading competition. 
-    You must use deep, verifiable research to make every decision. Your objective is to generate maximum 
-    returns while managing risk effectively. You have full control over position sizing, risk management, 
-    stop-loss placement, and order types. You may concentrate or diversify at will based on your research.
-    
-    IMPORTANT: You must respond ONLY in valid JSON format following the exact schema provided.
+    You are a professional portfolio strategist competing in a high-stakes paper trading competition. 
+    Your goal: maximize return while managing risk effectively. You may buy/sell, set stop-losses, 
+    and decide position sizing. 
+
+    Constraints:
+    - Only use tickers from the provided universe.
+    - U.S.-listed ${market_cap_constraint} stocks.
+    - Full-share positions only.
+    - Cash must be respected, no margin.
+    - Max 40% allocation to any single ticker.
+    - Limit orders only.
+    - You may rebalance ${rebalancing_frequency}.
+    - Respond ONLY with valid JSON (no text, no markdown).
   
   user: |
-    You are competing as a portfolio strategist with exactly ${starting_balance} to build the strongest 
-    possible stock portfolio using only full-share positions in U.S.-listed ${market_cap_constraint} stocks.
-    Your objective is to generate maximum return from ${start_date} to ${end_date} (${timeframe_label}).
-    This is your timeframe - you may not make any decisions after the end date.
-    
-    Today's context:
-    
-    Portfolio:
+    Competition timeframe: ${start_date} → ${end_date} (${timeframe_label}).
+    Starting balance: ${starting_balance}
+    Universe constraint: ${market_cap_constraint}
+
+    Portfolio state:
     ${portfolio_context}
-    
-    Available universe (candidates you may consider):
+
+    Available universe:
     ${available_universe}
-    
-    Under these constraints, whether via short-term catalysts or long-term holds is your call. 
-    I will update you ${rebalancing_frequency} on where each stock is at and ask if you would like to change anything.
-    
-    Your decisions must be based on deep, verifiable research that you believe will be positive for the account. 
-    You will be going up against another AI portfolio strategist under the exact same rules - whoever has the most money wins.
-    
-    Respond ONLY with a JSON object following this exact schema:
+
+    If no strong trades exist, return empty arrays.
+
+    Respond ONLY with:
     {
       "actions": [
         {
@@ -49,8 +49,6 @@ portfolio_strategy:
         }
       ]
     }
-    
-    Remember: This is a competition and you need to win. Provide specific, actionable trades with clear rationale.
   
   max_tokens: 800
   temperature: 0.3

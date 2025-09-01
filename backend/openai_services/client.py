@@ -163,7 +163,6 @@ class OpenAIService:
                 'model': prompt_data.get('model', os.getenv('OPENAI_MODEL', 'gpt-5-nano')),
                 'messages': messages,
             }
-            
             # Add response format if specified (json_object or json_schema)
             has_response_format = False
             if prompt_data.get('response_format'):

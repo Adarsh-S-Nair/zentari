@@ -12,6 +12,8 @@ import {
 } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { FinancialProvider } from './contexts/FinancialContext';
+import { PortfolioProvider } from './contexts/PortfolioContext';
+import { usePortfolio } from './contexts/PortfolioContext';
 import {
   CollapsibleSidebar,
   Topbar,
@@ -29,7 +31,7 @@ import {
   TransactionDetail,
 } from './components';
 import { PortfolioCreateForm } from './components/forms';
-import { Button, Modal } from './components/ui';
+import { Button, Modal, MatrixOverlay } from './components/ui';
 import ToggleTabs from './components/ui/ToggleTabs';
 import { TransactionFilterForm } from './components/forms';
 import { PlaidLinkModal } from './components/modals';
@@ -39,6 +41,7 @@ import { MdDashboard } from 'react-icons/md';
 import { IoFolderOpen } from 'react-icons/io5';
 import { FaReceipt } from 'react-icons/fa';
 import { FiArrowLeft, FiFilter } from 'react-icons/fi';
+import { IoMdSettings } from 'react-icons/io';
 import { FinancialContext } from './contexts/FinancialContext';
 import SimpleDrawer from './components/ui/SimpleDrawer';
 
@@ -605,8 +608,9 @@ function App() {
 
   return (
     <FinancialProvider setToast={setToast}>
-      <DrawerProvider>
-        <ModalProvider>
+      <PortfolioProvider>
+        <DrawerProvider>
+          <ModalProvider>
           <Router>
             <AppContent
               loading={loading}
@@ -664,8 +668,11 @@ function App() {
             />
             <Toast message={toast.message} type={toast.type} />
           </Router>
-        </ModalProvider>
-      </DrawerProvider>
+          {/* AI matrix overlay only while LLM is running */}
+          <OverlayWhileLLM />
+          </ModalProvider>
+        </DrawerProvider>
+      </PortfolioProvider>
     </FinancialProvider>
   );
 }
@@ -681,9 +688,35 @@ function AppContent({
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { fetchFilteredTransactions } = useContext(FinancialContext);
+  const { fetchFilteredTransactions, portfolio } = useContext(FinancialContext);
   const { openDrawer, pushDrawer, replaceTop, goBack } = useDrawer();
   const maxWidth = 700;
+
+  function DeletePortfolioButton({ onDeleted }) {
+    const { user } = useContext(FinancialContext);
+    const { portfolio, fetchPortfolio } = useContext(FinancialContext);
+    const handleDelete = async () => {
+      try {
+        if (!portfolio?.id) return
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+        const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+        const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
+        const url = `${protocol}://${cleanBaseUrl}/database/portfolios/${encodeURIComponent(portfolio.id)}`
+        const resp = await fetch(url, { method: 'DELETE' })
+        if (!resp.ok) {
+          const err = await resp.json().catch(()=>({}))
+          throw new Error(err?.detail || `HTTP ${resp.status}`)
+        }
+        if (user?.id) await fetchPortfolio(user.id)
+        onDeleted && onDeleted()
+      } catch (e) {
+        console.error('delete portfolio error', e)
+      }
+    }
+    return (
+      <Button label="Delete" danger={true} className="h-9" onClick={handleDelete} />
+    )
+  }
 
   // Simple drawer for GPT Trading actions (scoped to AppContent)
   const [simpleDrawerOpen, setSimpleDrawerOpen] = useState(false)
@@ -1078,21 +1111,73 @@ function AppContent({
                         }}
                       />
                     </div>
-                    <Button 
-                      label="Create Portfolio" 
-                      width="w-auto" 
-                      color="networth" 
-                      className="h-8 px-3" 
-                      onClick={() => {
-                        setSimpleDrawerStack([{
-                          title: 'Create Portfolio',
-                          element: (
-                            <PortfolioCreateForm onClose={() => setSimpleDrawerOpen(false)} />
-                          )
-                        }])
-                        setSimpleDrawerOpen(true)
-                      }}
-                    />
+                    {!portfolio ? (
+                      <Button 
+                        label="Create Portfolio" 
+                        width="w-auto" 
+                        color="networth" 
+                        className="h-8 px-3" 
+                        onClick={() => {
+                          setSimpleDrawerStack([{
+                            title: 'Create Portfolio',
+                            element: (
+                              <PortfolioCreateForm onClose={() => setSimpleDrawerOpen(false)} />
+                            )
+                          }])
+                          setSimpleDrawerOpen(true)
+                        }}
+                      />
+                    ) : (
+                      <Button 
+                        icon={<IoMdSettings size={18} />} 
+                        width="w-auto" 
+                        color="white" 
+                        className="h-8 px-3" 
+                        onClick={() => {
+                          setSimpleDrawerStack([{
+                            title: 'Portfolio Settings',
+                            element: (
+                              <div className="p-4 space-y-3">
+                                <div className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>
+                                  Manage your portfolio settings.
+                                </div>
+                                <Button 
+                                  label="Delete Portfolio" 
+                                  danger={true}
+                                  width="w-full" 
+                                  className="h-9"
+                                  onClick={() => {
+                                    setSimpleDrawerStack(prev => ([
+                                      ...prev,
+                                      {
+                                        title: 'Confirm Deletion',
+                                        element: (
+                                          <div className="p-4 space-y-4">
+                                            <div className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>
+                                              Are you sure you want to delete this portfolio? This action cannot be undone.
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                              <Button 
+                                                label="Cancel" 
+                                                color="white" 
+                                                className="h-9"
+                                                onClick={() => { setSimpleDrawerStack(prev => prev.slice(0, -1)) }}
+                                              />
+                                              <DeletePortfolioButton onDeleted={() => { setSimpleDrawerOpen(false); setSimpleDrawerStack([]) }} />
+                                            </div>
+                                          </div>
+                                        )
+                                      }
+                                    ]))
+                                  }}
+                                />
+                              </div>
+                            )
+                          }])
+                          setSimpleDrawerOpen(true)
+                        }}
+                      />
+                    )}
                   </div>
                 }
               />
@@ -1130,3 +1215,16 @@ function AppContent({
 }
 
 export default App;
+
+// Renders the matrix overlay only while LLM is running
+function OverlayWhileLLM() {
+  try {
+    const { llmStatus } = usePortfolio()
+    const running = String(llmStatus?.status || '').toLowerCase() === 'running'
+    if (!running) return null
+    return <MatrixOverlay />
+  } catch {
+    // Portfolio context may not be available on some routes
+    return null
+  }
+}

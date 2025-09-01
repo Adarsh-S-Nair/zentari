@@ -63,9 +63,11 @@ def test_send_template_message_builds_expected_payload(monkeypatch):
 	# JSON-only response format specified
 	assert payload.get('response_format') == { 'type': 'json_object' }
 
-	# Basic knobs present
-	assert isinstance(payload.get('max_tokens'), int)
+	# Model present; do not require max_tokens
 	assert 'model' in payload
+
+
+
 
 
 

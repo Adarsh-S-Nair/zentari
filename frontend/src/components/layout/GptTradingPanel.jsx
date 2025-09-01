@@ -1,9 +1,13 @@
 import React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Container, Pill, Input, Button, Card, ToggleTabs, Spinner, NumericInput } from '../ui'
-import { FaSearch, FaMinus, FaPlus, FaChartLine } from 'react-icons/fa'
-import { formatCurrency, formatPercentage } from '../../utils/formatters'
+import { Container, Pill, Input, Button, Card, ToggleTabs, Spinner, NumericInput, SegmentedBar, PositionCardsCarousel } from '../ui'
+import { getIndustryColor } from '../../utils/sectorColors'
+import SimpleDrawer from '../ui/SimpleDrawer'
+import OrderDetail from './OrderDetail'
+import { FaSearch, FaMinus, FaPlus, FaChartLine, FaChartPie, FaDollarSign, FaPiggyBank, FaCalendarAlt } from 'react-icons/fa'
+import { formatCurrency, formatPercentage, formatDate } from '../../utils/formatters'
 import { useFinancial } from '../../contexts/FinancialContext'
+import { usePortfolio } from '../../contexts/PortfolioContext'
 
 function SmoothLineChart({ series = [], height = 320, onHoverIndexChange }) {
   const containerRef = useRef(null)
@@ -116,13 +120,38 @@ function SmoothLineChart({ series = [], height = 320, onHoverIndexChange }) {
   )
 }
 
+// (Removed legacy AiBackgroundOverlay in favor of global MatrixOverlay when LLM is running)
+
+function PulsingCardHalo({ active, radius = 12 }) {
+  if (!active) return null
+  return (
+    <>
+      <style>{`@keyframes haloPulse { 0%{ opacity:0.35; box-shadow: 0 0 12px 0 var(--brand-income-hex);} 50%{ opacity:0.85; box-shadow: 0 0 28px 4px var(--brand-income-hex);} 100%{ opacity:0.35; box-shadow: 0 0 12px 0 var(--brand-income-hex);} }`}</style>
+      <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: radius, border: '2px solid var(--brand-income-hex)', animation: 'haloPulse 1500ms ease-in-out infinite' }} />
+    </>
+  )
+}
+
+function RacingBorder({ active, radius = 12, thickness = 3, segmentDeg = 22, speedMs = 1600 }) {
+  if (!active) return null
+  const start = 360 - segmentDeg
+  const mid = 360 - Math.floor(segmentDeg / 2)
+  const track = `conic-gradient(from 0deg, rgba(102,126,234,0) 0deg, rgba(102,126,234,0) ${start}deg, rgba(102,126,234,0) ${start}deg, rgba(102,126,234,1) ${mid}deg, rgba(102,126,234,0) 360deg)`
+  const mask = 'linear-gradient(#000, #000) content-box, linear-gradient(#000, #000)'
+  return (
+    <>
+      <style>{`@keyframes orbitRotate { to { transform: rotate(360deg); } }`}</style>
+      <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: radius, padding: thickness, background: track, WebkitMask: mask, WebkitMaskComposite: 'xor', maskComposite: 'exclude', animation: `orbitRotate ${speedMs}ms linear infinite` }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: radius, padding: thickness, background: track, filter: 'blur(6px)', opacity: 0.35, WebkitMask: mask, WebkitMaskComposite: 'xor', maskComposite: 'exclude', animation: `orbitRotate ${speedMs}ms linear infinite` }} />
+    </>
+  )
+}
+
 export default function GptTradingPanel({ isMobile, tradeMode }) {
   const { portfolio, portfolioLoading, fetchPortfolio, user } = useFinancial()
-  // Positions are needed to compute portfolio value (cash + market value)
-  const [positions, setPositions] = useState(null)
-  const [llmStatus, setLlmStatus] = useState({ status: 'unknown', step: 'Idle' })
-  const [orders, setOrders] = useState([])
-  const [ordersLoading, setOrdersLoading] = useState(false)
+  const { positions = [], positionsLoading: poLoading, orders = [], ordersLoading, llmStatus, refreshPositions, refreshOrders } = usePortfolio()
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerStack, setDrawerStack] = useState([])
   const positionsMarketValue = useMemo(() => {
     if (!Array.isArray(positions)) return 0
     return positions.reduce((sum, p) => sum + Math.abs(Number(p.quantity || 0)) * Number(p.avg_entry_price || 0), 0)
@@ -151,6 +180,10 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
     const n = map[range] || 30
     return allSeries.slice(-n)
   }, [range, allSeries])
+
+  const investedValue = useMemo(() => {
+    return positionsMarketValue
+  }, [positionsMarketValue])
 
   const initialHoldings = [
     { ticker: 'AAPL', qty: 12, price: 189.32, avgCost: 175.5 },
@@ -186,7 +219,6 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
   const mockPrice = useMemo(() => 150 + Math.round(Math.random() * 100), [])
   const estPrice = orderType === 'limit' && limitPrice ? Number(limitPrice) : (quotePrice ?? mockPrice)
   const estCost = Math.max(0, (Number(quantity) || 0) * (Number(estPrice) || 0))
-  // Lookup helper with rounding and error handling
   const lookupQuote = async () => {
     try {
       const symbol = (ticker || '').trim()
@@ -202,7 +234,6 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
         const p = Number(data.price)
         const rounded = Math.round(p * 100) / 100
         setQuotePrice(isFinite(rounded) ? rounded : null)
-        // Prefill limit with 2-decimals string
         setLimitPrice(isFinite(rounded) ? String(rounded.toFixed(2)) : '')
         setQuoteError('')
         setQuantity(q => (Number(q) || 0) > 0 ? q : 1)
@@ -214,7 +245,6 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
     finally { setQuoteLoading(false) }
   }
 
-  // Measure the full form block height so the spinner uses the same height
   useEffect(() => {
     if (!quoteLoading && formContentRef.current) {
       const h = formContentRef.current.offsetHeight
@@ -244,24 +274,12 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
       })
       const data = await resp.json().catch(()=>({}))
       if (!resp.ok || !data?.success) throw new Error(data?.detail || data?.error || 'Order failed')
-      // Refresh orders/positions and portfolio cash
       setQuoteError('')
-      // reload positions
-      const posResp = await fetch(`${protocol}://${cleanBaseUrl}/database/portfolios/${portfolio.id}/positions`)
-      const pos = await posResp.json().catch(()=>({}))
-      setPositions(pos?.positions || [])
-      // Refresh portfolio from server to reflect new cash after order
+      refreshPositions()
       if (user?.id && typeof fetchPortfolio === 'function') {
         fetchPortfolio(user.id)
       }
-      // Refresh orders list
-      try {
-        const ordResp = await fetch(`${protocol}://${cleanBaseUrl}/database/portfolios/${portfolio.id}/orders`)
-        const ord = await ordResp.json().catch(()=>({}))
-        setOrders(Array.isArray(ord?.orders) ? ord.orders : [])
-      } catch (e) {
-        // ignore
-      }
+      refreshOrders()
     } catch (e) {
       console.error('place order error', e)
       setQuoteError(String(e.message || e))
@@ -269,100 +287,12 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
   }
   const rangeOptions = ['1D','1W','1M','3M','YTD','1Y','ALL']
 
-  // Helpers
-  const fmtDateTime = (d) => {
-    try { return new Date(d).toLocaleString() } catch { return '-' }
-  }
-
-  // Load positions for current portfolio
-  const [poLoading, setPoLoading] = useState(false)
-
   const sideColor = (s) => {
     const v = String(s || '').toLowerCase()
     if (v === 'buy') return 'var(--brand-income-hex)'
     if (v === 'sell') return 'var(--brand-spending-hex)'
     return 'var(--color-text-secondary)'
   }
-
-  useEffect(() => {
-    const load = async () => {
-      if (!portfolio?.id) return
-      setPoLoading(true)
-      try {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
-        const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
-        const cleanBaseUrl = baseUrl.replace(/^https?:\/\//,'')
-        const posResp = await fetch(`${protocol}://${cleanBaseUrl}/database/portfolios/${portfolio.id}/positions`)
-        const pos = await posResp.json().catch(()=>({}))
-        setPositions(pos?.positions || [])
-        // Load orders alongside positions
-        setOrdersLoading(true)
-        try {
-          const ordResp = await fetch(`${protocol}://${cleanBaseUrl}/database/portfolios/${portfolio.id}/orders`)
-          const ord = await ordResp.json().catch(()=>({}))
-          setOrders(Array.isArray(ord?.orders) ? ord.orders : [])
-        } catch (e) {
-          setOrders([])
-        } finally {
-          setOrdersLoading(false)
-        }
-      } catch (e) {
-        console.error('Load positions/orders error', e)
-        setPositions([])
-      } finally {
-        setPoLoading(false)
-      }
-    }
-    load()
-  }, [portfolio?.id, llmStatus.status])
-
-  // Poll backend for LLM setup status and show spinner messages until complete
-  useEffect(() => {
-    let timer = null
-    let cancelled = false
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
-    const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
-    const cleanBaseUrl = baseUrl.replace(/^https?:\/\//,'')
-
-    const mapStep = (raw) => {
-      const s = String(raw || '').toLowerCase()
-      if (s.includes('preparing') || s.includes('universe')) return 'Building trade universe...'
-      if (s.includes('sending')) return 'Generating trade plan...'
-      if (s.includes('waiting')) return 'Waiting for AI decision...'
-      if (s.includes('parsing') || s.includes('interpreting')) return 'Interpreting model response...'
-      if (s.includes('placing')) return 'Placing simulated orders...'
-      if (s.includes('refreshing') || s.includes('finalizing')) return 'Finalizing portfolio...'
-      if (s.includes('complete')) return 'Finalizing portfolio...'
-      if (s.includes('error')) return 'Encountered an error'
-      return 'Setting up your portfolio...'
-    }
-
-    const poll = async () => {
-      if (!portfolio?.id) return
-      try {
-        const resp = await fetch(`${protocol}://${cleanBaseUrl}/database/portfolios/${portfolio.id}/llm-status`)
-        const data = await resp.json().catch(()=>({}))
-        const status = data?.status || 'unknown'
-        const stepRaw = data?.step || 'Idle'
-        const step = mapStep(stepRaw)
-        if (!cancelled) setLlmStatus({ status, step })
-        if (status === 'running') {
-          timer = setTimeout(poll, 1500)
-        }
-      } catch (e) {
-        if (!cancelled) setLlmStatus({ status: 'unknown', step: 'Idle' })
-      }
-    }
-
-    // Start polling when a portfolio exists
-    if (portfolio?.id) {
-      poll()
-    } else {
-      setLlmStatus({ status: 'unknown', step: 'Idle' })
-    }
-
-    return () => { cancelled = true; if (timer) clearTimeout(timer) }
-  }, [portfolio?.id])
 
   if (portfolioLoading) {
     return (
@@ -385,16 +315,7 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
     )
   }
 
-  // Gate the whole panel until positions and orders have loaded
-  if (llmStatus.status === 'running') {
-    return (
-      <Container size="xl" className="py-6">
-        <div className="w-full flex items-center justify-center" style={{ minHeight: 420 }}>
-          <Spinner label={llmStatus.step || 'Setting up your portfolio...'} />
-        </div>
-      </Container>
-    )
-  }
+  const isLLMRunning = String(llmStatus?.status || '').toLowerCase() === 'running'
 
   if (poLoading) {
     return (
@@ -408,213 +329,272 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
 
   return (
     <Container size="xl" className="py-6">
+      {/* Remove legacy background animation; use global MatrixOverlay when LLM is running */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          {/* Toggle moved to toolbar */}
-
-          <div>
-            <div className="text-[12px] font-medium" style={{ color: 'var(--color-text-muted)' }}>Portfolio Value</div>
-            <div className="flex items-center gap-3 mt-1">
-              <div className="text-[32px] font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(portfolioValue)}</div>
-              <Pill value={Math.abs(pctChange)} isPositive={pctChange >= 0} isZero={Math.abs(pctChange) < 0.01} />
-            </div>
-            <div className="mt-1 text-[12px]" style={{ color: 'var(--color-text-muted)' }}>
-              Cash balance: <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(portfolio?.cash_balance || 0)}</span>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Card className="p-0 relative overflow-hidden" elevation="md">
+              <div className="p-4 pb-3 flex items-center justify-between">
+                <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+                  <FaDollarSign size={14} />
+                  <span>Portfolio Value</span>
+                </div>
+                <Pill value={Math.abs(pctChange)} isPositive={pctChange >= 0} isZero={Math.abs(pctChange) < 0.01} />
+              </div>
+              <div className="px-4 pb-4">
+                <div className="text-[22px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(portfolioValue)}</div>
+              </div>
+            </Card>
+            <Card className="p-0 relative overflow-hidden" elevation="md">
+              <div className="p-4 pb-2 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+                <FaChartLine size={14} />
+                <span className="text-[12px] font-medium">Invested Value</span>
+              </div>
+              <div className="px-4 pb-4">
+                <div className="text-[22px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(investedValue)}</div>
+                <div className="text-[11px] mt-1" style={{ color: 'var(--color-text-muted)' }}>Holdings market value</div>
+              </div>
+            </Card>
+            <Card className="p-0 relative overflow-hidden" elevation="md">
+              <div className="p-4 pb-2 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+                <FaPiggyBank size={14} />
+                <span className="text-[12px] font-medium">Cash Balance</span>
+              </div>
+              <div className="px-4 pb-4">
+                <div className="text-[22px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(portfolio?.cash_balance || 0)}</div>
+                <div className="text-[11px] mt-1" style={{ color: 'var(--color-text-muted)' }}>Available to trade</div>
+              </div>
+            </Card>
           </div>
 
-          <div className="w-full">
-            <SmoothLineChart series={rangedSeries} height={320} onHoverIndexChange={setHoverIdx} />
-            <div className="mt-2 flex items-center gap-2 text-[11px]">
+          <Card className="p-0 relative overflow-hidden" elevation="md">
+            <div className="px-4 pt-4">
+              <SmoothLineChart series={rangedSeries} height={320} onHoverIndexChange={setHoverIdx} />
+            </div>
+            <div className="px-4 pb-4 mt-2 flex items-center gap-2 text-[11px]">
               {rangeOptions.map(opt => (
                 <button key={opt} onClick={() => setRange(opt)} className={`px-2.5 py-1 rounded-md transition-all ${range===opt ? 'text-white' : ''}`} style={{ background: range===opt ? 'var(--color-gradient-primary)' : 'transparent', color: range===opt ? 'var(--color-text-white)' : 'var(--color-text-secondary)', cursor: 'pointer' }} onMouseEnter={(e)=>{ if(range!==opt){ e.currentTarget.style.transform='scale(1.06)'; e.currentTarget.style.background='var(--color-bg-hover)'} }} onMouseLeave={(e)=>{ if(range!==opt){ e.currentTarget.style.transform='scale(1.0)'; e.currentTarget.style.background='transparent'} }}>{opt}</button>
               ))}
             </div>
-          </div>
+          </Card>
 
-          {/* Orders under line chart */}
-          <Card className="p-0" elevation="md">
+          <Card className="p-0 relative overflow-hidden" elevation="md">
             <div className="px-5 pt-5 pb-2 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
               <FaChartLine size={12} />
-              <span className="text-[12px] font-medium">Orders</span>
+              <span className="text-[12px] font-medium">Positions</span>
             </div>
-            <div className="px-3 pt-2 pb-3 flex flex-col">
-              {ordersLoading ? (
-                <div className="w-full flex items-center justify-center py-6"><Spinner label="Loading orders..." /></div>
-              ) : (orders && orders.length > 0) ? (
-                orders.map((o, i) => {
-                  const isBuy = String(o.side||'').toLowerCase()==='buy'
-                  const sideLbl = isBuy ? 'Buy' : 'Sell'
-                  const qty = Number(o.filled_quantity ?? o.quantity ?? 0)
-                  const px = Number(o.avg_fill_price ?? o.limit_price ?? 0)
-                  const amt = Math.abs(qty * px)
-                  return (
-                    <div key={o.id || i} className="py-3 px-4" style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)' }}>
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          {o.logo_url ? (
-                            <img src={o.logo_url} alt={o.ticker} className="w-8 h-8 rounded-full object-cover flex-shrink-0" style={{ border: '1px solid var(--color-border-primary)' }} />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full flex-shrink-0" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)' }} />
-                          )}
-                          <div className="min-w-0">
-                            <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
-                              {(o.company_name || o.ticker || '').toString()}
-                            </div>
-                            <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-                              {(o.ticker || '').toUpperCase()} • {sideLbl} {qty} @ {formatCurrency(px)}
-                            </div>
-                            {o.rationale && (
-                              <div className="text-[12px] mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                                {o.rationale}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right self-center">
-                          <div className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(amt)}</div>
-                          <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{fmtDateTime(o.filled_at || o.submitted_at)}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })
+            <div className="relative z-10 px-3 pt-2 pb-3">
+              {positions && positions.length > 0 ? (
+                <PositionCardsCarousel positions={positions} />
               ) : (
-                <div className="flex-1 flex items-center justify-center py-8"><div className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>No orders yet</div></div>
+                <div className="flex-1 flex items-center justify-center py-8"><div className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>No positions found</div></div>
               )}
             </div>
           </Card>
         </div>
 
         <div className="space-y-4">
-          {/* <Card className="p-0" elevation="md">
-            <div className="px-5 pt-5 pb-2"><div className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--color-text-muted)' }}><FaSearch size={12} /><span>Ticker Lookup & Trade</span></div></div>
-            <div className="px-5 pb-4 space-y-4"> */}
-              {/* Symbol + Lookup */}
-              <div className="grid grid-cols-[1fr_40px] gap-2 items-end">
-                <div className="w-full">
-                  <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Symbol</div>
-                  <Input 
-                    value={ticker}
-                    onChange={(e) => { setTicker(e.target.value.toUpperCase()); setQuoteError('') }} 
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupQuote() } }}
-                    placeholder="Enter symbol (e.g., AAPL)" 
-                    className="w-full h-10" 
-                  />
-                </div>
-                <div className="w-full flex flex-col">
-                  <div className="text-[12px] mb-1 invisible select-none">Search</div>
-                  <button
-                    aria-label="Lookup"
-                    onClick={lookupQuote}
-                    className="h-10 w-10 rounded-md border flex items-center justify-center"
-                    style={{ borderColor: 'var(--color-input-border)', background: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)', cursor: 'pointer', transition: 'transform 120ms ease, background 120ms ease' }}
-                    onMouseEnter={(e)=>{ e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.background='var(--color-bg-hover)'; }}
-                    onMouseLeave={(e)=>{ e.currentTarget.style.transform='scale(1.0)'; e.currentTarget.style.background='var(--color-bg-secondary)'; }}
-                  >
-                    <FaSearch size={14} />
-                  </button>
-                </div>
-              </div>
-              {!quoteLoading && quoteError && (
-                <div className="text-[12px]" style={{ color: 'var(--color-danger)' }}>{quoteError}</div>
-              )}
-
-              {quoteLoading ? (
-                <div className="w-full flex items-center justify-center" style={{ height: formBlockHeight }}>
-                  <Spinner label="Loading quote..." />
-                </div>
-              ) : (
-                <div style={{ overflow: 'hidden', maxHeight: hasQuote ? formBlockHeight : 0, opacity: hasQuote ? 1 : 0, transition: 'max-height 200ms ease, opacity 160ms ease' }}>
-                  <div ref={formContentRef}>
-                    {/* Compact quote banner */}
-                    <div className="flex items-center justify-between mb-2 px-3 py-2 rounded-md" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)' }}>
-                      <div className="text-[12px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                        {ticker.trim().toUpperCase()} Quote
-                      </div>
-                      <div className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                        {formatCurrency(quotePrice || 0)}
-                      </div>
-                    </div>
-                    {/* Side and Type */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Side</div>
-                        <ToggleTabs options={[{ label: 'BUY', value: 'BUY' }, { label: 'SELL', value: 'SELL' }]} value={side} onChange={setSide} />
-                      </div>
-                      <div>
-                        <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Order Type</div>
-                        <select value={orderType} onChange={(e)=> setOrderType(e.target.value)} className="w-full px-3 py-2 text-[13px] rounded-md border bg-transparent" style={{ borderColor: 'var(--color-input-border)', color: 'var(--color-text-primary)' }}>
-                          <option value="market">Market</option>
-                          <option value="limit">Limit</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Price and Quantity */}
-                    {orderType === 'limit' ? (
-                      <div className="grid grid-cols-2 gap-3 w-full">
-                        <div>
-                          <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Limit Price</div>
-                          <Input 
-                            value={limitPrice}
-                            onChange={(e)=> setLimitPrice(e.target.value)} 
-                            placeholder={(() => { const v = quotePrice ?? ''; return v ? String((Math.round(v*100)/100).toFixed(2)) : '' })()} 
-                            className="text-[13px] h-10" 
-                          />
-                        </div>
-                        <div>
-                          <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Quantity</div>
-                          <NumericInput value={quantity} onChange={setQuantity} min={1} placeholder="Enter quantity" />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-3 w-full">
-                        <div>
-                          <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>Quantity</div>
-                          <NumericInput value={quantity} onChange={setQuantity} min={1} placeholder="Enter quantity" />
-                        </div>
-                      </div>
-                    )}
-
-                    {(Number(quantity) || 0) > 0 && (
-                      <div className="flex items-center justify-between text-[12px] mt-1"><div style={{ color: 'var(--color-text-muted)' }}>Est. {side==='BUY' ? 'Cost' : 'Proceeds'}</div><div className="font-semibold" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(estCost)}</div></div>
-                    )}
-
-                    <div className="flex items-center gap-2 pt-2">
-                      <Button label={`Place Order${(Number(quantity)||0)>0?` • ${formatCurrency(estCost)}`:''}`} width="w-full" color="networth" className="px-4 py-2 text-[13px]" disabled={quoteLoading || isPlaceDisabled} onClick={handlePlaceOrder} />
-                      <Button label="Clear" width="w-auto" color="white" className="px-3 py-2 text-[13px]" onClick={()=>{ setTicker(''); setQuantity(0); setLimitPrice(''); setOrderType('market'); setQuotePrice(null); setQuoteError('') }} />
-                    </div>
-                  </div>
-                </div>
-              )}
-            {/* </div>
-          </Card> */}
-
           <Card className="p-0" elevation="md">
-            <div className="px-5 pt-5 pb-2 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
-              <FaChartLine size={12} />
-              <span className="text-[12px] font-medium">Positions</span>
+            <div className="px-5 pt-5 pb-0 flex items-center justify-between">
+              <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+                <FaChartPie size={14} />
+                <span>Investment Overview</span>
+              </div>
+              <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Holdings</div>
             </div>
-            <div className="px-3 pt-2 pb-3 flex flex-col">
-              {(positions && positions.length > 0) ? (
-                positions.map((p, i) => {
-                  const isLong = (p.quantity || 0) >= 0
-                  const qty = Math.abs(p.quantity || 0)
-                  const mv = (p.avg_entry_price || 0) * qty
-                  const invested = (p.avg_entry_price || 0) * qty
-                  const delta = mv - invested
-                  const pct = invested > 0 ? (delta / invested) * 100 : 0
+            <div className="px-5 pt-2 pb-5 space-y-3">
+              {(() => {
+                const total = positionsMarketValue
+                const sectorMap = new Map()
+                for (const p of (positions || [])) {
+                  const sector = (p.sector || 'Other')
+                  const value = Math.abs((p.quantity || 0) * (p.avg_entry_price || 0))
+                  sectorMap.set(sector, (sectorMap.get(sector) || 0) + value)
+                }
+                const items = Array.from(sectorMap.entries())
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 5)
+                  .map(([label, value]) => ({ label, value, color: getIndustryColor(label) }))
+                const shownSum = items.reduce((s, c) => s + (c.value || 0), 0)
+                const others = Math.max(0, total - shownSum)
+                const segs = others > 0 ? [...items, { label: 'Other', value: others, color: '#94a3b8' }] : items
+                return (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="text-[28px] leading-[28px] font-medium tracking-[-0.01em]" style={{ color: 'var(--color-text-secondary)', opacity: 0.95 }}>{formatCurrency(total)}</div>
+                      </div>
+                    </div>
+                    <SegmentedBar items={segs} total={total} height={16} gap={3} radius={6} />
+                    <div className="space-y-1">
+                      {segs.slice(0, 3).map((c, idx) => (
+                        <div key={c.label + idx} className="grid grid-cols-2 items-center rounded-md px-2 py-1 transition" style={{ outline: '1px solid transparent' }}>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} />
+                            <span className="text-[12px] truncate" style={{ color: 'var(--color-text-secondary)' }}>{c.label}</span>
+                          </div>
+                          <div className="text-right text-[12px] font-medium" style={{ color: 'var(--color-text-primary)', opacity: 0.92, fontVariantNumeric: 'tabular-nums' }}>
+                            {formatCurrency(c.value)}
+                            <span className="ml-2" style={{ color: 'var(--color-text-muted)' }}>({((c.value / (total || 1)) * 100 || 0).toFixed(1)}%)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          </Card>
+
+          {/* Next Rebalance Card - countdown and progress */}
+          <Card className="p-0 overflow-hidden relative" elevation="md" style={{ background: 'var(--color-gradient-primary)' }}>
+            <style>{`@keyframes barStripes { 0%{ background-position: 0 0;} 100%{ background-position: 14px 0;} }`}</style>
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(1200px 200px at -10% -40%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 60%)', opacity: 0.2 }} />
+            <div className="px-5 pt-5 pb-3 flex items-center justify-between relative z-10">
+              <div className="flex items-center gap-2">
+                <FaCalendarAlt size={14} color="white" />
+                <div className="text-[12px] font-medium" style={{ color: 'var(--color-text-white)', opacity: 0.95 }}>Next Rebalance</div>
+              </div>
+              {portfolio?.rebalance_cadence && (
+                <span className="text-[10px] px-2 py-1 rounded-sm" style={{ color: 'var(--color-text-white)', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
+                  {String(portfolio.rebalance_cadence).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div className="px-5 pb-5 relative z-10">
+              {(() => {
+                const dueIso = portfolio?.next_rebalance_due
+                if (!dueIso) {
                   return (
-                    <div
-                      key={p.id || i}
-                      className="py-3 px-4 transition-colors duration-150"
-                      style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)', cursor: 'default', outline: '1px solid transparent', borderRadius: 8 }}
+                    <div className="flex items-center justify-between">
+                      <div className="text-[20px] font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text-white)' }}>Not scheduled</div>
+                      <span className="text-[11px] px-2 py-1 rounded-sm" style={{ color: 'var(--color-text-white)', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>Set in settings</span>
+                    </div>
+                  )
+                }
+                try {
+                  const now = new Date()
+                  const due = new Date(dueIso)
+                  const cadence = String(portfolio?.rebalance_cadence || 'weekly').toLowerCase()
+                  const windowMs = cadence === 'daily' ? 24*60*60*1000 : cadence === 'weekly' ? 7*24*60*60*1000 : cadence === 'monthly' ? 30*24*60*60*1000 : 90*24*60*60*1000
+                  const start = new Date(due.getTime() - windowMs)
+                  const total = windowMs
+                  const elapsed = Math.max(0, Math.min(total, now.getTime() - start.getTime()))
+                  const remaining = Math.max(0, total - elapsed)
+                  const pct = Math.max(0, Math.min(100, Math.round((elapsed / total) * 100)))
+                  const hLeft = Math.floor(remaining / (1000*60*60))
+                  const dLeft = Math.floor(hLeft / 24)
+                  const hRem = hLeft % 24
+                  const mLeft = Math.floor((remaining % (1000*60*60)) / (1000*60))
+                  const leftLabel = dLeft > 0 ? `${dLeft}d ${hRem}h` : (hLeft > 0 ? `${hLeft}h ${mLeft}m` : `${mLeft}m`)
+                  const dueLabel = due.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+
+                  return (
+                    <>
+                      <div className="flex items-center justify-start">
+                        <div className="text-[18px] font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text-white)' }}>{dueLabel}</div>
+                      </div>
+                      <div className="mt-3">
+                        <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.25)' }}>
+                          <div className="h-full" style={{ width: `${pct}%`, background: 'rgba(255,255,255,0.95)', boxShadow: '0 0 10px rgba(255,255,255,0.55)', backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.9) 25%, rgba(255,255,255,0.6) 25%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0.9) 75%, rgba(255,255,255,0.6) 75%, rgba(255,255,255,0.6) 100%)', backgroundSize: '14px 14px', animation: 'barStripes 1000ms linear infinite' }} />
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="text-[11px]" style={{ color: 'var(--color-text-white)', opacity: 0.85 }}>Elapsed: {pct}%</div>
+                          <div className="text-[11px]" style={{ color: 'var(--color-text-white)', opacity: 0.85 }}>Remaining: {leftLabel}</div>
+                        </div>
+                      </div>
+                    </>
+                  )
+                } catch {
+                  return (
+                    <div className="text-[20px] font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text-white)' }}>{formatDate(portfolio?.next_rebalance_due)}</div>
+                  )
+                }
+              })()}
+            </div>
+          </Card>
+
+          <Card className="p-0 relative overflow-hidden" elevation="md">
+            <div className="relative z-10 px-5 pt-5 pb-2 flex items-center justify-between" style={{ color: 'var(--color-text-muted)' }}>
+              <div className="flex items-center gap-2"><FaChartLine size={12} /><span className="text-[12px] font-medium">Recent Activity</span></div>
+              <button
+                type="button"
+                className="text-[11px] font-medium px-2 py-1 rounded-sm cursor-pointer"
+                style={{ color: 'var(--color-text-secondary)', background: 'transparent' }}
+                onClick={() => { setDrawerStack([{ title: 'All Recent Orders', element: (
+                  <div className="p-3">
+                    {ordersLoading ? (<div className="w-full flex items-center justify-center py-6"><Spinner label="Loading orders..." /></div>) : (
+                      <div className="flex flex-col">
+                        {orders.map((o, i) => {
+                          const isBuy = String(o.side||'').toLowerCase()==='buy'
+                          const qty = Number(o.filled_quantity ?? o.quantity ?? 0)
+                          const px = Number(o.avg_fill_price ?? o.limit_price ?? 0)
+                          const amt = Math.abs(qty * px)
+                          return (
+                            <div key={o.id || i} className="py-3 px-2 cursor-pointer transition-colors duration-150" style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)', outline: '1px solid transparent', borderRadius: 8 }}
+                              onClick={() => {
+                                setDrawerStack(prev => [...prev, { title: 'Order Detail', element: (<OrderDetail order={o} inBottomSheet />) }])
+                              }}
+                              onMouseEnter={(e) => {
+                                const color = isBuy ? 'var(--brand-income-hex)' : 'var(--brand-spending-hex)'
+                                e.currentTarget.style.background = 'var(--color-bg-secondary)'
+                                e.currentTarget.style.outline = '1px solid rgba(148,163,184,0.25)'
+                                e.currentTarget.style.boxShadow = `inset 3px 0 0 ${color}`
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent'
+                                e.currentTarget.style.outline = '1px solid transparent'
+                                e.currentTarget.style.boxShadow = 'none'
+                              }}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  {o.logo_url ? (<img src={o.logo_url} alt={o.ticker} className="w-7 h-7 rounded-full object-cover flex-shrink-0" style={{ border: '1px solid var(--color-border-primary)' }} />) : (<div className="w-7 h-7 rounded-full flex-shrink-0" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)' }} />)}
+                                  <div className="min-w-0">
+                                    <div className="text-[12px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{o.company_name || (o.ticker || '').toUpperCase()}</div>
+                                    <div className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--color-text-muted)' }}>
+                                      <span style={{ color: 'var(--color-text-muted)' }}>{(o.ticker || '').toUpperCase()}</span>
+                                      <span className="mx-1" style={{ color: 'var(--color-text-light)' }}>•</span>
+                                      {formatDate(o.filled_at || o.submitted_at)}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right self-center">
+                                  <div className="text-[12px] font-semibold" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(amt)}</div>
+                                  <div className="text-[10px]" style={{ color: isBuy ? 'var(--color-success)' : 'var(--color-danger)', fontVariantNumeric: 'tabular-nums' }}>{isBuy ? '+' : '-'}{qty} shares</div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) }]); setDrawerOpen(true) }}
+                onMouseEnter={(e)=>{ e.currentTarget.style.textDecoration='underline'; e.currentTarget.style.color='var(--color-text-primary)'; }}
+                onMouseLeave={(e)=>{ e.currentTarget.style.textDecoration='none'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+              >View all</button>
+            </div>
+            <div className="relative z-10 px-3 pt-2 pb-3 flex flex-col">
+              {ordersLoading ? (
+                <div className="w-full flex items-center justify-center py-6"><Spinner label="Loading orders..." /></div>
+              ) : (orders && orders.length > 0) ? (
+                (orders.slice(0, 5)).map((o, i) => {
+                  const isBuy = String(o.side||'').toLowerCase()==='buy'
+                  const qty = Number(o.filled_quantity ?? o.quantity ?? 0)
+                  const px = Number(o.avg_fill_price ?? o.limit_price ?? 0)
+                  const amt = Math.abs(qty * px)
+                  return (
+                    <div key={o.id || i} className="py-3 px-4 cursor-pointer transition-colors duration-150" style={{ borderTop: i === 0 ? 'none' : '1px solid var(--color-border-primary)', outline: '1px solid transparent', borderRadius: 8 }}
+                      onClick={() => {
+                        setDrawerStack([{ title: 'Order Detail', element: (<OrderDetail order={o} inBottomSheet />) }])
+                        setDrawerOpen(true)
+                      }}
                       onMouseEnter={(e) => {
-                        const color = p.logo_url ? '#64748b' : '#64748b'
+                        const color = isBuy ? 'var(--brand-income-hex)' : 'var(--brand-spending-hex)'
                         e.currentTarget.style.background = 'var(--color-bg-secondary)'
-                        e.currentTarget.style.outline = `1px solid rgba(148,163,184,0.25)`
-                        e.currentTarget.style.boxShadow = `inset 3px 0 0 rgba(148,163,184,0.8)`
+                        e.currentTarget.style.outline = '1px solid rgba(148,163,184,0.25)'
+                        e.currentTarget.style.boxShadow = `inset 3px 0 0 ${color}`
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent'
@@ -623,42 +603,46 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
                       }}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        {/* Left: logo + names */}
                         <div className="flex items-center gap-3 min-w-0">
-                          {/* Company logo if present, otherwise placeholder */}
-                          {p.logo_url ? (
-                            <img src={p.logo_url} alt={p.ticker} className="w-8 h-8 rounded-full object-cover flex-shrink-0" style={{ border: '1px solid var(--color-border-primary)' }} />
+                          {o.logo_url ? (
+                            <img src={o.logo_url} alt={o.ticker} className="w-8 h-8 rounded-full object-cover flex-shrink-0" style={{ border: '1px solid var(--color-border-primary)' }} />
                           ) : (
                             <div className="w-8 h-8 rounded-full flex-shrink-0" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)' }} />
                           )}
                           <div className="min-w-0">
-                            <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{p.company_name || p.ticker}</div>
-                            <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{(p.ticker || '').toUpperCase()}</div>
+                            <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{(o.ticker || '').toUpperCase()}</div>
+                            <div className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{formatDate(o.filled_at || o.submitted_at)}</div>
                           </div>
                         </div>
-                        {/* Middle spacer (removed dotted line) */}
-                        <div className="hidden sm:block flex-1 mx-3" />
-                        {/* Right: value and badge */}
-                        <div className="text-right">
-                          <div className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(mv)}</div>
-                          <div className="text-[10px] flex items-center gap-1 justify-end" style={{ color: delta >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontVariantNumeric: 'tabular-nums' }}>
-                            <span style={{ fontSize: 10, lineHeight: '10px' }}>{delta >= 0 ? '▲' : '▼'}</span>
-                            {formatPercentage(pct)}
-                          </div>
+                        <div className="text-right self-center">
+                          <div className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(amt)}</div>
+                          <div className="text-[11px]" style={{ color: isBuy ? 'var(--color-success)' : 'var(--color-danger)', fontVariantNumeric: 'tabular-nums' }}>{isBuy ? '+' : '-'}{qty} shares</div>
                         </div>
                       </div>
                     </div>
                   )
                 })
               ) : (
-                <div className="flex-1 flex items-center justify-center py-8"><div className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>No positions found</div></div>
+                <div className="flex-1 flex items-center justify-center py-8">
+                  {isLLMRunning ? (
+                    <div className="text-[12px] px-3 py-2 rounded-md" style={{ color: 'var(--color-text-secondary)', background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)' }}>
+                      Analyzing opportunities with GPT-5…
+                    </div>
+                  ) : (
+                    <div className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>No orders yet</div>
+                  )}
+                </div>
               )}
             </div>
           </Card>
-
-          
         </div>
       </div>
+      <SimpleDrawer
+        isOpen={drawerOpen}
+        stack={drawerStack}
+        onClose={() => { setDrawerOpen(false); setDrawerStack([]) }}
+        onBack={() => setDrawerStack(prev => prev.slice(0, -1))}
+      />
     </Container>
   )
 }

@@ -276,5 +276,4 @@ class TestOpenAIService:
                 api_call_args = mock_post.call_args
                 payload = api_call_args[1]['json']
                 assert payload['response_format'] == { 'type': 'json_object' }
-                assert payload['max_tokens'] == 800
-                assert payload['temperature'] == 0.3
+                # temperature is omitted

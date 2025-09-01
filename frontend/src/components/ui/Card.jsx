@@ -31,8 +31,8 @@ const Card = ({
   const { style: userStyle, ...restProps } = props || {}
 
   const baseClasses = `
-    rounded-xl border
-    ${hoverable ? 'cursor-pointer transition-all duration-200 hover:shadow-lg' : ''}
+    rounded-lg border
+    ${hoverable ? 'cursor-pointer transition-all duration-200 hover:shadow' : ''}
     ${onClick ? 'cursor-pointer' : ''}
   `;
 
@@ -53,8 +53,8 @@ const Card = ({
   const shadow = elevation === 'none'
     ? 'none'
     : elevation === 'md'
-      ? '0 4px 12px rgba(0,0,0,0.10)'
-      : '0 1px 3px 0 var(--color-shadow-light)'
+      ? '0 2px 8px rgba(0,0,0,0.06)'
+      : '0 1px 2px rgba(0,0,0,0.05)'
 
   return (
     <div 

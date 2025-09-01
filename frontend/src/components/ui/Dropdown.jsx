@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { FiChevronDown } from 'react-icons/fi'
 
-function Dropdown({ label, name, value, onChange, options }) {
+function Dropdown({ label, name, value, onChange, options, placeholder, disabled = false, className = '' }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
   const dropdownRef = useRef(null)
@@ -18,7 +18,8 @@ function Dropdown({ label, name, value, onChange, options }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const selectedLabel = options.find(opt => opt.value === value)?.label || ''
+  const selectedOption = options.find(opt => opt.value === value)
+  const selectedLabel = selectedOption?.label || placeholder || 'Select an option'
 
   const handleSelect = (val) => {
     const fakeEvent = {
@@ -32,98 +33,105 @@ function Dropdown({ label, name, value, onChange, options }) {
     setIsFocused(false)
   }
 
-  const getDropdownStyles = () => {
-    return {
-      width: '100%',
-      height: '24px',
-      borderRadius: '4px',
-      backgroundColor: '#374151',
-      color: '#e5e7eb',
-      fontSize: '10px',
-      boxSizing: 'border-box',
-      fontFamily: '"Inter", system-ui, sans-serif',
-      padding: '0 8px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      boxShadow: isFocused 
-        ? '0 0 0 2px rgba(59, 130, 246, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06)'
-        : '0 1px 2px 0 rgba(0, 0, 0, 0.1), 0 1px 1px 0 rgba(0, 0, 0, 0.06)',
-      border: `1px solid ${isFocused ? '#3b82f6' : '#4b5563'}`,
-      transition: 'all 0.15s ease-in-out'
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setIsOpen(!isOpen)
+      setIsFocused(true)
+    } else if (e.key === 'Escape') {
+      setIsOpen(false)
+      setIsFocused(false)
     }
   }
 
   return (
-    <div style={{ width: '100%' }} ref={dropdownRef}>
-      <label className="text-[9px] font-medium mb-[2px]" style={{ color: '#d1d5db' }}>
-        {label}
-      </label>
-      <div
-        onClick={() => {
-          setIsOpen(!isOpen)
-          setIsFocused(true)
-        }}
-        className="relative cursor-pointer select-none"
-        style={getDropdownStyles()}
-      >
-        <span>{selectedLabel}</span>
-        <FiChevronDown
-          size={12}
-          className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-        />
+    <div className={`w-full ${className}`} ref={dropdownRef}>
+      {label && (
+        <div className="text-[12px] mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+          {label}
+        </div>
+      )}
+      
+      <div className="relative">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            if (!disabled) {
+              setIsOpen(!isOpen)
+              setIsFocused(true)
+            }
+          }}
+          onKeyDown={handleKeyDown}
+          className={`
+            w-full px-3 py-2 rounded-md border text-left text-sm transition-all duration-150
+            flex items-center justify-between gap-2
+            ${disabled ? 'cursor-not-allowed opacity-60' : ''}
+            ${isFocused ? 'ring-2 ring-blue-300' : ''}
+          `}
+          style={{
+            borderColor: isFocused ? 'var(--color-input-focus)' : 'var(--color-input-border)',
+            backgroundColor: 'var(--color-input-bg)',
+            color: selectedOption ? 'var(--color-text-primary)' : 'var(--color-text-muted)'
+          }}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          aria-labelledby={label ? `${name}-label` : undefined}
+        >
+          <span className="truncate">{selectedLabel}</span>
+          <FiChevronDown
+            size={16}
+            className={`transition-transform duration-200 flex-shrink-0 ${
+              isOpen ? 'rotate-180' : ''
+            }`}
+            style={{ color: 'var(--color-text-muted)' }}
+          />
+        </button>
+
+        {/* Dropdown menu */}
         {isOpen && (
           <div
-            className="absolute z-10 w-full rounded-[4px] shadow-lg"
+            className="absolute z-50 w-full mt-1 rounded-md shadow-lg border overflow-hidden"
             style={{
-              top: 'calc(100% + 4px)',
-              left: 0,
-              backgroundColor: '#374151',
-              boxSizing: 'border-box',
-              border: '1px solid #4b5563',
-              boxShadow: '0 8px 12px -3px rgba(0, 0, 0, 0.1), 0 3px 4px -2px rgba(0, 0, 0, 0.05)',
-              animation: 'slideDown 0.2s ease-out',
-              overflow: 'hidden'
+              backgroundColor: 'var(--color-bg-tertiary)',
+              borderColor: 'var(--color-border-primary)',
+              boxShadow: 'var(--color-shadow-medium)'
             }}
           >
-            {options.map((opt, idx) => (
-              <div
-                key={opt.value}
-                onClick={() => handleSelect(opt.value)}
-                className={`px-[8px] py-[4px] text-[10px] transition-colors duration-150 cursor-pointer ${
-                  idx === 0 ? 'rounded-t-[4px]' : ''
-                } ${idx === options.length - 1 ? 'rounded-b-[4px]' : ''}`}
-                style={{ 
-                  color: '#e5e7eb',
-                  borderBottom: idx < options.length - 1 ? '1px solid #4a5568' : 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#4b5563';
-                  e.target.style.color = '#f9fafb';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = '#e5e7eb';
-                }}
-              >
-                {opt.label}
-              </div>
-            ))}
+            <div className="py-1 max-h-60 overflow-auto">
+              {options.map((option, index) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleSelect(option.value)}
+                  className={`
+                    w-full px-3 py-2 text-sm text-left transition-colors duration-150
+                    ${option.value === value ? 'font-medium' : 'font-normal'}
+                    ${index === 0 ? 'rounded-t-md' : ''}
+                    ${index === options.length - 1 ? 'rounded-b-md' : ''}
+                  `}
+                  style={{
+                    color: option.value === value ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                    backgroundColor: option.value === value ? 'var(--color-bg-selected)' : 'transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (option.value !== value) {
+                      e.target.style.backgroundColor = 'var(--color-bg-hover)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (option.value !== value) {
+                      e.target.style.backgroundColor = 'transparent'
+                    }
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
-      <style>{`
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   )
 }

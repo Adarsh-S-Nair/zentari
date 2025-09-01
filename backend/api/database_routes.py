@@ -2,6 +2,12 @@ from fastapi import APIRouter, HTTPException, Header, Request, Depends
 from fastapi import BackgroundTasks
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator
+from typing import Optional
+from datetime import datetime, timedelta
+try:
+    from zoneinfo import ZoneInfo
+except Exception:
+    ZoneInfo = None  # Python <3.9 fallback (not expected)
 from typing import Optional, Literal
 try:
     # When running under uvicorn with backend on PYTHONPATH
@@ -32,6 +38,7 @@ import json
 import calendar
 import requests
 from threading import Lock
+from fastapi import status
 
 router = APIRouter(prefix="/database", tags=["Database Operations"])
 
@@ -63,6 +70,10 @@ class CreatePortfolioRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     starting_balance: int = Field(..., ge=10, le=100000000)
     is_paper: bool = Field(default=True)
+    rebalance_cadence: Optional[str] = Field(default='weekly')
+    schedule_tz: Optional[str] = Field(default='America/New_York')
+    next_rebalance_due: Optional[datetime] = Field(default=None)
+    last_rebalanced_at: Optional[datetime] = Field(default=None)
 
     @field_validator('name', mode='before')
     def strip_name(cls, v: str) -> str:
@@ -70,6 +81,18 @@ class CreatePortfolioRequest(BaseModel):
         if not s:
             raise ValueError('name cannot be empty')
         return s
+
+    @field_validator('rebalance_cadence', mode='before')
+    def normalize_cadence(cls, v: Optional[str]) -> str:
+        val = (v or 'weekly').strip().lower()
+        if val not in {'daily', 'weekly', 'monthly', 'quarterly'}:
+            val = 'weekly'
+        return val
+
+    @field_validator('schedule_tz', mode='before')
+    def normalize_tz(cls, v: Optional[str]) -> str:
+        val = (v or 'America/New_York').strip() or 'America/New_York'
+        return val
 
 
 class PlaceOrderRequest(BaseModel):
@@ -469,11 +492,43 @@ async def create_portfolio(payload: CreatePortfolioRequest, background_tasks: Ba
     """Create a portfolio row with basic validation. Returns inserted record(s)."""
     try:
         portfolios = get_portfolios()
+        # Compute rebalance scheduling fields (server-side authoritative)
+        cadence = (payload.rebalance_cadence or 'weekly').lower()
+        tz_name = payload.schedule_tz or 'America/New_York'
+        try:
+            tz = ZoneInfo(tz_name) if ZoneInfo else None
+        except Exception:
+            tz = None
+        now = datetime.now(tz) if tz else datetime.utcnow()
+        if payload.next_rebalance_due:
+            next_due_dt = payload.next_rebalance_due
+        else:
+            if cadence == 'daily':
+                delta = timedelta(days=1)
+            elif cadence == 'weekly':
+                delta = timedelta(days=7)
+            elif cadence == 'monthly':
+                delta = timedelta(days=30)
+            elif cadence == 'quarterly':
+                delta = timedelta(days=90)
+            else:
+                delta = timedelta(days=7)
+            next_due_dt = (now + delta).replace(hour=14, minute=30, second=0, microsecond=0)
+        # Ensure timezone-aware ISO string
+        try:
+            next_due_val = next_due_dt.isoformat()
+        except Exception:
+            next_due_val = None
+
         result = portfolios.create(
             user_id=payload.user_id,
             name=payload.name,
             starting_balance=payload.starting_balance,
-            is_paper=payload.is_paper
+            is_paper=payload.is_paper,
+            rebalance_cadence=cadence,
+            schedule_tz=tz_name,
+            next_rebalance_due=next_due_val,
+            last_rebalanced_at=(payload.last_rebalanced_at.isoformat() if payload.last_rebalanced_at else None)
         )
         if not result.get('success'):
             raise HTTPException(status_code=400, detail=result.get('error') or 'Failed to create portfolio')
@@ -590,6 +645,48 @@ async def create_portfolio(payload: CreatePortfolioRequest, background_tasks: Ba
                                     except Exception as e:
                                         print(f"[OPENAI][EXEC] Error executing action {act}: {e}")
                                 _set_portfolio_llm_status(portfolio.get('id'), step="Refreshing portfolio...")
+                                # Create a portfolio snapshot after orders executed
+                                try:
+                                    try:
+                                        from supabase_services import get_client, get_positions  # type: ignore
+                                    except Exception:
+                                        from backend.supabase_services import get_client, get_positions  # type: ignore
+                                    from datetime import datetime, timezone
+                                    pf_id = portfolio.get('id')
+                                    client = get_client().client
+                                    # Load latest cash
+                                    pf_row = client.table('portfolios').select('cash_balance').eq('id', pf_id).limit(1).execute()
+                                    cash = 0.0
+                                    try:
+                                        cash = float(((pf_row.data or [{}])[0] or {}).get('cash_balance') or 0)
+                                    except Exception:
+                                        cash = 0.0
+                                    # Load positions and compute invested value (avg_entry_price * |qty|)
+                                    pos_service = get_positions()
+                                    pos_res = pos_service.get_by_portfolio(pf_id)
+                                    total_invested = 0.0
+                                    if pos_res.get('success'):
+                                        for r in (pos_res.get('data') or []):
+                                            try:
+                                                q = abs(float(r.get('quantity') or 0))
+                                                px = float(r.get('avg_entry_price') or 0)
+                                                total_invested += q * px
+                                            except Exception:
+                                                pass
+                                    total_value = round(cash + total_invested, 2)
+                                    ts = datetime.now(timezone.utc).isoformat()
+                                    snap_payload = {
+                                        'portfolio_id': pf_id,
+                                        'recorded_at': ts,
+                                        'total_value': total_value,
+                                    }
+                                    try:
+                                        client.table('portfolio_snapshots').insert(snap_payload).execute()
+                                        print(f"[SNAPSHOT] Inserted snapshot total={total_value}")
+                                    except Exception as _es:
+                                        print(f"[SNAPSHOT] Insert failed: {_es}")
+                                except Exception as _e:
+                                    print(f"[SNAPSHOT] Error preparing snapshot: {_e}")
                             except Exception:
                                 print(f"[OPENAI][CONTENT] {content}")
                     except Exception as _e:
@@ -761,10 +858,8 @@ def _execute_order_internal(portfolio_id: str, ticker: str, side: str, order_typ
         cost = round(exec_price * qty, 2)
         side_l = (side or '').lower()
 
-        # Resolve or create company by ticker
+        # Resolve or create company by ticker (best-effort)
         company_id = _ensure_company_for_ticker((ticker or '').upper())
-        if not company_id:
-            return { 'success': False, 'error': f'Unable to resolve company for {ticker}', 'status_code': 400 }
 
         # Get existing open position (if any)
         pos_result = positions.get_by_portfolio(portfolio_id)
@@ -772,9 +867,14 @@ def _execute_order_internal(portfolio_id: str, ticker: str, side: str, order_typ
         current = None
         if pos_result.get('success'):
             for row in (pos_result.get('data') or []):
-                if company_id and (row.get('company_id') == company_id):
-                    current = row
-                    break
+                if company_id:
+                    if row.get('company_id') == company_id:
+                        current = row
+                        break
+                else:
+                    if (row.get('ticker') or '').upper() == (ticker or '').upper():
+                        current = row
+                        break
         print(f"[ORDER] Existing position found? {bool(current)}")
 
         # Update cash and position logic
@@ -794,11 +894,14 @@ def _execute_order_internal(portfolio_id: str, ticker: str, side: str, order_typ
             else:
                 payload_pos = {
                     'portfolio_id': portfolio_id,
-                    'company_id': company_id,
                     'quantity': qty,
                     'avg_entry_price': exec_price,
                     'realized_pnl': 0
                 }
+                if company_id:
+                    payload_pos['company_id'] = company_id
+                else:
+                    payload_pos['ticker'] = (ticker or '').upper()
                 ins_res = positions.client.insert('positions', payload_pos)
                 print(f"[ORDER] Insert position result: {ins_res}")
                 if not ins_res.get('success'):
@@ -848,6 +951,8 @@ def _execute_order_internal(portfolio_id: str, ticker: str, side: str, order_typ
             'filled_at': ts,
             'rationale': (rationale or None)
         }
+        if not company_id:
+            order_payload['ticker'] = (ticker or '').upper()
         ord_result = orders.client.insert('orders', order_payload)
         print(f"[ORDER] Insert order result: {ord_result}")
         if not ord_result.get('success'):
@@ -860,6 +965,21 @@ def _execute_order_internal(portfolio_id: str, ticker: str, side: str, order_typ
         print(f"[ORDER] Internal execution error: {e}\n{traceback.format_exc()}")
         return { 'success': False, 'error': 'Internal server error', 'status_code': 500 }
 
+@router.delete("/portfolios/{portfolio_id}")
+async def delete_portfolio(portfolio_id: str):
+    """Delete a portfolio by id. Returns success true if deleted (idempotent)."""
+    try:
+        portfolios = get_portfolios()
+        res = portfolios.delete(portfolio_id)
+        if not res.get('success'):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=res.get('error') or 'Failed to delete portfolio')
+        return { 'success': True }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[DB] Exception in delete_portfolio: {e}")
+        raise HTTPException(status_code=500, detail='Internal server error')
+
 def _ensure_company_for_ticker(ticker: str) -> Optional[str]:
     """Find or create a company row for the given ticker.
     Returns company_id or None on failure.
@@ -867,12 +987,13 @@ def _ensure_company_for_ticker(ticker: str) -> Optional[str]:
     try:
         if not ticker:
             return None
-        client = get_client().client
-        # Try by ticker first
+        svc = get_client()
+        client = getattr(svc, 'client', None)
+        # Try by ticker first using wrapper select (compatible with fake client)
         try:
-            r = client.table('companies').select('id, ticker, domain, web_url, name').eq('ticker', ticker).limit(1).execute()
-            if r.data:
-                return (r.data[0] or {}).get('id')
+            sel = svc.select('companies', filters={'ticker': ticker}, limit=1)
+            if sel.get('success') and sel.get('data'):
+                return (sel['data'][0] or {}).get('id')
         except Exception:
             pass
 
@@ -880,6 +1001,7 @@ def _ensure_company_for_ticker(ticker: str) -> Optional[str]:
         name = ticker
         web_url = None
         domain = None
+        sector = None
         try:
             api_key = os.getenv('FINNHUB_API_KEY')
             if api_key:
@@ -890,6 +1012,8 @@ def _ensure_company_for_ticker(ticker: str) -> Optional[str]:
                     web_url = js.get('weburl') or js.get('url') or None
                     # Derive domain for Clearbit
                     domain = _domain_from_url(web_url)
+                    # Prefer Finnhub industry as sector when available
+                    sector = js.get('finnhubIndustry') or js.get('industry') or sector
         except Exception:
             pass
 
@@ -898,26 +1022,29 @@ def _ensure_company_for_ticker(ticker: str) -> Optional[str]:
             'web_url': web_url,
             'domain': domain,
             'ticker': ticker,
+            'sector': sector,
         }
         try:
-            ins = client.table('companies').insert(payload).execute()
+            ins = svc.insert('companies', payload)
+            if not ins.get('success'):
+                raise Exception(ins.get('error') or 'insert failed')
         except Exception:
             # Fallback insert without ticker if schema mismatch
             payload2 = {k: v for k, v in payload.items() if k != 'ticker'}
-            ins = client.table('companies').insert(payload2).execute()
+            _ = svc.insert('companies', payload2)
         # Fetch id
         try:
-            r2 = client.table('companies').select('id').eq('ticker', ticker).limit(1).execute()
-            if r2.data:
-                return (r2.data[0] or {}).get('id')
+            r2 = svc.select('companies', filters={'ticker': ticker}, limit=1)
+            if r2.get('success') and r2.get('data'):
+                return (r2['data'][0] or {}).get('id')
         except Exception:
             pass
         # As a last resort, try by domain
         if domain:
             try:
-                r3 = client.table('companies').select('id').eq('domain', domain).limit(1).execute()
-                if r3.data:
-                    return (r3.data[0] or {}).get('id')
+                r3 = svc.select('companies', filters={'domain': domain}, limit=1)
+                if r3.get('success') and r3.get('data'):
+                    return (r3['data'][0] or {}).get('id')
             except Exception:
                 pass
         return None

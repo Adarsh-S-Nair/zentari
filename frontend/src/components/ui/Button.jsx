@@ -54,6 +54,7 @@ const colorMap = {
   networth: 'text-white',
   blue: 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white',
   red: 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white',
+  danger: 'bg-[var(--color-danger-strong)] hover:bg-[var(--color-danger)] active:bg-[var(--color-danger-strong)] text-white',
   green: 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white',
   yellow: 'bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white',
   // Neutral buttons tuned for light mode visibility
@@ -74,17 +75,20 @@ function Button({
   type = 'button',
   icon = null,
   badge = null,
+  danger = false,
   ...props
 }) {
   const [isHovering, setIsHovering] = useState(false)
   const isInactive = disabled || loading
 
-  // Pick color classes
-  const colorClasses =
-    color in colorMap
-      ? colorMap[color]
-      : color.includes(' ')
-        ? color
+  // Pick color classes - danger prop overrides color
+  const finalColor = danger ? 'red' : color
+  const colorClasses = danger 
+    ? '' // No color classes when danger is true - we handle styling via inline styles
+    : finalColor in colorMap
+      ? colorMap[finalColor]
+      : finalColor.includes(' ')
+        ? finalColor
         : colorMap.networth
   const baseClasses = `inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-[13px] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300 ${width}`
   const inactiveClasses = 'opacity-60 cursor-not-allowed pointer-events-none'
@@ -139,11 +143,17 @@ function Button({
       onFocus={() => setIsHovering(true)}
       onBlur={() => setIsHovering(false)}
       style={{ 
-        // Only control colors via inline styles for the gradient "networth" variant.
-        // Other variants rely on their Tailwind classes, so we don't override text or bg colors here.
-        background: color === 'networth' ? 'var(--color-gradient-primary)' : undefined,
-        ...(color === 'networth' && isHovering && !isInactive && { background: 'var(--color-gradient-primary-hover)' }),
-        ...(color === 'networth' && isInactive && { background: 'var(--color-gradient-primary-active)' })
+        // Danger prop overrides all other styling
+        ...(danger && {
+          background: isInactive ? 'var(--color-gray-400)' : isHovering ? 'var(--color-danger-light)' : 'var(--color-danger)',
+          color: 'white'
+        }),
+        // Only control colors via inline styles for the gradient "networth" variant when not danger.
+        ...(!danger && color === 'networth' && {
+          background: 'var(--color-gradient-primary)',
+          ...(isHovering && !isInactive && { background: 'var(--color-gradient-primary-hover)' }),
+          ...(isInactive && { background: 'var(--color-gradient-primary-active)' })
+        })
       }}
       {...props}
     >

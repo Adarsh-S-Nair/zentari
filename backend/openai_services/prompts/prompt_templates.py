@@ -33,13 +33,15 @@ class PromptTemplates:
             else:
                 end_dt = now + timedelta(days=7)
             end_date = end_dt.strftime("%m-%d-%y")
-        else:
-            # Provide a reasonable label when explicit dates are passed with 7-day span
-            try:
-                sd = datetime.strptime(start_date, "%m-%d-%y")
-                ed = datetime.strptime(end_date, "%m-%d-%y")
-            except Exception:
-                pass
+        # Compute timeframe label (e.g., 6 months)
+        try:
+            sd = datetime.strptime(start_date, "%m-%d-%y")
+            ed = datetime.strptime(end_date, "%m-%d-%y")
+            delta_days = max(1, (ed - sd).days)
+            months = round(delta_days / 30)
+            timeframe_label = f"{months} months" if months >= 1 else f"{delta_days} days"
+        except Exception:
+            timeframe_label = f"{timeframe_months} months" if timeframe_months else "7 days"
         
         return self.manager.format_prompt(
             'portfolio_strategy',

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import ToggleTabs from '../ui/ToggleTabs'
+import Dropdown from '../ui/Dropdown'
 import Button from '../ui/Button'
 import NumericInput from '../ui/NumericInput'
 import { useFinancial } from '../../contexts/FinancialContext'
@@ -8,10 +9,35 @@ export default function PortfolioCreateForm({ onClose }) {
   const [name, setName] = useState('My Portfolio')
   const [startingBalance, setStartingBalance] = useState(10000)
   const [mode, setMode] = useState('PAPER')
+  const [cadence, setCadence] = useState('weekly')
   const [submitting, setSubmitting] = useState(false)
   const { user, fetchPortfolio, setToast } = useFinancial()
 
   const canSubmit = !!name?.trim() && Number.isInteger(startingBalance) && startingBalance >= 10
+
+  const computeNextDue = (cad) => {
+    try {
+      const now = new Date()
+      const c = String(cad || 'weekly').toLowerCase()
+      const d = new Date(now)
+      if (c === 'daily') {
+        d.setDate(d.getDate() + 1)
+      } else if (c === 'weekly') {
+        d.setDate(d.getDate() + 7)
+      } else if (c === 'monthly') {
+        d.setMonth(d.getMonth() + 1)
+      } else if (c === 'quarterly') {
+        d.setMonth(d.getMonth() + 3)
+      } else {
+        d.setDate(d.getDate() + 7)
+      }
+      // Set to 14:30 local just to avoid midnight DST edge cases
+      d.setHours(14, 30, 0, 0)
+      return d.toISOString()
+    } catch {
+      return new Date(Date.now() + 7*24*60*60*1000).toISOString()
+    }
+  }
 
   const handleCreate = async () => {
     if (!canSubmit || !user?.id || submitting) return
@@ -28,7 +54,11 @@ export default function PortfolioCreateForm({ onClose }) {
           user_id: user.id,
           name: name.trim(),
           starting_balance: startingBalance,
-          is_paper: mode === 'PAPER'
+          is_paper: mode === 'PAPER',
+          rebalance_cadence: String(cadence || 'weekly').toLowerCase(),
+          schedule_tz: 'America/New_York',
+          next_rebalance_due: computeNextDue(cadence),
+          last_rebalanced_at: null
         })
       })
       if (!resp.ok) {
@@ -85,6 +115,21 @@ export default function PortfolioCreateForm({ onClose }) {
               value={mode}
               onChange={setMode}
               activeStyles={{ PAPER: { background: 'var(--color-gradient-primary)', color: 'var(--color-text-white)' } }}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Dropdown
+              label="Rebalance Cadence"
+              name="rebalance_cadence"
+              value="weekly"
+              onChange={() => {}} // No-op since only weekly is supported
+              options={[
+                { label: 'Weekly', value: 'weekly' }
+              ]}
+              disabled={true}
             />
           </div>
         </div>
