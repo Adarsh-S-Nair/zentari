@@ -9,6 +9,7 @@ import { formatCurrency, formatPercentage, formatDate } from '../../utils/format
 import { useFinancial } from '../../contexts/FinancialContext'
 import { usePortfolio } from '../../contexts/PortfolioContext'
 
+
 function SmoothLineChart({ series = [], height = 320, onHoverIndexChange }) {
   const containerRef = useRef(null)
   const [width, setWidth] = useState(700)
@@ -64,6 +65,10 @@ function SmoothLineChart({ series = [], height = 320, onHoverIndexChange }) {
   }
 
   const pathD = buildPath(points)
+  const firstPx = points.length ? { x: xToPx(points[0].x), y: yToPx(points[0].y) } : null
+  const lastPx = points.length ? { x: xToPx(points[points.length-1].x), y: yToPx(points[points.length-1].y) } : null
+  const baseY = margin.top + innerH
+  const areaD = points.length ? `${pathD} L ${lastPx.x} ${baseY} L ${firstPx.x} ${baseY} Z` : ''
 
   const gridLines = []
   const gridCount = 4
@@ -106,15 +111,25 @@ function SmoothLineChart({ series = [], height = 320, onHoverIndexChange }) {
       )}
 
       <svg width={width} height={height} style={{ overflow: 'visible' }} onMouseMove={handleMove} onMouseEnter={handleMove} onMouseLeave={handleLeave}>
+        <defs>
+          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--brand-income-hex)" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="var(--brand-income-hex)" stopOpacity="0.02" />
+          </linearGradient>
+          <clipPath id="chartClip">
+            <rect x={margin.left} y={margin.top} width={innerW} height={innerH} />
+          </clipPath>
+        </defs>
         <g>
           {gridLines.map((g, idx) => (
             <line key={idx} x1={margin.left} x2={width - margin.right} y1={g.y} y2={g.y} stroke={'var(--color-border-secondary)'} strokeWidth="1" strokeDasharray={'2 6'} />
           ))}
         </g>
+        {areaD && (<path d={areaD} fill="url(#areaGrad)" stroke="none" clipPath="url(#chartClip)" />)}
         {hoverIdx >= 0 && (
           <line x1={margin.left + (innerW * (activePoint.x / (xCount || 1)))} x2={margin.left + (innerW * (activePoint.x / (xCount || 1)))} y1={margin.top} y2={height - margin.bottom} stroke={'var(--color-border-primary)'} strokeWidth="1.5" />
         )}
-        <path d={pathD} fill="none" stroke={'var(--brand-income-hex)'} strokeWidth="3" />
+        <path d={pathD} fill="none" stroke={'var(--brand-income-hex)'} strokeWidth="3" clipPath="url(#chartClip)" />
       </svg>
     </div>
   )
@@ -152,9 +167,13 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
   const { positions = [], positionsLoading: poLoading, orders = [], ordersLoading, llmStatus, refreshPositions, refreshOrders } = usePortfolio()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerStack, setDrawerStack] = useState([])
+  
   const positionsMarketValue = useMemo(() => {
     if (!Array.isArray(positions)) return 0
-    return positions.reduce((sum, p) => sum + Math.abs(Number(p.quantity || 0)) * Number(p.avg_entry_price || 0), 0)
+    return positions.reduce((sum, p) => {
+      const currentPrice = Number(p.latest_price || 0) || Number(p.avg_entry_price || 0)
+      return sum + Math.abs(Number(p.quantity || 0)) * currentPrice
+    }, 0)
   }, [positions])
   const portfolioValue = useMemo(() => {
     return Number(portfolio?.cash_balance || 0) + positionsMarketValue
@@ -332,50 +351,62 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
       {/* Remove legacy background animation; use global MatrixOverlay when LLM is running */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Card className="p-0 relative overflow-hidden" elevation="md">
-              <div className="p-4 pb-3 flex items-center justify-between">
-                <div className="text-[12px] font-medium flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
-                  <FaDollarSign size={14} />
-                  <span>Portfolio Value</span>
-                </div>
-                <Pill value={Math.abs(pctChange)} isPositive={pctChange >= 0} isZero={Math.abs(pctChange) < 0.01} />
-              </div>
-              <div className="px-4 pb-4">
-                <div className="text-[22px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(portfolioValue)}</div>
-              </div>
-            </Card>
-            <Card className="p-0 relative overflow-hidden" elevation="md">
-              <div className="p-4 pb-2 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
-                <FaChartLine size={14} />
-                <span className="text-[12px] font-medium">Invested Value</span>
-              </div>
-              <div className="px-4 pb-4">
-                <div className="text-[22px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(investedValue)}</div>
-                <div className="text-[11px] mt-1" style={{ color: 'var(--color-text-muted)' }}>Holdings market value</div>
-              </div>
-            </Card>
-            <Card className="p-0 relative overflow-hidden" elevation="md">
-              <div className="p-4 pb-2 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
-                <FaPiggyBank size={14} />
-                <span className="text-[12px] font-medium">Cash Balance</span>
-              </div>
-              <div className="px-4 pb-4">
-                <div className="text-[22px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(portfolio?.cash_balance || 0)}</div>
-                <div className="text-[11px] mt-1" style={{ color: 'var(--color-text-muted)' }}>Available to trade</div>
-              </div>
-            </Card>
-          </div>
-
           <Card className="p-0 relative overflow-hidden" elevation="md">
-            <div className="px-4 pt-4">
+            <div className="px-4 pt-4 pb-3 flex items-start justify-between">
+              <div className="flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+                <FaDollarSign size={14} />
+                <span className="text-[12px] font-medium">Portfolio Overview</span>
+              </div>
+              <Pill value={Math.abs(pctChange)} isPositive={pctChange >= 0} isZero={Math.abs(pctChange) < 0.01} />
+            </div>
+
+            <div className="px-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div className="pt-1">
+                  <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Total value</div>
+                  <div className="text-[22px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(portfolioValue)}</div>
+                </div>
+                {(() => {
+                  const cash = Number(portfolio?.cash_balance || 0)
+                  const invested = investedValue
+                  const total = Math.max(0, cash + invested)
+                  const pct = (v) => ((v / (total || 1)) * 100).toFixed(1)
+                  return (
+                    <div className="flex items-start gap-8 flex-wrap justify-end w-full sm:w-auto">
+                      <div className="min-w-[160px] pt-1">
+                        <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Invested</div>
+                        <div className="text-[18px] font-semibold" style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatCurrency(invested)}
+                          <span className="ml-2 text-[12px]" style={{ color: 'var(--color-text-muted)' }}>({pct(invested)}%)</span>
+                        </div>
+                        <div className="mt-1 h-[3px] rounded-full" style={{ background: 'linear-gradient(90deg, var(--brand-income-hex), rgba(99,102,241,0.15))' }} />
+                      </div>
+                      <div className="hidden sm:block" style={{ height: 38, width: 1, background: 'var(--color-border-primary)' }} />
+                      <div className="min-w-[140px] pt-1">
+                        <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Cash</div>
+                        <div className="text-[18px] font-semibold" style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatCurrency(cash)}
+                          <span className="ml-2 text-[12px]" style={{ color: 'var(--color-text-muted)' }}>({pct(cash)}%)</span>
+                        </div>
+                        <div className="mt-1 h-[3px] rounded-full" style={{ background: 'linear-gradient(90deg, var(--color-text-muted), rgba(148,163,184,0.12))' }} />
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            <div className="px-4 pt-3">
               <SmoothLineChart series={rangedSeries} height={320} onHoverIndexChange={setHoverIdx} />
             </div>
-            <div className="px-4 pb-4 mt-2 flex items-center gap-2 text-[11px]">
+            <div className="px-4 pt-2 pb-3 flex items-center gap-2 text-[11px]">
               {rangeOptions.map(opt => (
                 <button key={opt} onClick={() => setRange(opt)} className={`px-2.5 py-1 rounded-md transition-all ${range===opt ? 'text-white' : ''}`} style={{ background: range===opt ? 'var(--color-gradient-primary)' : 'transparent', color: range===opt ? 'var(--color-text-white)' : 'var(--color-text-secondary)', cursor: 'pointer' }} onMouseEnter={(e)=>{ if(range!==opt){ e.currentTarget.style.transform='scale(1.06)'; e.currentTarget.style.background='var(--color-bg-hover)'} }} onMouseLeave={(e)=>{ if(range!==opt){ e.currentTarget.style.transform='scale(1.0)'; e.currentTarget.style.background='transparent'} }}>{opt}</button>
               ))}
             </div>
+            {/* Removed the footer stats row per design preference */}
+
+            {/* Simplified footer removed per design preference */}
           </Card>
 
           <Card className="p-0 relative overflow-hidden" elevation="md">
@@ -405,16 +436,21 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
             <div className="px-5 pt-2 pb-5 space-y-3">
               {(() => {
                 const total = positionsMarketValue
-                const sectorMap = new Map()
+                const sectorTotals = new Map()
+                const sectorColors = new Map()
                 for (const p of (positions || [])) {
-                  const sector = (p.sector || 'Other')
-                  const value = Math.abs((p.quantity || 0) * (p.avg_entry_price || 0))
-                  sectorMap.set(sector, (sectorMap.get(sector) || 0) + value)
+                  const label = (p.sector || 'Other')
+                  const currentPrice = Number(p.latest_price || 0) || Number(p.avg_entry_price || 0)
+                  const val = Math.abs((p.quantity || 0) * currentPrice)
+                  sectorTotals.set(label, (sectorTotals.get(label) || 0) + val)
+                  if (!sectorColors.has(label) && p.sector_color) {
+                    sectorColors.set(label, p.sector_color)
+                  }
                 }
-                const items = Array.from(sectorMap.entries())
+                const items = Array.from(sectorTotals.entries())
                   .sort((a, b) => b[1] - a[1])
                   .slice(0, 5)
-                  .map(([label, value]) => ({ label, value, color: getIndustryColor(label) }))
+                  .map(([label, value]) => ({ label, value, color: sectorColors.get(label) || getIndustryColor(label) }))
                 const shownSum = items.reduce((s, c) => s + (c.value || 0), 0)
                 const others = Math.max(0, total - shownSum)
                 const segs = others > 0 ? [...items, { label: 'Other', value: others, color: '#94a3b8' }] : items
@@ -579,7 +615,7 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
               {ordersLoading ? (
                 <div className="w-full flex items-center justify-center py-6"><Spinner label="Loading orders..." /></div>
               ) : (orders && orders.length > 0) ? (
-                (orders.slice(0, 5)).map((o, i) => {
+                (orders.slice(0, 4)).map((o, i) => {
                   const isBuy = String(o.side||'').toLowerCase()==='buy'
                   const qty = Number(o.filled_quantity ?? o.quantity ?? 0)
                   const px = Number(o.avg_fill_price ?? o.limit_price ?? 0)

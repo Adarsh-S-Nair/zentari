@@ -28,16 +28,35 @@ function PositionCard({ position, index = 0, snapAlign = 'center', totalMV = 0 }
   const p = position || {}
   const qty = Math.abs(Number(p.quantity || 0))
   const avg = Number(p.avg_entry_price || 0)
-  const mv = avg * qty
+  const ticker = (p.ticker || '').toUpperCase()
+  
+  // Get current price from database or fallback to average entry price
+  const currentPrice = Number(p.latest_price || 0) || avg
+  const hasCurrentPrice = p.latest_price !== null && p.latest_price !== undefined
+  const priceAsOf = p.latest_price_as_of
+  const priceSource = p.latest_price_source
+  
+  // Calculate market value using current price
+  const mv = currentPrice * qty
   const invested = avg * qty
-  const delta = mv - invested
-  const pct = invested > 0 ? (delta / invested) * 100 : 0
-  const sector = String(p.sector || 'Other')
-  const sectorColor = getIndustryColor(sector)
   const weight = totalMV > 0 ? (mv / totalMV) * 100 : 0
+  const sector = String(p.sector || 'Other')
+  const sectorColor = p.sector_color || getIndustryColor(sector)
+  
+  // Calculate gain/loss
+  const gainLoss = mv - invested
+  const gainLossPct = invested > 0 ? (gainLoss / invested) * 100 : 0
 
   return (
-    <div className={`min-w-[280px] relative rounded-xl p-4 transition-colors`} style={{ scrollSnapAlign: snapAlign, border: '1px solid var(--color-border-primary)', background: 'var(--color-bg-secondary)', boxShadow: '0 10px 22px var(--color-shadow-light)' }}>
+    <div
+      className={`min-w-[280px] relative rounded-xl p-4`}
+      style={{
+        scrollSnapAlign: snapAlign,
+        border: '1px solid var(--color-border-primary)',
+        background: 'var(--color-bg-secondary)',
+        boxShadow: '0 10px 22px var(--color-shadow-light)'
+      }}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {p.logo_url ? (
@@ -55,22 +74,29 @@ function PositionCard({ position, index = 0, snapAlign = 'center', totalMV = 0 }
         </div>
         <div className="text-right">
           <div className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(mv)}</div>
-          <div className="text-[10px] flex items-center gap-1 justify-end" style={{ color: delta >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontVariantNumeric: 'tabular-nums' }}>
-            <span style={{ fontSize: 10, lineHeight: '10px' }}>{delta >= 0 ? '▲' : '▼'}</span>
-            {formatPercentage(pct)}
+          <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+            {hasCurrentPrice ? (
+              <div className="flex flex-col items-end gap-0.5">
+                <span style={{ color: gainLoss >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                  {gainLoss >= 0 ? '+' : ''}{formatCurrency(gainLoss)} ({gainLossPct >= 0 ? '+' : ''}{gainLossPct.toFixed(1)}%)
+                </span>
+                {priceAsOf && (
+                  <span className="text-[9px]" style={{ color: 'var(--color-text-light)', opacity: 0.7 }}>
+                    {new Date(priceAsOf).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            ) : (
+              `Weight ${(weight || 0).toFixed(1)}%`
+            )}
           </div>
         </div>
       </div>
       <Meter valuePct={weight} color={sectorColor} className="mt-3" />
-      <div className="mt-3 flex items-start justify-between gap-6">
+      <div className="mt-3 grid grid-cols-3 gap-6">
         <Stat label="Quantity" value={qty} />
-        <Stat label="Avg Price" value={formatCurrency(avg)} />
-        <Stat label="Weight" value={`${(weight || 0).toFixed(1)}%`} />
-      </div>
-      <div className="mt-2 flex items-start justify-between gap-6">
-        <Stat label="Cost Basis" value={formatCurrency(invested)} />
-        <Stat label="Market Value" value={formatCurrency(mv)} />
-        <Stat label="P/L" value={`${delta >= 0 ? '+' : ''}${formatCurrency(delta)}`} />
+        <Stat label={hasCurrentPrice ? "Current Price" : "Avg Price"} value={formatCurrency(hasCurrentPrice ? currentPrice : avg)} />
+        <Stat label="Position" value={`${(weight || 0).toFixed(1)}%`} />
       </div>
     </div>
   )
@@ -80,12 +106,21 @@ export default function PositionCardsCarousel({ positions = [], className = '', 
   const sorted = useMemo(() => {
     const arr = (positions || []).slice(0, 48)
     return arr.sort((a, b) => {
-      const aMv = Math.abs(Number(a.quantity || 0)) * Number(a.avg_entry_price || 0)
-      const bMv = Math.abs(Number(b.quantity || 0)) * Number(b.avg_entry_price || 0)
+      // Use latest_price for sorting if available, otherwise fallback to avg entry price
+      const aPrice = Number(a.latest_price || 0) || Number(a.avg_entry_price || 0)
+      const bPrice = Number(b.latest_price || 0) || Number(b.avg_entry_price || 0)
+      const aMv = Math.abs(Number(a.quantity || 0)) * aPrice
+      const bMv = Math.abs(Number(b.quantity || 0)) * bPrice
       return bMv - aMv
     })
   }, [positions])
-  const totalMV = useMemo(() => (sorted || []).reduce((s, p) => s + Math.abs(Number(p.quantity || 0)) * Number(p.avg_entry_price || 0), 0), [sorted])
+  
+  const totalMV = useMemo(() => {
+    return (sorted || []).reduce((s, p) => {
+      const price = Number(p.latest_price || 0) || Number(p.avg_entry_price || 0)
+      return s + Math.abs(Number(p.quantity || 0)) * price
+    }, 0)
+  }, [sorted])
 
   return (
     <div className={`relative ${className}`} style={style}>

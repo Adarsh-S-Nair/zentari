@@ -788,6 +788,70 @@ async def get_portfolio_positions(portfolio_id: str):
         return {"success": True, "positions": []}
 
 
+# Lightweight lookups for frontend enrichment
+@router.get("/sectors")
+async def get_sectors():
+    """Return all sectors with id, name, and color for client-side mapping."""
+    try:
+        client = get_client().client
+        resp = client.table('sectors').select('id, name, color').execute()
+        rows = resp.data or []
+        return { 'success': True, 'sectors': rows }
+    except Exception as e:
+        print(f"[DB] Exception in get_sectors: {e}")
+        return { 'success': True, 'sectors': [] }
+
+
+@router.get("/companies")
+async def get_companies(ids: Optional[str] = None, tickers: Optional[str] = None):
+    """Fetch companies by ids and/or tickers. Also joins sector name/color.
+
+    Query params:
+      - ids: comma-separated list of company ids
+      - tickers: comma-separated list of tickers
+    """
+    try:
+        client = get_client().client
+        id_list = [s.strip() for s in (ids or '').split(',') if s.strip()]
+        ticker_list = [s.strip().upper() for s in (tickers or '').split(',') if s.strip()]
+        results = []
+        # Fetch by ids
+        if id_list:
+            q = client.table('companies').select('id, ticker, name, logo_url, sector_id, latest_price, latest_price_as_of, latest_price_currency, latest_price_source').in_('id', id_list)
+            r = q.execute()
+            results.extend(r.data or [])
+        # Fetch by tickers
+        if ticker_list:
+            q2 = client.table('companies').select('id, ticker, name, logo_url, sector_id, latest_price, latest_price_as_of, latest_price_currency, latest_price_source').in_('ticker', ticker_list)
+            r2 = q2.execute()
+            # Avoid duplicates by id
+            existing = { (row.get('id') or '') for row in results }
+            for row in (r2.data or []):
+                if (row.get('id') or '') not in existing:
+                    results.append(row)
+
+        # Join sectors
+        sids = { r.get('sector_id') for r in results if r.get('sector_id') }
+        s_map = {}
+        if sids:
+            try:
+                s = client.table('sectors').select('id, name, color').in_('id', list(sids)).execute()
+                for row in (s.data or []):
+                    s_map[row.get('id')] = row
+            except Exception:
+                pass
+        for r in results:
+            sid = r.get('sector_id')
+            sr = s_map.get(sid)
+            if sr:
+                r['sector'] = sr.get('name')
+                r['sector_color'] = sr.get('color')
+
+        return { 'success': True, 'companies': results }
+    except Exception as e:
+        print(f"[DB] Exception in get_companies: {e}")
+        return { 'success': True, 'companies': [] }
+
 @router.post("/portfolios/order")
 async def place_order(payload: PlaceOrderRequest):
     """Place a simple market/limit order that affects cash and positions."""
@@ -1017,12 +1081,78 @@ def _ensure_company_for_ticker(ticker: str) -> Optional[str]:
         except Exception:
             pass
 
+        # Resolve sector_id via sectors table (create if missing)
+        def _get_or_create_sector_id(sec_name: Optional[str]) -> Optional[str]:
+            try:
+                if not sec_name:
+                    return None
+                sname = str(sec_name).strip()
+                if not sname:
+                    return None
+                # Helper to pick a distinct color that fits the app palette
+                def _pick_distinct_color(existing_colors: set, label: str) -> str:
+                    try:
+                        palette = [
+                            '#6b8afd', '#7c3aed', '#f472b6', '#22c55e', '#f59e0b',
+                            '#06b6d4', '#64748b', '#ef4444', '#a855f7', '#10b981', '#3b82f6', '#94a3b8'
+                        ]
+                        for c in palette:
+                            if c.lower() not in existing_colors:
+                                return c
+                        # Fallback: deterministic HSL from name avoiding collisions
+                        import colorsys
+                        base = 0
+                        for ch in label:
+                            base = (base * 31 + ord(ch)) & 0xFFFFFFFF
+                        for step in range(0, 360, 17):
+                            hue = ((base + step) % 360) / 360.0
+                            r, g, b = colorsys.hls_to_rgb(hue, 0.56, 0.65)
+                            hexc = '#%02x%02x%02x' % (int(r*255), int(g*255), int(b*255))
+                            if hexc.lower() not in existing_colors:
+                                return hexc
+                        return '#6b8afd'
+                    except Exception:
+                        return '#6b8afd'
+                # exact match first
+                try:
+                    sel = svc.select('sectors', filters={'name': sname}, limit=1)
+                    if sel.get('success') and sel.get('data'):
+                        return (sel['data'][0] or {}).get('id')
+                except Exception:
+                    pass
+                # insert new sector row with unique color
+                try:
+                    # gather existing colors
+                    existing = []
+                    try:
+                        existing = (svc.select('sectors').get('data') or [])
+                    except Exception:
+                        existing = []
+                    used = {str((r or {}).get('color') or '').strip().lower() for r in existing if r and r.get('color')}
+                    color = _pick_distinct_color(used, sname)
+                    ins = svc.insert('sectors', { 'name': sname, 'color': color })
+                    if not ins.get('success'):
+                        raise Exception(ins.get('error') or 'insert failed')
+                except Exception:
+                    pass
+                try:
+                    sel2 = svc.select('sectors', filters={'name': sname}, limit=1)
+                    if sel2.get('success') and sel2.get('data'):
+                        return (sel2['data'][0] or {}).get('id')
+                except Exception:
+                    pass
+                return None
+            except Exception:
+                return None
+
+        sector_id = _get_or_create_sector_id(sector)
+
         payload = {
             'name': name,
             'web_url': web_url,
             'domain': domain,
             'ticker': ticker,
-            'sector': sector,
+            'sector_id': sector_id,
         }
         try:
             ins = svc.insert('companies', payload)

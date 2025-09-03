@@ -8,6 +8,7 @@ class _InMemoryTableQuery:
 		self._outer = outer
 		self._table = table_name
 		self._filters: Dict[str, Any] = {}
+		self._in_filters: Dict[str, set] = {}
 		self._limit: Optional[int] = None
 		self.data = None
 	def select(self, _cols: str = "*"):
@@ -15,11 +16,30 @@ class _InMemoryTableQuery:
 	def eq(self, key: str, value: Any):
 		self._filters[key] = value
 		return self
+	def in_(self, key: str, values):
+		try:
+			vals = list(values) if not isinstance(values, list) else values
+		except Exception:
+			vals = []
+		self._in_filters[key] = set(vals)
+		return self
 	def limit(self, n: int):
 		self._limit = n
 		return self
 	def execute(self):
-		rows = [r for r in self._outer._db.setdefault(self._table, []) if all(r.get(k) == v for k, v in (self._filters or {}).items())]
+		def _row_matches(row: Dict[str, Any]) -> bool:
+			# equality filters
+			for k, v in (self._filters or {}).items():
+				if row.get(k) != v:
+					return False
+			# in_ filters
+			for k, vals in (self._in_filters or {}).items():
+				if not vals:
+					return False
+				if row.get(k) not in vals:
+					return False
+			return True
+		rows = [r for r in self._outer._db.setdefault(self._table, []) if _row_matches(r)]
 		if self._limit is not None:
 			rows = rows[: self._limit]
 		self.data = [dict(r) for r in rows]
@@ -30,7 +50,7 @@ class _InMemoryClient:
 	"""Lightweight in-memory supabase-like client for tests."""
 	def __init__(self):
 		self._db: Dict[str, list] = {
-			'accounts': [], 'transactions': [], 'portfolios': [], 'positions': [], 'orders': [], 'companies': []
+			'accounts': [], 'transactions': [], 'portfolios': [], 'positions': [], 'orders': [], 'companies': [], 'sectors': []
 		}
 		self._is_fake = True
 	def table(self, name: str):

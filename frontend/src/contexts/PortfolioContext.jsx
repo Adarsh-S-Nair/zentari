@@ -57,7 +57,41 @@ export function PortfolioProvider({ children }) {
       try {
         const resp = await fetch(`${base.protocol}://${base.clean}/database/portfolios/${pfId}/positions`)
         const data = await resp.json().catch(()=>({}))
-        const rows = Array.isArray(data?.positions) ? data.positions : []
+        let rows = Array.isArray(data?.positions) ? data.positions : []
+        // Enrich positions with company info (logo, sector name/color) if needed
+        try {
+          const ids = Array.from(new Set(rows.map(r => r.company_id).filter(Boolean)))
+          const tickers = Array.from(new Set(rows.map(r => (r.ticker || '').toUpperCase()).filter(Boolean)))
+          if (ids.length || tickers.length) {
+            const qs = []
+            if (ids.length) qs.push(`ids=${encodeURIComponent(ids.join(','))}`)
+            if (tickers.length) qs.push(`tickers=${encodeURIComponent(tickers.join(','))}`)
+            const respC = await fetch(`${base.protocol}://${base.clean}/database/companies?${qs.join('&')}`)
+            const dataC = await respC.json().catch(()=>({}))
+            const comps = Array.isArray(dataC?.companies) ? dataC.companies : []
+            const byId = new Map(comps.map(c => [c.id, c]))
+            const byTicker = new Map(comps.map(c => [String(c.ticker || '').toUpperCase(), c]))
+            rows = rows.map(r => {
+              const match = (r.company_id && byId.get(r.company_id)) || byTicker.get(String(r.ticker || '').toUpperCase())
+              if (match) {
+                return {
+                  ...r,
+                  company_name: match.name || r.company_name,
+                  logo_url: match.logo_url || r.logo_url,
+                  sector_id: match.sector_id || r.sector_id,
+                  sector: match.sector || r.sector,
+                  sector_color: match.sector_color || r.sector_color,
+                  ticker: r.ticker || (match.ticker ? String(match.ticker).toUpperCase() : undefined),
+                  latest_price: match.latest_price,
+                  latest_price_as_of: match.latest_price_as_of,
+                  latest_price_currency: match.latest_price_currency,
+                  latest_price_source: match.latest_price_source
+                }
+              }
+              return r
+            })
+          }
+        } catch {}
         positionsCacheRef.current.set(pfId, rows)
         setPositions(rows)
       } catch { setPositions([]) } finally { setPositionsLoading(false) }
@@ -117,7 +151,40 @@ export function PortfolioProvider({ children }) {
     try {
       const resp = await fetch(`${base.protocol}://${base.clean}/database/portfolios/${pfId}/positions`)
       const data = await resp.json().catch(()=>({}))
-      const rows = Array.isArray(data?.positions) ? data.positions : []
+      let rows = Array.isArray(data?.positions) ? data.positions : []
+      try {
+        const ids = Array.from(new Set(rows.map(r => r.company_id).filter(Boolean)))
+        const tickers = Array.from(new Set(rows.map(r => (r.ticker || '').toUpperCase()).filter(Boolean)))
+        if (ids.length || tickers.length) {
+          const qs = []
+          if (ids.length) qs.push(`ids=${encodeURIComponent(ids.join(','))}`)
+          if (tickers.length) qs.push(`tickers=${encodeURIComponent(tickers.join(','))}`)
+          const respC = await fetch(`${base.protocol}://${base.clean}/database/companies?${qs.join('&')}`)
+          const dataC = await respC.json().catch(()=>({}))
+          const comps = Array.isArray(dataC?.companies) ? dataC.companies : []
+          const byId = new Map(comps.map(c => [c.id, c]))
+          const byTicker = new Map(comps.map(c => [String(c.ticker || '').toUpperCase(), c]))
+          rows = rows.map(r => {
+            const match = (r.company_id && byId.get(r.company_id)) || byTicker.get(String(r.ticker || '').toUpperCase())
+            if (match) {
+              return {
+                ...r,
+                company_name: match.name || r.company_name,
+                logo_url: match.logo_url || r.logo_url,
+                sector_id: match.sector_id || r.sector_id,
+                sector: match.sector || r.sector,
+                sector_color: match.sector_color || r.sector_color,
+                ticker: r.ticker || (match.ticker ? String(match.ticker).toUpperCase() : undefined),
+                latest_price: match.latest_price,
+                latest_price_as_of: match.latest_price_as_of,
+                latest_price_currency: match.latest_price_currency,
+                latest_price_source: match.latest_price_source
+              }
+            }
+            return r
+          })
+        }
+      } catch {}
       positionsCacheRef.current.set(pfId, rows)
       setPositions(rows)
     } catch { setPositions([]) } finally { setPositionsLoading(false) }

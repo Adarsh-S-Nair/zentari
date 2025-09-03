@@ -15,6 +15,10 @@ portfolio_strategy:
     - Max 40% allocation to any single ticker.
     - Limit orders only.
     - You may rebalance ${rebalancing_frequency}.
+    - Aim to deploy ~95–100% of available cash at all times.
+    - Diversify across 4–8 tickers when possible, not just 1–2.
+    - Prioritize the strongest momentum names but avoid over-concentration in a single sector.
+    - Do not leave significant idle cash unless no valid trades exist.
     - Respond ONLY with valid JSON (no text, no markdown).
   
   user: |
@@ -29,6 +33,9 @@ portfolio_strategy:
     ${available_universe}
 
     If no strong trades exist, return empty arrays.
+
+    Respond with enough buy actions to bring the portfolio’s invested capital close to 100%,
+    while respecting the 40% max allocation per ticker.
 
     Respond ONLY with:
     {
