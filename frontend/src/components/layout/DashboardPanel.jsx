@@ -426,19 +426,23 @@ export default function DashboardPanel() {
                 <SegmentedBar items={segs} total={spendingThisMonth} height={16} gap={3} radius={6} onItemClick={(seg) => seg?.id && goToCategory(seg.id)} />
                 <div className="space-y-1">
                   {listItems.map((c) => (
-                    <div key={c.label} className="grid grid-cols-2 items-center rounded-md px-2 py-1 cursor-pointer transition"
+                    <div key={c.label} className="flex items-center justify-between rounded-md px-2 py-1 cursor-pointer transition"
                       style={{ outline: '1px solid transparent' }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = hexToRgba(c.color || '#64748b', 0.10); e.currentTarget.style.outline = `1px solid ${hexToRgba(c.color || '#64748b', 0.25)}`; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${hexToRgba(c.color || '#64748b', 0.8)}` }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.outline = '1px solid transparent'; e.currentTarget.style.boxShadow = 'none' }}
                       onClick={() => c?.id && goToCategory(c.id)}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} />
+                      <div className="flex items-center gap-2 min-w-0" style={{ maxWidth: 'calc(100% - 140px)' }}>
+                        <span className="inline-block w-3 h-3 min-w-[12px] min-h-[12px] rounded-full flex-shrink-0" style={{ background: c.color }} />
                         <span className="text-[12px] truncate" style={{ color: 'var(--color-text-secondary)' }}>{c.label}</span>
                       </div>
-                      <div className="text-right text-[12px] font-medium" style={{ color: 'var(--color-text-primary)', opacity: 0.92, fontVariantNumeric: 'tabular-nums' }}>
+                      <div className="text-right text-[12px] font-medium flex items-center justify-end gap-2 flex-shrink-0" style={{ color: 'var(--color-text-primary)', opacity: 0.92, fontVariantNumeric: 'tabular-nums', minWidth: '120px' }}>
                         {formatCurrency(c.value)}
-                        <span className="ml-2" style={{ color: 'var(--color-text-muted)' }}>({((c.value / totalSp) * 100 || 0).toFixed(1)}%)</span>
+                        <Pill
+                          value={parseFloat(((c.value / totalSp) * 100 || 0).toFixed(1))}
+                          customBgColor="var(--color-border-primary)"
+                          customTextColor="var(--color-text-muted)"
+                        />
                       </div>
                     </div>
                   ))}
@@ -570,8 +574,8 @@ export default function DashboardPanel() {
                     e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center" style={{ background: p.imageUrl ? 'transparent' : (p.categoryColor || 'var(--color-bg-secondary)') }}>
+                  <div className="flex items-center gap-3 min-w-0" style={{ maxWidth: 'calc(100% - 120px)' }}>
+                    <div className="w-8 h-8 min-w-[32px] min-h-[32px] rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{ background: p.imageUrl ? 'transparent' : (p.categoryColor || 'var(--color-bg-secondary)') }}>
                       {p.imageUrl ? (
                         <img src={p.imageUrl} alt="icon" className="w-full h-full object-cover" />
                       ) : p.categoryIconLib && p.categoryIconName ? (
@@ -580,8 +584,8 @@ export default function DashboardPanel() {
                         <FaCalendarAlt size={14} style={{ color: 'var(--color-text-white)' }} />
                       )}
                     </div>
-                    <div>
-                      <div className="text-[13px]" style={{ color: 'var(--color-text-primary)' }}>{p.label}</div>
+                    <div className="min-w-0">
+                      <div className="text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{p.label}</div>
                       <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Due {formatDate(p.nextDate)}</div>
                     </div>
                   </div>
@@ -605,8 +609,8 @@ export default function DashboardPanel() {
                     e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center" style={{ background: t.icon_url ? 'transparent' : (t.category_color || 'var(--color-bg-secondary)') }}>
+                  <div className="flex items-center gap-3 min-w-0" style={{ maxWidth: 'calc(100% - 120px)' }}>
+                    <div className="w-8 h-8 min-w-[32px] min-h-[32px] rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{ background: t.icon_url ? 'transparent' : (t.category_color || 'var(--color-bg-secondary)') }}>
                       {t.icon_url ? (
                         <img src={t.icon_url} alt="icon" className="w-full h-full object-cover" />
                       ) : t.category_icon_lib && t.category_icon_name ? (
@@ -615,8 +619,8 @@ export default function DashboardPanel() {
                         <FaCalendarAlt size={14} style={{ color: 'var(--color-text-white)' }} />
                       )}
                     </div>
-                    <div>
-                      <div className="text-[13px]" style={{ color: 'var(--color-text-primary)' }}>{t.merchant_name || t.description || 'Payment'}</div>
+                    <div className="min-w-0">
+                      <div className="text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{t.merchant_name || t.description || 'Payment'}</div>
                       <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{formatDate(t.datetime)}</div>
                     </div>
                   </div>

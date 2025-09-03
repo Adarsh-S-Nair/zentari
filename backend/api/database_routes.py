@@ -788,6 +788,45 @@ async def get_portfolio_positions(portfolio_id: str):
         return {"success": True, "positions": []}
 
 
+@router.get("/portfolios/{portfolio_id}/snapshots")
+async def get_portfolio_snapshots(portfolio_id: str, start_date: Optional[str] = None, end_date: Optional[str] = None, limit: int = 365):
+    """Get portfolio snapshots for charting. Returns daily portfolio values over time."""
+    try:
+        client = get_client().client
+        query = client.table('portfolio_snapshots').select('recorded_at, total_value').eq('portfolio_id', portfolio_id)
+        
+        if start_date:
+            query = query.gte('recorded_at', start_date)
+        if end_date:
+            query = query.lte('recorded_at', end_date)
+            
+        # Order by date ascending for charting
+        resp = query.order('recorded_at', desc=False).limit(limit).execute()
+        rows = resp.data or []
+        
+        # Convert to chart-friendly format
+        snapshots = []
+        for row in rows:
+            try:
+                recorded_at = row.get('recorded_at')
+                total_value = float(row.get('total_value', 0))
+                if recorded_at and total_value > 0:
+                    # Use the recorded_at date directly (already in UTC)
+                    snapshots.append({
+                        'date': recorded_at.split('T')[0],  # YYYY-MM-DD format
+                        'value': total_value,
+                        'recorded_at': recorded_at
+                    })
+            except Exception as e:
+                print(f"[DB] Error processing snapshot row: {e}")
+                continue
+                
+        return {"success": True, "snapshots": snapshots}
+    except Exception as e:
+        print(f"[DB] Exception in get_portfolio_snapshots: {e}")
+        return {"success": True, "snapshots": []}
+
+
 # Lightweight lookups for frontend enrichment
 @router.get("/sectors")
 async def get_sectors():
@@ -914,16 +953,48 @@ def _execute_order_internal(portfolio_id: str, ticker: str, side: str, order_typ
                 return { 'success': False, 'error': 'Valid limit_price required for limit orders', 'status_code': 400 }
             exec_price = float(limit_price)
         else:
-            # For demo we require limit_price as execution for market too, if not provided
-            exec_price = float(limit_price or 0)
-            if exec_price <= 0:
-                return { 'success': False, 'error': 'Execution price required (use limit price)', 'status_code': 400 }
+            # For market orders, fetch current price from yfinance
+            try:
+                import yfinance as yf
+                stock = yf.Ticker(ticker.upper())
+                hist = stock.history(period="1d", interval="1m")
+                if hist.empty:
+                    # Fallback to daily data if intraday not available
+                    hist = stock.history(period="2d")
+                    if hist.empty:
+                        return { 'success': False, 'error': f'Could not fetch current price for {ticker}', 'status_code': 400 }
+                
+                # Use the most recent close price
+                current_price = float(hist['Close'].iloc[-1])
+                exec_price = current_price
+                print(f"[ORDER] Fetched current market price for {ticker}: ${exec_price:.2f}")
+            except Exception as e:
+                print(f"[ORDER] Error fetching current price for {ticker}: {e}")
+                # Fallback to limit_price if provided
+                exec_price = float(limit_price or 0)
+                if exec_price <= 0:
+                    return { 'success': False, 'error': f'Could not fetch current price for {ticker} and no limit price provided', 'status_code': 400 }
 
         cost = round(exec_price * qty, 2)
         side_l = (side or '').lower()
 
         # Resolve or create company by ticker (best-effort)
         company_id = _ensure_company_for_ticker((ticker or '').upper())
+        
+        # Update the company's latest_price with the execution price
+        if company_id and exec_price > 0:
+            try:
+                from datetime import datetime, timezone
+                client = get_client().client
+                client.table('companies').update({
+                    'latest_price': exec_price,
+                    'latest_price_as_of': datetime.now(timezone.utc).isoformat(),
+                    'latest_price_currency': 'USD',
+                    'latest_price_source': 'order_execution'
+                }).eq('id', company_id).execute()
+                print(f"[ORDER] Updated company {ticker} latest_price to ${exec_price:.2f}")
+            except Exception as e:
+                print(f"[ORDER] Warning: Could not update company price: {e}")
 
         # Get existing open position (if any)
         pos_result = positions.get_by_portfolio(portfolio_id)

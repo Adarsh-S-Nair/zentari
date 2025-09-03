@@ -1,4 +1,4 @@
-function Pill({ value, isPositive, isZero = false, type = 'percentage', customText, customBgColor, customTextColor, width }) {
+function Pill({ value, isPositive, isZero = false, type = 'percentage', customText, customBgColor, customTextColor, width, onClick, style, ...props }) {
   let bgColor, textColor, displayValue
 
   // Ensure value is a string for comparison
@@ -21,14 +21,15 @@ function Pill({ value, isPositive, isZero = false, type = 'percentage', customTe
     displayValue = value?.toUpperCase() || customText || 'N/A'
   } else {
     // Default percentage behavior
-    if (isZero) {
+    if (isZero && !customBgColor) {
       bgColor = 'var(--color-warning-bg)'
       textColor = 'var(--color-warning)'
     } else {
-      bgColor = isPositive ? 'var(--color-success-bg)' : 'var(--color-danger-bg)'
-      textColor = isPositive ? 'var(--color-success)' : 'var(--color-danger)'
+      bgColor = customBgColor || (isPositive ? 'var(--color-success-bg)' : 'var(--color-danger-bg)')
+      textColor = customTextColor || (isPositive ? 'var(--color-success)' : 'var(--color-danger)')
     }
-    displayValue = typeof value === 'number' && isFinite(value) ? value.toFixed(1) : '--'
+    // Use customText if provided, otherwise use the value
+    displayValue = customText || (typeof value === 'number' && isFinite(value) ? value.toFixed(1) : '--')
   }
 
   // Ensure we always have valid colors
@@ -49,15 +50,40 @@ function Pill({ value, isPositive, isZero = false, type = 'percentage', customTe
     minWidth: 'fit-content',
     width: width || 'auto',
     // Ensure background color is properly applied
-    background: bgColor
+    background: bgColor,
+    transition: 'all 0.2s ease',
+    transform: 'scale(1)',
+    ...style
+  }
+
+  const Component = onClick ? 'button' : 'div'
+
+  const handleMouseEnter = (e) => {
+    if (onClick) {
+      e.currentTarget.style.transform = 'scale(1.05)'
+      e.currentTarget.style.filter = 'brightness(1.1)'
+    }
+  }
+
+  const handleMouseLeave = (e) => {
+    if (onClick) {
+      e.currentTarget.style.transform = 'scale(1)'
+      e.currentTarget.style.filter = 'brightness(1)'
+    }
   }
 
   return (
-    <div style={baseStyles}>
-      {type === 'percentage' && !isZero && isPositive ? '+' : ''}
+    <Component 
+      style={baseStyles} 
+      onClick={onClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      {...props}
+    >
+      {type === 'percentage' && !isZero && isPositive && !customText ? '+' : ''}
       {displayValue}
-      {type === 'percentage' ? '%' : ''}
-    </div>
+      {type === 'percentage' && !customText ? '%' : ''}
+    </Component>
   )
 }
 

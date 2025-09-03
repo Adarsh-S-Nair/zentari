@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import Carousel from './Carousel'
 import Badge from './Badge'
 import Meter from './Meter'
+import Pill from './Pill'
 import { formatCurrency, formatPercentage } from '../../utils/formatters'
 import { getIndustryColor } from '../../utils/sectorColors'
 
@@ -24,7 +25,7 @@ function Stat({ label, value }) {
   )
 }
 
-function PositionCard({ position, index = 0, snapAlign = 'center', totalMV = 0 }) {
+function PositionCard({ position, index = 0, snapAlign = 'center', totalMV = 0, showDollarAmount = false, onToggleDisplay }) {
   const p = position || {}
   const qty = Math.abs(Number(p.quantity || 0))
   const avg = Number(p.avg_entry_price || 0)
@@ -43,7 +44,7 @@ function PositionCard({ position, index = 0, snapAlign = 'center', totalMV = 0 }
   const sector = String(p.sector || 'Other')
   const sectorColor = p.sector_color || getIndustryColor(sector)
   
-  // Calculate gain/loss
+  // Calculate gain/loss using current market price vs entry price
   const gainLoss = mv - invested
   const gainLossPct = invested > 0 ? (gainLoss / invested) * 100 : 0
 
@@ -60,13 +61,13 @@ function PositionCard({ position, index = 0, snapAlign = 'center', totalMV = 0 }
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {p.logo_url ? (
-            <img src={p.logo_url} alt={p.ticker} className="w-8 h-8 rounded-full object-cover flex-shrink-0" style={{ border: '1px solid var(--color-border-primary)' }} />
+            <img src={p.logo_url} alt={p.ticker} className="w-10 h-10 rounded-full object-cover flex-shrink-0" style={{ border: '1px solid var(--color-border-primary)' }} />
           ) : (
-            <div className="w-8 h-8 rounded-full flex-shrink-0" style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border-primary)' }} />
+            <div className="w-10 h-10 rounded-full flex-shrink-0" style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border-primary)' }} />
           )}
           <div className="min-w-0">
             <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{p.company_name || (p.ticker || '').toUpperCase()}</div>
-            <div className="flex items-center gap-2 mt-0.5 min-w-0">
+            <div className="flex items-center gap-2 mt-1 min-w-0">
               <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{(p.ticker || '').toUpperCase()}</div>
               <Badge label={sector} color={sectorColor} />
             </div>
@@ -74,20 +75,22 @@ function PositionCard({ position, index = 0, snapAlign = 'center', totalMV = 0 }
         </div>
         <div className="text-right">
           <div className="text-[13px] font-semibold" style={{ color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(mv)}</div>
-          <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+          <div className="text-[10px] mt-1">
             {hasCurrentPrice ? (
-              <div className="flex flex-col items-end gap-0.5">
-                <span style={{ color: gainLoss >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                  {gainLoss >= 0 ? '+' : ''}{formatCurrency(gainLoss)} ({gainLossPct >= 0 ? '+' : ''}{gainLossPct.toFixed(1)}%)
-                </span>
-                {priceAsOf && (
-                  <span className="text-[9px]" style={{ color: 'var(--color-text-light)', opacity: 0.7 }}>
-                    {new Date(priceAsOf).toLocaleDateString()}
-                  </span>
-                )}
+              <div className="flex justify-end">
+                <Pill
+                  value={Math.abs(gainLossPct)}
+                  isPositive={gainLoss >= 0}
+                  isZero={Math.abs(gainLossPct) < 0.01}
+                  customText={showDollarAmount ? `${gainLoss >= 0 ? '+' : ''}${formatCurrency(gainLoss)}` : `${gainLossPct >= 0 ? '+' : ''}${gainLossPct.toFixed(1)}%`}
+                  customBgColor={gainLoss >= 0 ? 'var(--color-success-bg)' : 'var(--color-danger-bg)'}
+                  customTextColor={gainLoss >= 0 ? 'var(--color-success)' : 'var(--color-danger)'}
+                  onClick={onToggleDisplay}
+                  style={{ cursor: 'pointer' }}
+                />
               </div>
             ) : (
-              `Weight ${(weight || 0).toFixed(1)}%`
+              <span style={{ color: 'var(--color-text-muted)' }}>Weight {weight.toFixed(1)}%</span>
             )}
           </div>
         </div>
@@ -103,6 +106,9 @@ function PositionCard({ position, index = 0, snapAlign = 'center', totalMV = 0 }
 }
 
 export default function PositionCardsCarousel({ positions = [], className = '', style = {}, onCardClick }) {
+  // Shared state for all position cards
+  const [showDollarAmount, setShowDollarAmount] = useState(false)
+  
   const sorted = useMemo(() => {
     const arr = (positions || []).slice(0, 48)
     return arr.sort((a, b) => {
@@ -121,6 +127,10 @@ export default function PositionCardsCarousel({ positions = [], className = '', 
       return s + Math.abs(Number(p.quantity || 0)) * price
     }, 0)
   }, [sorted])
+  
+  const handleToggleDisplay = () => {
+    setShowDollarAmount(!showDollarAmount)
+  }
 
   return (
     <div className={`relative ${className}`} style={style}>
@@ -130,7 +140,14 @@ export default function PositionCardsCarousel({ positions = [], className = '', 
         gap={12}
         getKey={(pos, i) => pos?.id || `${pos?.ticker || 'pos'}-${i}`}
         renderItem={({ item, index, snapAlign }) => (
-          <PositionCard position={item} index={index} snapAlign={snapAlign} totalMV={totalMV} />
+          <PositionCard 
+            position={item} 
+            index={index} 
+            snapAlign={snapAlign} 
+            totalMV={totalMV}
+            showDollarAmount={showDollarAmount}
+            onToggleDisplay={handleToggleDisplay}
+          />
         )}
         onItemClick={onCardClick ? (e, pos) => onCardClick(e, pos) : undefined}
         showPagination={true}

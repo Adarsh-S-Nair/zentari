@@ -11,6 +11,7 @@ export default function PortfolioCreateForm({ onClose }) {
   const [mode, setMode] = useState('PAPER')
   const [cadence, setCadence] = useState('weekly')
   const [submitting, setSubmitting] = useState(false)
+  const [userInitiated, setUserInitiated] = useState(false)
   const { user, fetchPortfolio, setToast } = useFinancial()
 
   const canSubmit = !!name?.trim() && Number.isInteger(startingBalance) && startingBalance >= 10
@@ -43,6 +44,7 @@ export default function PortfolioCreateForm({ onClose }) {
     if (!canSubmit || !user?.id || submitting) return
     try {
       setSubmitting(true)
+      setUserInitiated(true)
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
       const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
       const cleanBaseUrl = baseUrl.replace(/^https?:\/\//, '')
@@ -71,7 +73,10 @@ export default function PortfolioCreateForm({ onClose }) {
       }
       // Refresh context portfolio (keeps GPT panel showing spinner via polling)
       await fetchPortfolio(user.id)
-      if (setToast) setToast({ type: 'success', message: 'Portfolio created. Initial trades are being prepared...' })
+      // Only show success toast if this was actually a user-initiated action
+      if (setToast && userInitiated) {
+        setToast({ type: 'success', message: 'Portfolio created. Initial trades are being prepared...' })
+      }
       onClose && onClose()
     } catch (e) {
       console.error('Create portfolio error:', e)

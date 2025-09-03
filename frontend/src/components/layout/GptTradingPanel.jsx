@@ -188,13 +188,56 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
   const portfolioValue = useMemo(() => {
     return Number(portfolio?.cash_balance || 0) + positionsMarketValue
   }, [portfolio?.cash_balance, positionsMarketValue])
+  const [portfolioSnapshots, setPortfolioSnapshots] = useState([])
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false)
+
+  const base = useMemo(() => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'localhost:8000'
+    const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+    const clean = baseUrl.replace(/^https?:\/\//,'')
+    return { protocol, clean }
+  }, [])
+
+  // Fetch portfolio snapshots
+  useEffect(() => {
+    const fetchSnapshots = async () => {
+      if (!portfolio?.id) return
+      setSnapshotsLoading(true)
+      try {
+        const resp = await fetch(`${base.protocol}://${base.clean}/database/portfolios/${portfolio.id}/snapshots`)
+        const data = await resp.json().catch(() => ({}))
+        const snapshots = Array.isArray(data?.snapshots) ? data.snapshots : []
+        setPortfolioSnapshots(snapshots)
+      } catch (error) {
+        console.error('Error fetching portfolio snapshots:', error)
+        setPortfolioSnapshots([])
+      } finally {
+        setSnapshotsLoading(false)
+      }
+    }
+    fetchSnapshots()
+  }, [portfolio?.id, base.protocol, base.clean])
+
   const allSeries = useMemo(() => {
     if (!portfolio?.created_at) return []
     
+    // If we have snapshots, use them; otherwise fall back to flat line
+    if (portfolioSnapshots.length > 0) {
+      return portfolioSnapshots.map(snapshot => ({
+        x: new Date(snapshot.date).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          timeZone: "America/New_York"
+        }),
+        y: snapshot.value
+      }))
+    }
+    
+    // Fallback: generate flat line with current portfolio value
     const out = []
     const todayValue = Math.round(portfolioValue)
     
-    // Convert UTC portfolio creation date to EST/EDT (America/New_York handles DST automatically)
+    // Convert UTC portfolio creation date to EST/EDT
     const portfolioCreatedAt = new Date(portfolio.created_at)
     const portfolioCreatedEST = new Date(portfolioCreatedAt.toLocaleString("en-US", {timeZone: "America/New_York"}))
     
@@ -223,7 +266,7 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
       })
     }
     return out
-  }, [portfolioValue, portfolio?.created_at])
+  }, [portfolioValue, portfolio?.created_at, portfolioSnapshots])
 
   const [range, setRange] = useState('1M')
   const [hoverIdx, setHoverIdx] = useState(-1)
@@ -426,19 +469,27 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <Card className="p-0 relative overflow-hidden" elevation="md">
-            <div className="px-4 pt-4 pb-3 flex items-start justify-between">
+            <div className="px-4 pt-4 pb-3">
               <div className="flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
                 <FaDollarSign size={14} />
                 <span className="text-[12px] font-medium">Portfolio Overview</span>
               </div>
-              <Pill value={Math.abs(pctChange)} isPositive={pctChange >= 0} isZero={Math.abs(pctChange) < 0.01} />
             </div>
 
             <div className="px-4">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="pt-1">
                   <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Total value</div>
-                  <div className="text-[22px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(portfolioValue)}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-[22px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(portfolioValue)}</div>
+                    <Pill 
+                      value={Math.abs(pctChange)} 
+                      isPositive={pctChange >= 0} 
+                      isZero={Math.abs(pctChange) < 0.01}
+                      customBgColor={pctChange < 0 ? 'var(--color-danger-bg)' : 'var(--color-success-bg)'}
+                      customTextColor={pctChange < 0 ? 'var(--color-danger)' : 'var(--color-success)'}
+                    />
+                  </div>
                 </div>
                 {(() => {
                   const cash = Number(portfolio?.cash_balance || 0)
@@ -449,18 +500,30 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
                     <div className="flex items-start gap-8 flex-wrap justify-end w-full sm:w-auto">
                       <div className="min-w-[160px] pt-1">
                         <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Invested</div>
-                        <div className="text-[18px] font-semibold" style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-                          {formatCurrency(invested)}
-                          <span className="ml-2 text-[12px]" style={{ color: 'var(--color-text-muted)' }}>({pct(invested)}%)</span>
+                        <div className="flex items-center gap-2">
+                          <div className="text-[18px] font-semibold" style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                            {formatCurrency(invested)}
+                          </div>
+                          <Pill 
+                            value={parseFloat(pct(invested))} 
+                            customBgColor="var(--color-border-primary)"
+                            customTextColor="var(--color-text-muted)"
+                          />
                         </div>
                         <div className="mt-1 h-[3px] rounded-full" style={{ background: 'linear-gradient(90deg, var(--brand-income-hex), rgba(99,102,241,0.15))' }} />
                       </div>
                       <div className="hidden sm:block" style={{ height: 38, width: 1, background: 'var(--color-border-primary)' }} />
                       <div className="min-w-[140px] pt-1">
                         <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Cash</div>
-                        <div className="text-[18px] font-semibold" style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-                          {formatCurrency(cash)}
-                          <span className="ml-2 text-[12px]" style={{ color: 'var(--color-text-muted)' }}>({pct(cash)}%)</span>
+                        <div className="flex items-center gap-2">
+                          <div className="text-[18px] font-semibold" style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                            {formatCurrency(cash)}
+                          </div>
+                          <Pill 
+                            value={parseFloat(pct(cash))} 
+                            customBgColor="var(--color-border-primary)"
+                            customTextColor="var(--color-text-muted)"
+                          />
                         </div>
                         <div className="mt-1 h-[3px] rounded-full" style={{ background: 'linear-gradient(90deg, var(--color-text-muted), rgba(148,163,184,0.12))' }} />
                       </div>
@@ -543,9 +606,13 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
                             <span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color }} />
                             <span className="text-[12px] truncate" style={{ color: 'var(--color-text-secondary)' }}>{c.label}</span>
                           </div>
-                          <div className="text-right text-[12px] font-medium" style={{ color: 'var(--color-text-primary)', opacity: 0.92, fontVariantNumeric: 'tabular-nums' }}>
+                          <div className="text-right text-[12px] font-medium flex items-center justify-end gap-2" style={{ color: 'var(--color-text-primary)', opacity: 0.92, fontVariantNumeric: 'tabular-nums' }}>
                             {formatCurrency(c.value)}
-                            <span className="ml-2" style={{ color: 'var(--color-text-muted)' }}>({((c.value / (total || 1)) * 100 || 0).toFixed(1)}%)</span>
+                            <Pill
+                              value={parseFloat(((c.value / (total || 1)) * 100 || 0).toFixed(1))}
+                              customBgColor="var(--color-border-primary)"
+                              customTextColor="var(--color-text-muted)"
+                            />
                           </div>
                         </div>
                       ))}
@@ -630,7 +697,7 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
               <button
                 type="button"
                 className="text-[11px] font-medium px-2 py-1 rounded-sm cursor-pointer"
-                style={{ color: 'var(--color-text-secondary)', background: 'transparent' }}
+                style={{ color: 'var(--color-text-muted)', background: 'transparent' }}
                 onClick={() => { setDrawerStack([{ title: 'All Recent Orders', element: (
                   <div className="p-3">
                     {ordersLoading ? (<div className="w-full flex items-center justify-center py-6"><Spinner label="Loading orders..." /></div>) : (
@@ -681,8 +748,8 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
                     )}
                   </div>
                 ) }]); setDrawerOpen(true) }}
-                onMouseEnter={(e)=>{ e.currentTarget.style.textDecoration='underline'; e.currentTarget.style.color='var(--color-text-primary)'; }}
-                onMouseLeave={(e)=>{ e.currentTarget.style.textDecoration='none'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+                onMouseEnter={(e)=>{ e.currentTarget.style.textDecoration='underline'; e.currentTarget.style.color='var(--color-text-secondary)'; }}
+                onMouseLeave={(e)=>{ e.currentTarget.style.textDecoration='none'; e.currentTarget.style.color='var(--color-text-muted)'; }}
               >View all</button>
             </div>
             <div className="relative z-10 px-3 pt-2 pb-3 flex flex-col">
