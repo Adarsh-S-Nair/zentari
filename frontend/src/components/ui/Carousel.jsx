@@ -100,20 +100,48 @@ export default function Carousel({
         <button
           aria-label="Scroll left"
           onClick={() => scrollByAmount(-1)}
-          className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full shadow-md transition-transform hover:scale-110 cursor-pointer"
-          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)', color: 'var(--color-text-primary)' }}
+          className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full transition-all duration-200 hover:scale-110 cursor-pointer"
+          style={{ 
+            background: 'var(--color-bg-primary)', 
+            border: '1px solid var(--color-border-primary)', 
+            color: 'var(--color-text-primary)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(8px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2), 0 3px 6px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
+            e.currentTarget.style.background = 'var(--color-bg-secondary)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+            e.currentTarget.style.background = 'var(--color-bg-primary)'
+          }}
         >
-          <FiChevronLeft size={16} />
+          <FiChevronLeft size={18} />
         </button>
       )}
       {canRight && (
         <button
           aria-label="Scroll right"
           onClick={() => scrollByAmount(1)}
-          className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full shadow-md transition-transform hover:scale-110 cursor-pointer"
-          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-primary)', color: 'var(--color-text-primary)' }}
+          className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full transition-all duration-200 hover:scale-110 cursor-pointer"
+          style={{ 
+            background: 'var(--color-bg-primary)', 
+            border: '1px solid var(--color-border-primary)', 
+            color: 'var(--color-text-primary)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(8px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2), 0 3px 6px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
+            e.currentTarget.style.background = 'var(--color-bg-secondary)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+            e.currentTarget.style.background = 'var(--color-bg-primary)'
+          }}
         >
-          <FiChevronRight size={16} />
+          <FiChevronRight size={18} />
         </button>
       )}
 

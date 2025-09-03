@@ -45,7 +45,11 @@ function SmoothLineChart({ series = [], height = 320, onHoverIndexChange }) {
 
   const buildPath = (pts) => {
     if (pts.length === 0) return ''
-    if (pts.length === 1) return `M ${xToPx(0)} ${yToPx(pts[0].y)}`
+    if (pts.length === 1) {
+      // For single data point, create a horizontal line spanning the full width
+      const y = yToPx(pts[0].y)
+      return `M ${margin.left} ${y} L ${width - margin.right} ${y}`
+    }
     const path = []
     for (let i = 0; i < pts.length; i++) {
       const p0 = pts[i - 1] || pts[i]
@@ -68,7 +72,13 @@ function SmoothLineChart({ series = [], height = 320, onHoverIndexChange }) {
   const firstPx = points.length ? { x: xToPx(points[0].x), y: yToPx(points[0].y) } : null
   const lastPx = points.length ? { x: xToPx(points[points.length-1].x), y: yToPx(points[points.length-1].y) } : null
   const baseY = margin.top + innerH
-  const areaD = points.length ? `${pathD} L ${lastPx.x} ${baseY} L ${firstPx.x} ${baseY} Z` : ''
+  
+  // Create area fill - for single point, create a horizontal rectangle
+  const areaD = points.length ? (
+    points.length === 1 
+      ? `M ${margin.left} ${yToPx(points[0].y)} L ${width - margin.right} ${yToPx(points[0].y)} L ${width - margin.right} ${baseY} L ${margin.left} ${baseY} Z`
+      : `${pathD} L ${lastPx.x} ${baseY} L ${firstPx.x} ${baseY} Z`
+  ) : ''
 
   const gridLines = []
   const gridCount = 4
@@ -179,26 +189,90 @@ export default function GptTradingPanel({ isMobile, tradeMode }) {
     return Number(portfolio?.cash_balance || 0) + positionsMarketValue
   }, [portfolio?.cash_balance, positionsMarketValue])
   const allSeries = useMemo(() => {
-    const days = 60
+    if (!portfolio?.created_at) return []
+    
     const out = []
     const todayValue = Math.round(portfolioValue)
+    
+    // Convert UTC portfolio creation date to EST/EDT (America/New_York handles DST automatically)
+    const portfolioCreatedAt = new Date(portfolio.created_at)
+    const portfolioCreatedEST = new Date(portfolioCreatedAt.toLocaleString("en-US", {timeZone: "America/New_York"}))
+    
+    // Get today's date in EST/EDT
     const now = new Date()
+    const todayEST = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}))
+    
+    // Calculate the number of days between portfolio creation and today
+    const timeDiff = todayEST.getTime() - portfolioCreatedEST.getTime()
+    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24))
+    
+    // If portfolio was created today or in the future, show just today
+    const days = Math.max(1, daysDiff)
+    
+    // Generate series data starting from portfolio creation date
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now)
-      d.setDate(now.getDate() - i)
-      out.push({ x: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), y: todayValue })
+      const d = new Date(portfolioCreatedEST)
+      d.setDate(portfolioCreatedEST.getDate() + (days - 1 - i))
+      out.push({ 
+        x: d.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          timeZone: "America/New_York"
+        }), 
+        y: todayValue 
+      })
     }
     return out
-  }, [portfolioValue])
+  }, [portfolioValue, portfolio?.created_at])
 
   const [range, setRange] = useState('1M')
   const [hoverIdx, setHoverIdx] = useState(-1)
 
+  // Set default range based on portfolio age
+  useEffect(() => {
+    if (!portfolio?.created_at) return
+    
+    const portfolioCreatedAt = new Date(portfolio.created_at)
+    const portfolioCreatedEST = new Date(portfolioCreatedAt.toLocaleString("en-US", {timeZone: "America/New_York"}))
+    const now = new Date()
+    const todayEST = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}))
+    const portfolioAgeDays = Math.ceil((todayEST.getTime() - portfolioCreatedEST.getTime()) / (1000 * 60 * 60 * 24))
+    
+    if (portfolioAgeDays <= 1) setRange('1D')
+    else if (portfolioAgeDays <= 7) setRange('1W')
+    else if (portfolioAgeDays <= 30) setRange('1M')
+    else if (portfolioAgeDays <= 90) setRange('3M')
+    else if (portfolioAgeDays <= 365) setRange('1Y')
+    else setRange('ALL')
+  }, [portfolio?.created_at])
+
   const rangedSeries = useMemo(() => {
-    const map = { '1D': 5, '1W': 7, '1M': 30, '3M': 90, 'YTD': (() => { const now = new Date(); const start = new Date(now.getFullYear(), 0, 1); return Math.max(1, Math.round((now - start) / (1000*60*60*24))) })(), '1Y': 365, 'ALL': allSeries.length }
-    const n = map[range] || 30
+    if (!portfolio?.created_at) return []
+    
+    // Calculate portfolio age in days
+    const portfolioCreatedAt = new Date(portfolio.created_at)
+    const portfolioCreatedEST = new Date(portfolioCreatedAt.toLocaleString("en-US", {timeZone: "America/New_York"}))
+    const now = new Date()
+    const todayEST = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}))
+    const portfolioAgeDays = Math.ceil((todayEST.getTime() - portfolioCreatedEST.getTime()) / (1000 * 60 * 60 * 24))
+    
+    // Calculate YTD days from portfolio creation or year start, whichever is later
+    const yearStart = new Date(todayEST.getFullYear(), 0, 1)
+    const ytdStart = portfolioCreatedEST > yearStart ? portfolioCreatedEST : yearStart
+    const ytdDays = Math.ceil((todayEST.getTime() - ytdStart.getTime()) / (1000 * 60 * 60 * 24))
+    
+    const map = { 
+      '1D': Math.min(1, portfolioAgeDays), 
+      '1W': Math.min(7, portfolioAgeDays), 
+      '1M': Math.min(30, portfolioAgeDays), 
+      '3M': Math.min(90, portfolioAgeDays), 
+      'YTD': Math.max(1, ytdDays), 
+      '1Y': Math.min(365, portfolioAgeDays), 
+      'ALL': allSeries.length 
+    }
+    const n = map[range] || Math.min(30, portfolioAgeDays)
     return allSeries.slice(-n)
-  }, [range, allSeries])
+  }, [range, allSeries, portfolio?.created_at])
 
   const investedValue = useMemo(() => {
     return positionsMarketValue
